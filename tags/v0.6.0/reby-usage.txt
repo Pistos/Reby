@@ -1,0 +1,37 @@
+Reby: Ruby-Eggdrop Bridge Yes-this-letter-no-meaning-in-the-acronym
+-----------------------------------------------------------------------
+
+Version 0.5.3
+
+To use Reby with your eggdrop:
+
+1) Move the "reby*" files to some appropriate location such as
+/path/to/your/eggdrop/scripts .  At the least, reby.tcl, reby.rb and reby.conf
+should be together.
+
+2) Enable the .tcl command in your eggdrop's conf, if it isn't already.
+This is usually done by commenting out the following line:
+unbind dcc n tcl *dcc:tcl
+
+3) Rehash the eggdrop (with the .rehash party line command) to reload the
+changed eggdrop configuration and include the reby.tcl script.
+
+4) Edit the reby.conf file.  It is heavily commented and self-explanatory.
+
+5) Run the reby.rb program.  You can run it in the background, pipe stdout or
+stderr wherever you like--whatever you want.  By default, it does not run as
+a daemon, and it writes status and error messages to stdout.
+
+It also looks for a configuration file called reby.conf in the same directory.
+You can pass the path to a specific configuration file as an argument to
+reby.rb.
+
+----
+
+And that's it!  :)  I hope you enjoy using Reby!
+
+Pistos
+http://purepistos.net/eggdrop
+irc://irc.freenode.net
+
+April 5, 2004
