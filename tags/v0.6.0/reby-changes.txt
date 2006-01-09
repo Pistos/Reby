@@ -1,6 +1,0 @@
-reby changes: 0.5.5 to 0.5.6
-
-Added a means of registering script threads with Reby for proper Thread.exit cleanup.
-Fixed bugs in hand2nick and handonchan methods.
-raw binds now always return 0.
-Added ctcp binding.
