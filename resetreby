@@ -1,0 +1,1 @@
+kill -s HUP `cat reby.pid`
