@@ -461,6 +461,7 @@ class Reby
                             instance = $1
                             method_name = $2
                             rest = $3.changeBraces
+                            rest = rest.unescapeBackslashed
                             arglist = makeArray( rest, -1, 1 )
                             arglist.collect! do |arg|
                                 arg.toReby
@@ -918,6 +919,9 @@ class String
     end
     def restoreBraces
         return gsub( /\001/, "\\{" ).gsub( /\002/, "\\}" )
+    end
+    def unescapeBackslashed
+        return gsub( /\\(.)/, "\\1" )
     end
     def toReby
         return "'" + restoreBraces + "'"

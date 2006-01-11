@@ -108,25 +108,23 @@ class WebSearch
     def search( nick, channel, args, engine = ENGINE_GOOGLE )
         num_results = 1
 
-        if args.class == Array
-            if args.length < 1
-                $reby.putserv "PRIVMSG #{channel} :!google [number of results] <search terms>"
-                return
+        args_array = args.split( /\s+/ )
+        
+        if args_array.length < 1
+            $reby.putserv "PRIVMSG #{channel} :!google [number of results] <search terms>"
+            return
+        end
+        if args_array[ 0 ].to_i.to_s == args_array[ 0 ]
+            # A number of results has been specified
+            num_results = args_array[ 0 ].to_i
+            if num_results > MAX_RESULTS
+                num_results = MAX_RESULTS
             end
-            if args[ 0 ].to_i.to_s == args[ 0 ]
-                # A number of results has been specified
-                num_results = args[ 0 ].to_i
-                if num_results > MAX_RESULTS
-                    num_results = MAX_RESULTS
-                end
-                arg = args[ 1..-1 ].join( "+" )
-                unescaped_arg = args[ 1..-1 ].join( " " )
-            else
-                arg = args.join( "+" )
-                unescaped_arg = args.join( " " )
-            end
+            arg = args_array[ 1..-1 ].join( "+" )
+            unescaped_arg = args_array[ 1..-1 ].join( " " )
         else
-            unescaped_arg = arg = args
+            arg = args_array.join( "+" )
+            unescaped_arg = args_array.join( " " )
         end
         
         arg = CGI.escape( arg )
@@ -232,13 +230,16 @@ class WebSearch
                 open( "http://docs.geoshell.org/dosearchsite.action?searchQuery.queryString=#{ arg }" ) do |html|
                     text = html.read
                     counter = 0
-                    text.scan( /<a href="(\/confluence\/display[^"]+).+?<br\/>.+?(<span.+?)<\/td>/m ) do |url,desc|
+                    text.scan( /<a href="(\/display[^"]+).+?<br\/>.+?(<span.+?)<\/td>/m ) do |url,desc|
                         d = desc.gsub( /<[^>]+>/, "" )
-                        $reby.putserv "PRIVMSG #{channel} :http://docs.geoshell.com:8080#{url} - #{d}"
+                        $reby.putserv "PRIVMSG #{channel} :[#{arg}] http://docs.geoshell.org#{url} - #{d}"
                         counter += 1
                         if counter >= max_results
                             break
                         end
+                    end
+                    if counter == 0
+                        $reby.putserv "PRIVMSG #{channel} :[#{args}] No results."
                     end
                 end
         end
@@ -263,7 +264,7 @@ class WebSearch
                 while output.length > MAX_IRC_LINE_LENGTH
                     segment = output[ 0...MAX_IRC_LINE_LENGTH ]
                     output = output[ MAX_IRC_LINE_LENGTH..-1 ]
-                    $reby.puthelp "PRIVMSG #{channel} :#{segment}"
+                    $reby.puthelp "PRIVMSG #{channel} :[#{search_term}] #{segment}"
                 end
                 $reby.puthelp "PRIVMSG #{channel} :#{output}"
                 counter += 1

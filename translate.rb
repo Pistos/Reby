@@ -55,21 +55,14 @@ class Translator
     end
 
     def translate( nick, userhost, handle, channel, args )
-        if args.class == Array
-            if args.length < 1
-                $reby.putserv "PRIVMSG #{channel} :!translate <source lang> <target lang> <text to translate>"
-                return
-            end
-            source = args[ 0 ]
-            target = args[ 1 ]
-            text = args[ 2..-1 ].join( " " )
-        else
+        source, target, text = args.split( / /, 3 )
+        if source.nil? or target.nil? or text.nil?
             $reby.putserv "PRIVMSG #{channel} :!translate <source lang> <target lang> <text to translate>"
+        else
+            translation = text.translate( source, target )
+            $reby.putserv "PRIVMSG #{channel} :(#{source}) #{text}"
+            $reby.putserv "PRIVMSG #{channel} :(#{target}) #{translation}"
         end
-        
-        translation = text.translate( source, target )
-        $reby.putserv "PRIVMSG #{channel} :(#{source}) #{text}"
-        $reby.putserv "PRIVMSG #{channel} :(#{target}) #{translation}"
     end
 
 end
