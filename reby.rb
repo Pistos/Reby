@@ -4,7 +4,7 @@
 #
 # Ruby-Eggdrop Bridge Yes-this-letter-has-no-meaning-in-the-acronym
 # :title: Reby
-# Version:: 0.7.0 (July 17 2005)
+# Version:: 0.7.1 (February 18, 2006)
 #
 # Author:: Pistos (irc.freenode.net)
 # http://purepistos.net/eggdrop/reby
@@ -924,8 +924,7 @@ class String
         return gsub( /\\(.)/, "\\1" )
     end
     def toReby
-        return "'" + restoreBraces + "'"
-        #return "'" + self + "'"
+        return "'" + restoreBraces.replaceQuotes + "'"
     end
     def to_a
         return [ self ]
