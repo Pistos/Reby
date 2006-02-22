@@ -192,7 +192,7 @@ class Reby
     protected :defineRebyProcs
 
     def login
-        @con.waitfor( /Nickname\./ )
+        @con.waitfor( /(?:Please enter your n|N)ickname\./ )
         @con.puts( @username )
         @con.waitfor( /Enter your password\./ )
         if @password == nil
