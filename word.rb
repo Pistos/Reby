@@ -6,7 +6,7 @@
 # The classic word unscramble game, but enhanced.
 
 # By Pistos
-# irc.freenode.net#geobot
+# irc.freenode.net#mathetes
 
 # Score file format:
 # The first line is an index into the word list (the current word).
