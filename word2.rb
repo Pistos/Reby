@@ -151,6 +151,7 @@ class WordX
     end
 
     def printScore( nick, userhost, handle, channel, text )
+        
     end
 
     def killTimers
@@ -228,6 +229,7 @@ class WordX
         $reby.unbind( "pub", "-", @word.word, "correctGuess", "$wordx" )
         
         @game.end_time = Time.now
+        @game.save
         
         if not nextRound
             @channel.current_word += 1
