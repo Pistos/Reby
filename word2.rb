@@ -19,12 +19,11 @@ class WordX
     VERSION = '2.0.0'
     LAST_MODIFIED = 'March 12, 2006'
     MIN_GAMES_PLAYED_TO_SHOW_SCORE = 0
-    INITIAL_POINT_VALUE = 100
+    DEFAULT_INITIAL_POINT_VALUE = 100
     
     def initialize
         # Change these as you please.
         @say_answer = true
-        @official_initial_point_value = 300
         @MAX_WINS = 4
         @DEFAULT_NUM_ROUNDS = 3
         @TOO_MANY_ROUNDS = 50
@@ -46,19 +45,13 @@ class WordX
         @channel = nil
         @word = nil
         @game = nil
-        @point_value = INITIAL_POINT_VALUE
         @last_winner = nil
         @consecutive_wins = 0
         @ignored_player = nil
         @current_word_index = 0
-        @players = nil
 
         @game_parameters = Hash.new
         @game_parameters[ :state ] = :state_none
-
-        @PLAYER_PLAYING = 0
-        @PLAYER_WINS = 1
-        @PLAYER_SCORE = 2
 
         @WINBY_POINTS = 0
         @WINBY_WINS = 1
@@ -76,7 +69,6 @@ class WordX
             "start" => "startGame",
             "abort" => "setup_abort",
             "players" => "setup_listPlayers",
-            "winby" => "setup_winBy",
             "leave" => "setup_removePlayer"
         }
 
@@ -100,7 +92,7 @@ class WordX
     end
 
     def oneRound( nick, userhost, handle, channel, text )
-        return if @game_parameters[ :state ] != :state_going and playing?
+        return if @game_parameters[ :state ] != :state_going and game_going?
 
         @channel = Channel.find_or_create_by_name( channel )
         @game = Game.create( {
@@ -108,19 +100,15 @@ class WordX
         } )
         killTimers
         @def_shown = false
-        @point_value = INITIAL_POINT_VALUE
+        @initial_point_value = DEFAULT_INITIAL_POINT_VALUE
         @already_guessed = false
         
         # Is a GameSet just starting?
         if @game_parameters[ :state ] == :state_going
-            num_players = 0
-            @players.each do |nick, data|
-                if data[ @PLAYER_PLAYING ]
-                    num_players += 1
-                end
-            end
-            @point_value += (num_players - 2) * 15
+            @initial_point_value += (@players.length - 2) * 15
+            @game.players = @players
         end
+        @point_value = @initial_point_value
         
         @word = Word.find( @channel.current_word )
 
@@ -172,7 +160,16 @@ class WordX
         end
         put( "Done.", channel )
     end
-
+    
+    def printRating( nick, userhost, handle, channel, text )
+        player = Player.find_by_nick( nick )
+        if player != nil
+            put "#{player.nick}: Your battle rating is: #{player.rating}", channel
+        else
+            put "#{nick}: You're not a !word warrior!  Play a !wordbattle.", channel
+        end
+    end
+    
     def killTimers
         $reby.utimers.each do |utimer|
             case utimer[ 1 ]
@@ -186,17 +183,13 @@ class WordX
         return if @already_guessed
         
         player = Player.find_by_nick( nick )
-        if player.nil?
-            player = Player.create( {
-                :nick => nick
-            } )
-        end
+        return if player.nil?
         
         if ( @game_parameters[ :state ] != :state_going ) and ( player == @ignored_player )
             put( "You've already won #{player.consecutive_wins} times in a row!  Give some other people a chance.", player.nick )
             return
         end
-        if ( @game_parameters[ :state ] == :state_going ) and ( @players[ player.nick ] == nil )
+        if ( @game_parameters[ :state ] == :state_going ) and ( not @players.include?( player ) )
             sendNotice( "Since you did not join this game, your guesses are not counted.", player.nick )
             return
         end
@@ -210,7 +203,7 @@ class WordX
         put "#{player.nick} got it ... #{@word.word} ... for #{@point_value} points."
         
         @game.end_time = Time.now
-        @game.winner = player
+        @game.winner = player.id
         @game.points_awarded = @point_value
 
         if player == @last_winner
@@ -235,10 +228,10 @@ class WordX
         
         player.save
         @game.save
-
+        @channel.current_word += 1
+        @channel.save
+        
         if not nextRound
-            @channel.current_word += 1
-            @channel.save
             @channel = nil
         end
     end
@@ -249,10 +242,10 @@ class WordX
         
         @game.end_time = Time.now
         @game.save
+        @channel.current_word += 1
+        @channel.save
         
         if not nextRound
-            @channel.current_word += 1
-            @channel.save
             @channel = nil
         end
     end
@@ -263,7 +256,7 @@ class WordX
         if @game_parameters[ :state ] == :state_going
             if @game_parameters[ :current_round ] < @game_parameters[ :num_rounds ]
                 @game_parameters[ :current_round ] += 1
-                oneRound( nil, nil, nil, @channel, nil )
+                oneRound( nil, nil, nil, @channel.name, nil )
                 retval = true
             else
                 # No more rounds in the game.  GAME OVER.
@@ -271,99 +264,29 @@ class WordX
                 put "Game over."
 
                 @game_parameters[ :state ] = :state_none
-
-                # Reward game winner.
-
-                high_score = 0
-                high_wins = 0
-                @players.each_value do |data|
-                    if data[ @PLAYER_WINS ] > high_wins
-                        high_wins = data[ @PLAYER_WINS ]
-                    end
-                    if data[ @PLAYER_SCORE ] > high_score
-                        high_score = data[ @PLAYER_SCORE ]
-                    end
-                end
-
-                $reby.log "highs: #{high_wins} #{high_score}"
-
-                winners = Array.new
-                @players.each do |nick, data|
-                    if @game_parameters[ :win_criterion ] == @WINBY_WINS
-                        if data[ @PLAYER_WINS ] == high_wins
-                            winners.push nick
-                            $reby.log "Adding winner: #{nick}"
-                        end
-                    elsif @game_parameters[ :win_criterion ] == @WINBY_POINTS
-                        if data[ @PLAYER_SCORE ] == high_score
-                            winners.push nick
-                            $reby.log "Adding winner: #{nick}"
-                        end
-                    end
-                    if @score[ nick ] == nil
-                        # New player
-                        addScoreRecord( nick )
-                    end
-                    @score[ nick ][ @SCORE_GAMES_PLAYED ] += 1
-                end
-
-                win_reason = "nothing"
-                if @game_parameters[ :win_criterion ] == @WINBY_WINS
-                    win_reason = "#{high_wins} wins"
-                elsif @game_parameters[ :win_criterion ] == @WINBY_POINTS
-                    win_reason = "#{high_score} points"
-                end
-                if winners.length > 1
-                    put "A #{winners.length}-way tie for the win!"
-                    put "#{winners.join( ', ' )} each had #{win_reason}."
-                else
-                    put "#{winners[ 0 ]} is the game winner with #{win_reason}."
-                end
-
-                other_scores = "Other scores: "
-                @players.each do |nick, data|
-                    next if winners.include?( nick )
-                    case @game_parameters[ :win_criterion ]
-                        when @WINBY_WINS
-                            score_str = data[ @PLAYER_WINS ]
-                        when @WINBY_POINTS
-                            score_str = data[ @PLAYER_SCORE ]
-                    end
-                    other_scores += "#{nick}: #{score_str}  "
-                end
-                put other_scores
-
-                if winners.length == 1
-                    @score[ winners[ 0 ] ][ @SCORE_GAMES_WON ] += 1
-                else
-                    winners.each do |winner|
-                        @score[ winner ][ @SCORE_GAMES_TIED ] += 1
-                    end
-                end
-
             end
         end
         return retval
     end
 
     def clue1
-        @point_value = (INITIAL_POINT_VALUE * 0.95).to_i
+        @point_value = (@initial_point_value * 0.95).to_i
         put "Part of speech: #{ @word.pos }"
     end
     def clue2
-        @point_value = (INITIAL_POINT_VALUE * 0.90).to_i
+        @point_value = (@initial_point_value * 0.90).to_i
         put "Etymology: #{ @word.etymology }"
     end
     def clue3
-        @point_value = (INITIAL_POINT_VALUE * 0.85).to_i
+        @point_value = (@initial_point_value * 0.85).to_i
         put "Number of syllables: #{ @word.num_syllables }"
     end
     def clue4
-        @point_value = (INITIAL_POINT_VALUE * 0.70).to_i
+        @point_value = (@initial_point_value * 0.70).to_i
         put "Starts with: #{ @word.word[ 0..0 ] }"
     end
     def clue5
-        @point_value = (INITIAL_POINT_VALUE * 0.30).to_i
+        @point_value = (@initial_point_value * 0.30).to_i
         showDefinition
     end
 
@@ -372,7 +295,7 @@ class WordX
         @def_shown = true
     end
 
-    def playing?
+    def game_going?
         retval = false
         if @game_parameters[ :state ] == :state_setup
             put "A game is currently being setup."
@@ -388,16 +311,18 @@ class WordX
     end
 
     def setupGame( nick, userhost, handle, channel, text )
-        return if playing?
+        return if game_going?
 
         @game_parameters[ :state ] = :state_setup
-        @channel = channel
-        put "Defaults: Rounds: #{@DEFAULT_NUM_ROUNDS}; Win by: #{@WINBYSTR[ @DEFAULT_WIN_CRITERION ]}"
-        put "Commands: rounds <number>; join; leave; players; winby <points|wins>; abort; start"
+        @channel = Channel.find_or_create_by_name( channel )
+        player = Player.find_or_create_by_nick( nick )
+        
+        put "Defaults: Rounds: #{@DEFAULT_NUM_ROUNDS}"
+        put "Commands: rounds <number>; join; leave; players; abort; start"
         @game_parameters[ :num_rounds ] = @DEFAULT_NUM_ROUNDS
-        @game_parameters[ :starter ] = nick
+        @game_parameters[ :starter ] = player
         @game_parameters[ :win_criterion ] = @DEFAULT_WIN_CRITERION
-        @players = Hash.new
+        @players = Array.new
         setup_addPlayer( nick, userhost, handle, channel, text )
 
         @GAME_BINDS.each do |command, method|
@@ -405,8 +330,15 @@ class WordX
         end
     end
 
+    def setup_addPlayer( nick, userhost, handle, channel, text )
+        return if channel != @channel.name
+        player = Player.find_or_create_by_nick( nick )
+        @players << player
+        put "#{player.nick} has joined the game."
+    end
+
     def setup_numRounds( nick, userhost, handle, channel, text )
-        return if channel != @channel
+        return if channel != @channel.name
         num_rounds = text.to_i
         if num_rounds < 1
             put "Usage: rounds <positive integer>"
@@ -419,52 +351,28 @@ class WordX
         put "Number of rounds set to #{@game_parameters[ :num_rounds ]}."
     end
 
-    def setup_addPlayer( nick, userhost, handle, channel, text )
-        return if channel != @channel
-        @players[ nick ] = Array.new
-        @players[ nick ][ @PLAYER_PLAYING ] = true
-        @players[ nick ][ @PLAYER_WINS ] = 0
-        @players[ nick ][ @PLAYER_SCORE ] = 0
-        put "#{nick} has joined the game."
-    end
-
     def setup_removePlayer( nick, userhost, handle, channel, text )
-        return if channel != @channel
-        if nick == @game_parameters[ :starter ]
-            sendNotice( "You can't leave the game, you started it.  Try the abort command.", nick )
+        return if channel != @channel.name
+        player = Player.find_or_create_by_nick( nick )
+        if player == @game_parameters[ :starter ]
+            sendNotice( "You can't leave the game, you started it.  Try the abort command.", player.nick )
             return
         end
-        @players[ nick ] = nil
+        @players.delete player
         put "#{nick} has withdrawn from the game."
     end
 
     def setup_listPlayers( nick, userhost, handle, channel, text )
-        player_list = ""
-        @players.each do |nick, data|
-            if data[ @PLAYER_PLAYING ]
-                player_list += "#{nick} "
-            end
-        end
-        put player_list
+        str = "Players: "
+        str << ( @players.collect { |p| p.nick } ).join( ', ' )
+        put str
     end
 
-    def setup_winBy( nick, userhost, handle, channel, text )
-        case text
-            when /points/
-                @game_parameters[ :win_criterion ] = @WINBY_POINTS
-            when /wins/
-                @game_parameters[ :win_criterion ] = @WINBY_WINS
-        end
-        put "Winner will be decided by #{@WINBYSTR[ @game_parameters[ :win_criterion ] ] }."
-    end
-
-    def isStarter?( nick )
-        if nick == @game_parameters[ :starter ] or not $reby.onchan( @game_parameters[ :starter ] )
-            return true
-        else
-            put "Only the person who invoked the game can issue that command."
-            return false
-        end
+    def isStarter?( player )
+        return(
+            player == @game_parameters[ :starter ] or
+            not $reby.onchan( @game_parameters[ :starter ].nick )
+        )
     end
 
     def unbindSetupBinds
@@ -474,8 +382,11 @@ class WordX
     end
 
     def setup_abort( nick, userhost, handle, channel, text )
-        return if channel != @channel
-        return if not isStarter?( nick )
+        return if channel != @channel.name
+        if not isStarter?( Player.find_or_create_by_nick( nick ) )
+            put "Only the person who invoked the battle can abort it."
+            return
+        end
 
         unbindSetupBinds
         @game_parameters[ :state ] = :state_none
@@ -484,15 +395,12 @@ class WordX
     end
 
     def startGame( nick, userhost, handle, channel, text )
-        return if channel != @channel
-        return if not isStarter?( nick )
-        num_players = 0
-        @players.each do |nick, data|
-            if data[ @PLAYER_PLAYING ]
-                num_players += 1
-            end
+        return if channel != @channel.name
+        if not isStarter?( Player.find_or_create_by_nick( nick ) )
+            put "Only the person who invoked the battled can start it."
+            return
         end
-        if num_players < 2
+        if @players.length < 2
             put "At least two players need to be in the game."
             return
         end
@@ -510,4 +418,5 @@ $wordx = WordX.new
 
 $reby.bind( "pub", "-", "!word", "oneRound", "$wordx" )
 $reby.bind( "pub", "-", "!wordscore", "printScore", "$wordx" )
-$reby.bind( "pub", "-", "!wordsetup", "setupGame", "$wordx" )
+$reby.bind( "pub", "-", "!wordbattle", "setupGame", "$wordx" )
+$reby.bind( "pub", "-", "!wordrating", "printRating", "$wordx" )
