@@ -186,15 +186,15 @@ class WordX
     def correctGuess( nick, userhost, handle, channel, text )
         return if @already_guessed
         
-        player = Player.find_by_nick( nick )
-        return if player.nil?
+        winner = Player.find_by_nick( nick )
+        return if winner.nil?
         
-        if ( @game_parameters[ :state ] != :state_going ) and ( player == @ignored_player )
-            put( "You've already won #{player.consecutive_wins} times in a row!  Give some other people a chance.", player.nick )
+        if ( @game_parameters[ :state ] != :state_going ) and ( winner == @ignored_player )
+            put( "You've already won #{winner.consecutive_wins} times in a row!  Give some other people a chance.", winner.nick )
             return
         end
-        if ( @game_parameters[ :state ] == :state_going ) and ( not @players.include?( player ) )
-            sendNotice( "Since you did not join this game, your guesses are not counted.", player.nick )
+        if ( @game_parameters[ :state ] == :state_going ) and ( not @players.include?( winner ) )
+            sendNotice( "Since you did not join this game, your guesses are not counted.", winner.nick )
             return
         end
 
@@ -203,26 +203,40 @@ class WordX
         killTimers
 
         $reby.unbind( "pub", "-", @word.word, "correctGuess", "$wordx" )
-
-        put "#{player.nick} got it ... #{@word.word} ... for #{@point_value} points."
         
         @game.end_time = Time.now
-        @game.winner = player.id
+        @game.winner = winner.id
+        
+        # Modify award based on comparison of ratings.
+        loser_rating = 0
+        loser = nil
+        @players.each do |player|
+            next if player == winner
+            player_rating = player.rating
+            if player_rating > loser_rating
+                loser_rating = player_rating
+                loser = player
+            end
+        end
+        @point_value *= loser_rating.to_f / winner.rating.to_f
+
+        put "#{winner.nick} got it ... #{@word.word} ... for #{@point_value} points."
+        
         @game.points_awarded = @point_value
 
-        if player == @last_winner
-            player.consecutive_wins += 1
-            put "#{player.consecutive_wins} wins in a row!"
-            if ( @game_parameters[ :state ] != :state_going ) and ( player.consecutive_wins >= @MAX_WINS )
-                @ignored_player = player
-                put "#{player.nick}'s guesses will be ignored in the next non-game round."
+        if winner == @last_winner
+            winner.consecutive_wins += 1
+            put "#{winner.consecutive_wins} wins in a row!"
+            if ( @game_parameters[ :state ] != :state_going ) and ( winner.consecutive_wins >= @MAX_WINS )
+                @ignored_player = winner
+                put "#{winner.nick}'s guesses will be ignored in the next non-game round."
             end
         else
-            player.consecutive_wins = 1
+            winner.consecutive_wins = 1
             @ignored_player = nil
         end
 
-        @last_winner = player
+        @last_winner = winner
 
         if not @def_shown
             showDefinition
@@ -230,7 +244,7 @@ class WordX
 
         # Record score.
         
-        player.save
+        winner.save
         @game.save
         @channel.current_word += 1
         @channel.save
