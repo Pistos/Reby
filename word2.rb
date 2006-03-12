@@ -162,9 +162,13 @@ class WordX
     end
     
     def printRating( nick, userhost, handle, channel, text )
-        player = Player.find_by_nick( nick )
+        player = Player.find_by_nick( text )
+        if player.nil?
+            player = Player.find_by_nick( nick )
+        end
+        
         if player != nil
-            put "#{player.nick}: Your battle rating is: #{player.rating}", channel
+            put "Battle rating of #{player.nick} is: #{player.rating}", channel
         else
             put "#{nick}: You're not a !word warrior!  Play a !wordbattle.", channel
         end

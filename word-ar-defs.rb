@@ -15,7 +15,9 @@ class Player < ActiveRecord::Base
     BASE_RATING = 2000
     
     def rating
-        points = 0
+        points = BASE_RATING
+        
+        # Add wins ...
         g = Game.find_by_sql [
             " \
                 select sum( games.points_awarded ) as rating \
@@ -28,10 +30,27 @@ class Player < ActiveRecord::Base
             id
         ]
         if not g.nil? and not g.empty?
-            points = g[ 0 ].rating.to_i
+            points += g[ 0 ].rating.to_i
         end
         
-        return BASE_RATING + points
+        # Subtract losses...
+        g = Game.find_by_sql [
+            " \
+                select sum( games.points_awarded ) as rating \
+                from games, games_players \
+                where \
+                    games.winner <> ? \
+                    and games.id = games_players.game_id \
+                    and games_players.player_id = ? \
+                group by games.winner",
+            id,
+            id
+        ]
+        if not g.nil? and not g.empty?
+            points -= g[ 0 ].rating.to_i
+        end
+        
+        return points
     end
 end
 
