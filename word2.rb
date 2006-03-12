@@ -151,7 +151,26 @@ class WordX
     end
 
     def printScore( nick, userhost, handle, channel, text )
-        
+        put( "Scores:", channel )
+        Game.find(
+            :all,
+            :include => [ :players ],
+            :select => [ 'players.nick', 'sum( games.points_awarded ) AS points' ],
+            :conditions => 'games.winner = players.id',
+            :group => :nick
+        ).each do |player|
+            put( "#{player.nick}: #{player.points}", channel )
+        end
+        put( "---", channel )
+        Game.find(
+            :all,
+            :conditions => [ 'winner IS NOT NULL' ],
+            :select => 'winner, sum( points_awarded ) AS points',
+            :group => :winner
+        ).each do |player|
+            put( "#{player.winner}: #{player.points}", channel )
+        end
+        put( "Done.", channel )
     end
 
     def killTimers
