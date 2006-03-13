@@ -14,6 +14,22 @@ class Player < ActiveRecord::Base
     
     BASE_RATING = 2000
     
+    def games_played
+        result = Player.find_by_sql [
+            " \
+                SELECT COUNT( game_id ) AS num_games
+                FROM games_players
+                WHERE player_id = ?
+            ",
+            id
+        ]
+        if result != nil
+            return result[ 0 ].num_games.to_i
+        else
+            return nil
+        end
+    end
+    
     def rating
         points = BASE_RATING
         

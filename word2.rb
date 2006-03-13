@@ -20,6 +20,7 @@ class WordX
     LAST_MODIFIED = 'March 12, 2006'
     MIN_GAMES_PLAYED_TO_SHOW_SCORE = 0
     DEFAULT_INITIAL_POINT_VALUE = 100
+    MAX_SCORES_TO_SHOW = 10
     
     def initialize
         # Change these as you please.
@@ -27,7 +28,6 @@ class WordX
         @MAX_WINS = 4
         @DEFAULT_NUM_ROUNDS = 3
         @TOO_MANY_ROUNDS = 50
-        @TOO_MANY_SCORES = 5
         # see also #DEFAULT_WIN_CRITERION
         # End of configuration variables.
 
@@ -162,8 +162,13 @@ class WordX
     end
     
     def printRating( nick, userhost, handle, channel, text )
-        player = Player.find_by_nick( text )
-        if player.nil?
+        if not text.empty?
+            player = Player.find_by_nick( text )
+            if player.nil?
+                put "'#{text}' is not a player.", channel
+                return
+            end
+        else
             player = Player.find_by_nick( nick )
         end
         
@@ -171,6 +176,34 @@ class WordX
             put "Battle rating of #{player.nick} is: #{player.rating}", channel
         else
             put "#{nick}: You're not a !word warrior!  Play a !wordbattle.", channel
+        end
+    end
+    
+    # Returns an array of [Player,rating] subarrays.
+    def ranking
+        ratings = Hash.new
+        Player.find( :all ).each do |player|
+            if player.games_played > 0
+                ratings[ player ] = player.rating
+            end
+        end
+        
+        return ratings.sort { |a,b| b[ 1 ] <=> a[ 1 ] }
+    end
+    
+    def printRanking( nick, userhost, handle, channel, text )
+        num_to_show = 5
+        if not text.empty?
+            num_to_show = text.to_i
+            if num_to_show > MAX_SCORES_TO_SHOW
+                num_to_show = MAX_SCORES_TO_SHOW
+            end
+        end
+        num_shown = 0
+        ranking.each do |player, rating|
+            put( "%2d. %-20s %d" % [ num_shown + 1, player.nick, rating ], channel )
+            num_shown += 1
+            break if num_shown >= num_to_show
         end
     end
     
@@ -218,7 +251,8 @@ class WordX
                 loser = player
             end
         end
-        @point_value *= loser_rating.to_f / winner.rating.to_f
+        @point_value *= ( loser_rating.to_f / winner.rating.to_f )
+        @point_value = @point_value.to_i
 
         put "#{winner.nick} got it ... #{@word.word} ... for #{@point_value} points."
         
@@ -438,3 +472,6 @@ $reby.bind( "pub", "-", "!word", "oneRound", "$wordx" )
 $reby.bind( "pub", "-", "!wordscore", "printScore", "$wordx" )
 $reby.bind( "pub", "-", "!wordbattle", "setupGame", "$wordx" )
 $reby.bind( "pub", "-", "!wordrating", "printRating", "$wordx" )
+$reby.bind( "pub", "-", "!wordrank", "printRanking", "$wordx" )
+$reby.bind( "pub", "-", "!wordranking", "printRanking", "$wordx" )
+
