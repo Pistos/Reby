@@ -58,7 +58,7 @@ class Player < ActiveRecord::Base
                     games.winner <> ? \
                     and games.id = games_players.game_id \
                     and games_players.player_id = ? \
-                group by games.winner",
+                group by games_players.player_id",
             id,
             id
         ]
