@@ -75,7 +75,36 @@ class Player < ActiveRecord::Base
         
         return points
     end
+    
+    def title
+        retval = nil
+        t = Title.find_by_sql [
+            " \
+                select titles.text, points \
+                from title_levels, titles \
+                where \
+                    title_levels.id = titles.title_level_id \
+                    and title_levels.points < ? \
+                    and title_set_id = 1 \
+                order by points desc \
+                limit 1",
+            rating
+        ]
+        if not t.nil?
+            retval = t[ 0 ].text
+        end
+        return retval
+    end
 end
 
 class Channel < ActiveRecord::Base
+end
+
+class Title < ActiveRecord::Base
+end
+
+class TitleSet < ActiveRecord::Base
+end
+
+class TitleLevel < ActiveRecord::Base
 end

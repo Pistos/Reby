@@ -180,7 +180,7 @@ class WordX
                     break
                 end
             end
-            put "Battle rating of #{player.nick} is: #{player.rating} (rank: ##{rank})", channel
+            put "#{player.nick}, #{player.title} - Battle rating: #{player.rating} (Rank: ##{rank})", channel
         else
             put "#{nick}: You're not a !word warrior!  Play a !wordbattle.", channel
         end
