@@ -220,7 +220,7 @@ class WordX
             index += 1
             next if index < start_rank
             
-            put( "%2d. %-20s %d" % [ index, player.nick, rating ], channel )
+            put( "%2d. %-32s %d" % [ index, "#{player.nick}, #{player.title}", rating ], channel )
             num_shown += 1
             break if num_shown >= num_to_show
         end
