@@ -94,6 +94,10 @@ class WordX
         return if @game_parameters[ :state ] != :state_going and game_going?
 
         @channel = Channel.find_or_create_by_name( channel )
+        if not nick.nil?
+            # Game Set is starting...
+            @initial_ranking = ranking
+        end
         @word = Word.random
 
         @game = Game.create( {
@@ -104,11 +108,9 @@ class WordX
         @initial_point_value = DEFAULT_INITIAL_POINT_VALUE
         @already_guessed = false
         
-        # Is a GameSet just starting?
         if @game_parameters[ :state ] == :state_going
             @initial_point_value += (@players.length - 2) * 15
             @game.players = @players
-            @initial_ranking = ranking
         end
         @point_value = @initial_point_value
         
@@ -351,7 +353,7 @@ class WordX
                             report << '.'
                         end
                     elsif final_score < initial_score
-                        report << "  #{player.nick} lost #{initial_score - initial_score} points"
+                        report << "  #{player.nick} lost #{initial_score - final_score} points"
                         if final_rank < initial_rank
                             report << " and fell from ##{initial_rank} to ##{final_rank}!"
                         else
@@ -494,7 +496,7 @@ class WordX
     def startGame( nick, userhost, handle, channel, text )
         return if channel != @channel.name
         if not isStarter?( Player.find_or_create_by_nick( nick ) )
-            put "Only the person who invoked the battled can start it."
+            put "Only the person who invoked the battle can start it."
             return
         end
         if @players.length < 2
