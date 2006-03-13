@@ -14,6 +14,23 @@
 
 require 'word-ar-defs'
 
+class Array
+    def rank_and_score( player )
+        rank = nil
+        score = nil
+        
+        each_with_index do |pair, index|
+            if pair[ 0 ] == player
+                rank = index + 1
+                score = pair[ 1 ]
+                break
+            end
+        end
+        
+        return rank, score
+    end
+end
+
 class WordX
     
     VERSION = '2.0.0'
@@ -91,6 +108,7 @@ class WordX
         if @game_parameters[ :state ] == :state_going
             @initial_point_value += (@players.length - 2) * 15
             @game.players = @players
+            @initial_ranking = ranking
         end
         @point_value = @initial_point_value
         
@@ -155,7 +173,14 @@ class WordX
         end
         
         if player != nil
-            put "Battle rating of #{player.nick} is: #{player.rating}", channel
+            rank = 'unranked'
+            ranking.each_with_index do |pair, index|
+                if pair[ 0 ] == player
+                    rank = index + 1
+                    break
+                end
+            end
+            put "Battle rating of #{player.nick} is: #{player.rating} (rank: ##{rank})", channel
         else
             put "#{nick}: You're not a !word warrior!  Play a !wordbattle.", channel
         end
@@ -179,17 +204,19 @@ class WordX
         case text
             when /^\d+$/
                 num_to_show = text.to_i
-                if num_to_show > MAX_SCORES_TO_SHOW
-                    num_to_show = MAX_SCORES_TO_SHOW
-                end
             when /^(\d+)\s*-\s*(\d+)$/
                 start_rank = $1.to_i
                 end_rank = $2.to_i
                 num_to_show = end_rank - start_rank + 1
         end
+        if num_to_show > MAX_SCORES_TO_SHOW
+            num_to_show = MAX_SCORES_TO_SHOW
+        end
+        
         num_shown = 0
         index = 0
-        ranking.each do |player, rating|
+        r = ranking
+        r.each do |player, rating|
             index += 1
             next if index < start_rank
             
@@ -197,6 +224,8 @@ class WordX
             num_shown += 1
             break if num_shown >= num_to_show
         end
+        
+        put "(#{r.size} players total)" , channel
     end
     
     def killTimers
@@ -306,10 +335,33 @@ class WordX
                 retval = true
             else
                 # No more rounds in the game.  GAME OVER.
-
-                put "Game over."
-
+                
                 @game_parameters[ :state ] = :state_none
+
+                report = ''
+                @final_ranking = ranking
+                @game.players.each do |player|
+                    initial_rank, initial_score = @initial_ranking.rank_and_score( player )
+                    final_rank, final_score     = @final_ranking.rank_and_score( player )
+                    if final_score > initial_score
+                        report << "  #{player.nick} gained #{final_score - initial_score} points"
+                        if final_rank > initial_rank
+                            report << " and rose from ##{initial_rank} to ##{final_rank}!"
+                        else
+                            report << '.'
+                        end
+                    elsif final_score < initial_score
+                        report << "  #{player.nick} lost #{initial_score - initial_score} points"
+                        if final_rank < initial_rank
+                            report << " and fell from ##{initial_rank} to ##{final_rank}!"
+                        else
+                            report << '.'
+                        end
+                    end
+                end
+                
+                put "Game over.#{report}"
+
             end
         end
         return retval
