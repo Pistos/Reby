@@ -28,19 +28,7 @@ class WordX
         @MAX_WINS = 4
         @DEFAULT_NUM_ROUNDS = 3
         @TOO_MANY_ROUNDS = 50
-        # see also #DEFAULT_WIN_CRITERION
         # End of configuration variables.
-
-        @SCORE_TOTAL_POINTS = 0
-        @SCORE_OFFICIAL_POINTS = 1
-        @SCORE_TOTAL_WINS = 2
-        @SCORE_OFFICIAL_WINS = 3
-        @SCORE_OFFICIAL_ROUNDS_PLAYED = 4
-        @SCORE_GAMES_WON = 5
-        @SCORE_GAMES_PLAYED = 6
-        @SCORE_GAMES_TIED = 7
-        
-        @SHOW_ALL_SCORES = 30
 
         @channel = nil
         @word = nil
@@ -48,16 +36,10 @@ class WordX
         @last_winner = nil
         @consecutive_wins = 0
         @ignored_player = nil
-        @current_word_index = 0
 
         @game_parameters = Hash.new
         @game_parameters[ :state ] = :state_none
 
-        @WINBY_POINTS = 0
-        @WINBY_WINS = 1
-        @WINBYSTR = [ "points", "wins" ]
-        @DEFAULT_WIN_CRITERION = @WINBY_POINTS
-        
         @num_syllables = Hash.new
         @part_of_speech = Hash.new
         @etymology = Hash.new
@@ -95,8 +77,10 @@ class WordX
         return if @game_parameters[ :state ] != :state_going and game_going?
 
         @channel = Channel.find_or_create_by_name( channel )
+        @word = Word.random
+
         @game = Game.create( {
-            :word_id => @channel.current_word,
+            :word_id => @word.id
         } )
         killTimers
         @def_shown = false
@@ -110,8 +94,6 @@ class WordX
         end
         @point_value = @initial_point_value
         
-        @word = Word.find( @channel.current_word )
-
         # Mix up the letters
 
         indices = Array.new
@@ -222,11 +204,13 @@ class WordX
         winner = Player.find_by_nick( nick )
         return if winner.nil?
         
-        if ( @game_parameters[ :state ] != :state_going ) and ( winner == @ignored_player )
+        is_going = ( @game_parameters[ :state ] == :state_going )
+        
+        if not is_going and ( winner == @ignored_player )
             put( "You've already won #{winner.consecutive_wins} times in a row!  Give some other people a chance.", winner.nick )
             return
         end
-        if ( @game_parameters[ :state ] == :state_going ) and ( not @players.include?( winner ) )
+        if is_going and ( not @players.include?( winner ) )
             sendNotice( "Since you did not join this game, your guesses are not counted.", winner.nick )
             return
         end
@@ -240,19 +224,21 @@ class WordX
         @game.end_time = Time.now
         @game.winner = winner.id
         
-        # Modify award based on comparison of ratings.
-        loser_rating = 0
-        loser = nil
-        @players.each do |player|
-            next if player == winner
-            player_rating = player.rating
-            if player_rating > loser_rating
-                loser_rating = player_rating
-                loser = player
+        if is_going
+            # Modify award based on comparison of ratings.
+            loser_rating = 0
+            loser = nil
+            @players.each do |player|
+                next if player == winner
+                player_rating = player.rating
+                if player_rating > loser_rating
+                    loser_rating = player_rating
+                    loser = player
+                end
             end
+            @point_value *= ( loser_rating.to_f / winner.rating.to_f )
+            @point_value = @point_value.to_i
         end
-        @point_value *= ( loser_rating.to_f / winner.rating.to_f )
-        @point_value = @point_value.to_i
 
         put "#{winner.nick} got it ... #{@word.word} ... for #{@point_value} points."
         
@@ -280,7 +266,6 @@ class WordX
         
         winner.save
         @game.save
-        @channel.current_word += 1
         @channel.save
         
         if not nextRound
@@ -294,7 +279,6 @@ class WordX
         
         @game.end_time = Time.now
         @game.save
-        @channel.current_word += 1
         @channel.save
         
         if not nextRound
@@ -373,7 +357,6 @@ class WordX
         put "Commands: rounds <number>; join; leave; players; abort; start"
         @game_parameters[ :num_rounds ] = @DEFAULT_NUM_ROUNDS
         @game_parameters[ :starter ] = player
-        @game_parameters[ :win_criterion ] = @DEFAULT_WIN_CRITERION
         @players = Array.new
         setup_addPlayer( nick, userhost, handle, channel, text )
 

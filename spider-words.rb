@@ -53,7 +53,11 @@ class WordSpider
         other_words.uniq!
         $stderr.puts other_words.join( '; ' )
         other_words.each do |word|
-            if not @seen_words.include?( word ) and Word.find_by_word( word ).nil?
+            if(
+                not @seen_words.include?( word ) and
+                not @next_words.include?( word ) and
+                Word.find_by_word( word ).nil?
+            )
                 @next_words << word
             end
         end

@@ -1,6 +1,13 @@
 require 'active_record'
 
 class Word < ActiveRecord::Base
+    def Word::random
+        return Word.find(
+            :first,
+            :order => 'RANDOM()',
+            :limit => 1
+        )
+    end
 end
 
 class Game < ActiveRecord::Base
@@ -17,9 +24,9 @@ class Player < ActiveRecord::Base
     def games_played
         result = Player.find_by_sql [
             " \
-                SELECT COUNT( game_id ) AS num_games
-                FROM games_players
-                WHERE player_id = ?
+                SELECT COUNT( game_id ) AS num_games \
+                FROM games_players \
+                WHERE player_id = ? \
             ",
             id
         ]
