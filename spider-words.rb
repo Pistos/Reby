@@ -66,7 +66,9 @@ class WordSpider
                 not @next_words.include?( word ) and
                 Word.find_by_word( word ).nil?
             )
-                @next_words << word
+                if rand( other_words.length ) < 4
+                    @next_words << word
+                end
             end
         end
     end

@@ -17,7 +17,7 @@ require 'word-ar-defs'
 class WordX
     
     VERSION = '2.0.0'
-    LAST_MODIFIED = 'March 12, 2006'
+    LAST_MODIFIED = 'March 13, 2006'
     MIN_GAMES_PLAYED_TO_SHOW_SCORE = 0
     DEFAULT_INITIAL_POINT_VALUE = 100
     MAX_SCORES_TO_SHOW = 10
@@ -175,15 +175,25 @@ class WordX
     
     def printRanking( nick, userhost, handle, channel, text )
         num_to_show = 5
-        if not text.empty?
-            num_to_show = text.to_i
-            if num_to_show > MAX_SCORES_TO_SHOW
-                num_to_show = MAX_SCORES_TO_SHOW
-            end
+        start_rank = 1
+        case text
+            when /^\d+$/
+                num_to_show = text.to_i
+                if num_to_show > MAX_SCORES_TO_SHOW
+                    num_to_show = MAX_SCORES_TO_SHOW
+                end
+            when /^(\d+)\s*-\s*(\d+)$/
+                start_rank = $1.to_i
+                end_rank = $2.to_i
+                num_to_show = end_rank - start_rank + 1
         end
         num_shown = 0
+        index = 0
         ranking.each do |player, rating|
-            put( "%2d. %-20s %d" % [ num_shown + 1, player.nick, rating ], channel )
+            index += 1
+            next if index < start_rank
+            
+            put( "%2d. %-20s %d" % [ index, player.nick, rating ], channel )
             num_shown += 1
             break if num_shown >= num_to_show
         end
