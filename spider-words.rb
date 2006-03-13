@@ -27,12 +27,20 @@ class WordSpider
     
     def start
         while not @next_words.empty?
-            @word = @next_words.shift
-            getWord
-            if @next_words.size < HIGH_QUEUE_LEVEL
-                gatherRelated
+            begin
+                @word = @next_words.delete_at( rand( @next_words.length ) )
+                getWord
+                if @next_words.size < HIGH_QUEUE_LEVEL
+                    gatherRelated
+                end
+            rescue Exception => e
+                if e.class == Interrupt
+                    $stderr.puts "Aborted."
+                    break
+                else
+                    $stderr.puts "! (#{e.class}) #{e.message}"
+                end
             end
-            $stderr.puts "words left: #{@next_words.size}"
         end
     end
     
@@ -41,8 +49,8 @@ class WordSpider
         open( "http://dictionary.reference.com/search?q=#{@word}" ) do |html|
             soup = BeautifulSoup.new( html.read )
             
-            soup.find_all( 'a', :attrs => { 'href' => /\/search\?q=[A-z]+/ } ).each do |a|
-                a[ 'href' ] =~ /([A-z]+)$/
+            soup.find_all( 'a', :attrs => { 'href' => /\/search\?q=[a-z]+/ } ).each do |a|
+                a[ 'href' ] =~ /q=([a-z]+)$/
                 other_word = $1
                 if other_word != nil and other_word.length >= MIN_WORD_LENGTH
                     other_words << other_word
@@ -66,7 +74,7 @@ class WordSpider
     def getWord
         @seen_words << @word
         catch( :problem ) do
-            $stderr.puts "** #{@word}"
+            $stderr.puts "#{@word} ---------------"
         
             definition = ''
             part_of_speech = ''
@@ -78,7 +86,7 @@ class WordSpider
             
             syllabification = nil
             dict_lines.each do |line2|
-                if line2 =~ /<b>([a-z]+(?:&#183;[a-z]+)*)<\/b>.* &nbsp;&nbsp;/
+                if line2 =~ /<[bB]>([a-z]+(?:&#183;[a-z]+)*)<\/[bB]>.* &nbsp;&nbsp;/
                     syllables = $1.split( /&#183;/ )
                     if syllables.join( "" ) == @word
                         syllabification = syllables
@@ -88,7 +96,7 @@ class WordSpider
             end
             
             if syllabification.nil?
-                $stderr.puts "No syllabification"
+                $stderr.puts "\tno syllabification"
                 throw :problem
             end
             
@@ -117,7 +125,7 @@ class WordSpider
                 etymology.gsub!( /\s*(of|from)$/, "" )
                 
                 if etymology.empty?
-                    $stderr.puts "No etymology"
+                    $stderr.puts "\tno etymology"
                     throw :problem
                 end
                 
@@ -181,12 +189,12 @@ class WordSpider
             end
         
             if definition.empty?
-                $stderr.puts "No definition"
+                $stderr.puts "\tno definition"
                 throw :problem
             end
             
             if part_of_speech.empty?
-                $stderr.puts "No part of speech"
+                $stderr.puts "\tno part of speech"
                 throw :problem
             end
             
