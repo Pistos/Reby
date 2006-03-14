@@ -11,6 +11,7 @@
 
 require 'open-uri'
 require 'rubyful_soup'
+require 'net/http'
 
 class GeoLocate
     def initialize
@@ -19,7 +20,7 @@ class GeoLocate
     end
     
     def locate_ip( from, keyword, text )
-        return if keyword != "311" or @ip_channel.empty? or not $reby.isbotnick( @ip_nick )
+        return if keyword != "311" or @ip_channel.empty? or $reby.isbotnick( @ip_nick )
         
         ip_address = text.split()[ 3 ]
         
@@ -33,10 +34,10 @@ class GeoLocate
         t = Thread.new do
             open( "http://www.geobytes.com/IpLocator.htm?GetLocation&ipaddress=#{ip_address}" ) do |html|
                 soup = BeautifulSoup.new( html.read )
-                country = soup.find( 'input', { 'name' => /ro-no_bots_pls13/ } )[ 'value' ]
-                region = soup.find( 'input', { 'name' => /ro-no_bots_pls15/ } )[ 'value' ]
-                city = soup.find( 'input', { 'name' => /ro-no_bots_pls17/ } )[ 'value' ]
-                timezone = soup.find( 'input', { 'name' => /ro-no_bots_pls9/ } )[ 'value' ]
+                country = soup.find( 'input', :attrs => { 'name' => /ro-no_bots_pls13/ } )[ 'value' ]
+                region = soup.find( 'input', :attrs => { 'name' => /ro-no_bots_pls15/ } )[ 'value' ]
+                city = soup.find( 'input', :attrs => { 'name' => /ro-no_bots_pls17/ } )[ 'value' ]
+                timezone = soup.find( 'input', :attrs => { 'name' => /ro-no_bots_pls9/ } )[ 'value' ]
                 
                 found = ( not ( country.empty? or region.empty? or city.empty? or timezone.empty? ) )
             end

@@ -10,7 +10,8 @@ require 'word-ar-defs'
 
 class WordSpider
     MIN_WORD_LENGTH = 4
-    HIGH_QUEUE_LEVEL = 20
+    HIGH_QUEUE_LEVEL = 50
+    NUM_OTHER_WORDS = 7
     
     def initialize( seed_word )
         @seen_words = Array.new
@@ -66,7 +67,7 @@ class WordSpider
                 not @next_words.include?( word ) and
                 Word.find_by_word( word ).nil?
             )
-                if rand( other_words.length ) < 4
+                if rand( other_words.length ) < NUM_OTHER_WORDS
                     @next_words << word
                 end
             end
