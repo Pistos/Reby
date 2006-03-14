@@ -38,6 +38,7 @@ class WordX
     MIN_GAMES_PLAYED_TO_SHOW_SCORE = 0
     DEFAULT_INITIAL_POINT_VALUE = 100
     MAX_SCORES_TO_SHOW = 10
+    INCLUDE_PLAYERS_WITH_NO_GAMES = true
     
     def initialize
         # Change these as you please.
@@ -195,10 +196,10 @@ class WordX
     end
     
     # Returns an array of [Player,rating] subarrays.
-    def ranking
+    def ranking( include_players_with_no_games = false )
         ratings = Hash.new
         Player.find( :all ).each do |player|
-            if player.games_played > 0
+            if player.games_played > 0 or include_players_with_no_games
                 ratings[ player ] = player.rating
             end
         end
@@ -357,18 +358,20 @@ class WordX
                 @game.players.each do |player|
                     initial_rank, initial_score = @initial_ranking.rank_and_score( player )
                     final_rank, final_score     = @final_ranking.rank_and_score( player )
-                    if final_score > initial_score
+                    if initial_score != nil and final_score > initial_score
                         report << "  #{player.nick} gained #{final_score - initial_score} points"
-                        if final_rank > initial_rank
+                        if initial_rank != nil and final_rank < initial_rank
                             report << " and rose from ##{initial_rank} to ##{final_rank}!"
                         else
+                            $reby.log "#{player.nick} init: #{initial_rank} final: #{final_rank}"
                             report << '.'
                         end
-                    elsif final_score < initial_score
+                    elsif initial_score != nil and final_score < initial_score
                         report << "  #{player.nick} lost #{initial_score - final_score} points"
-                        if final_rank < initial_rank
+                        if initial_rank != nil and final_rank > initial_rank
                             report << " and fell from ##{initial_rank} to ##{final_rank}!"
                         else
+                            $reby.log "#{player.nick} init: #{initial_rank} final: #{final_rank}"
                             report << '.'
                         end
                     end
@@ -444,8 +447,12 @@ class WordX
     def setup_addPlayer( nick, userhost, handle, channel, text )
         return if channel != @channel.name
         player = Player.find_or_create_by_nick( nick )
-        @players << player
-        put "#{player.nick} has joined the game."
+        if not @players.include? player
+            @players << player
+            put "#{player.nick} has joined the game."
+        else
+            put "#{player.nick}: You're already in the game!"
+        end
     end
 
     def setup_numRounds( nick, userhost, handle, channel, text )
