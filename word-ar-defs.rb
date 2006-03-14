@@ -84,7 +84,7 @@ class Player < ActiveRecord::Base
                 from title_levels, titles \
                 where \
                     title_levels.id = titles.title_level_id \
-                    and title_levels.points < ? \
+                    and title_levels.points <= ? \
                     and title_set_id = 1 \
                 order by points desc \
                 limit 1",

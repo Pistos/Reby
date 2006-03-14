@@ -10,7 +10,7 @@
 # !locate <nick>
 
 require 'open-uri'
-require 'RubyfulSoup'
+require 'rubyful_soup'
 
 class GeoLocate
     def initialize

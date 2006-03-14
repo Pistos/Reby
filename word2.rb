@@ -141,26 +141,32 @@ class WordX
     end
 
     def printScore( nick, userhost, handle, channel, text )
-        put( "Scores:", channel )
-        Game.find(
-            :all,
-            :include => [ :players ],
-            :select => [ 'players.nick', 'sum( games.points_awarded ) AS points' ],
-            :conditions => 'games.winner = players.id',
-            :group => :nick
-        ).each do |player|
-            put( "#{player.nick}: #{player.points}", channel )
+        games = Game.find_by_sql [
+            " \
+                select games.winner, sum( points_awarded ) AS points \
+                from games \
+                where \
+                    not exists ( \
+                        select 1 from games_players where game_id = games.id limit 1 \
+                    ) and winner is not null \
+                group by winner \
+                order by sum( points_awarded ) desc"
+        ]
+        
+        num_to_show, start_rank, end_rank = printing_parameters( text )
+        
+        num_shown = 0
+        index = 0
+        games.each do |game|
+            index += 1
+            next if index < start_rank
+            
+            player = Player.find( game.winner )
+            put( "%2d. %-20s %5d" % [ index, player.nick, game.points ], channel )
+            
+            num_shown += 1
+            break if num_shown >= num_to_show
         end
-        put( "---", channel )
-        Game.find(
-            :all,
-            :conditions => [ 'winner IS NOT NULL' ],
-            :select => 'winner, sum( points_awarded ) AS points',
-            :group => :winner
-        ).each do |player|
-            put( "#{player.winner}: #{player.points}", channel )
-        end
-        put( "Done.", channel )
     end
     
     def printRating( nick, userhost, handle, channel, text )
@@ -200,7 +206,7 @@ class WordX
         return ratings.sort { |a,b| b[ 1 ] <=> a[ 1 ] }
     end
     
-    def printRanking( nick, userhost, handle, channel, text )
+    def printing_parameters( text )
         num_to_show = 5
         start_rank = 1
         case text
@@ -215,6 +221,12 @@ class WordX
             num_to_show = MAX_SCORES_TO_SHOW
         end
         
+        return num_to_show, start_rank, end_rank
+    end
+    
+    def printRanking( nick, userhost, handle, channel, text )
+        num_to_show, start_rank, end_rank = printing_parameters( text )
+        
         num_shown = 0
         index = 0
         r = ranking
@@ -222,7 +234,7 @@ class WordX
             index += 1
             next if index < start_rank
             
-            put( "%2d. %-32s %d" % [ index, "#{player.nick}, #{player.title}", rating ], channel )
+            put( "%2d. %-32s %5d" % [ index, "#{player.nick}, #{player.title}", rating ], channel )
             num_shown += 1
             break if num_shown >= num_to_show
         end
@@ -242,10 +254,10 @@ class WordX
     def correctGuess( nick, userhost, handle, channel, text )
         return if @already_guessed
         
-        winner = Player.find_by_nick( nick )
-        return if winner.nil?
-        
         is_going = ( @game_parameters[ :state ] == :state_going )
+        
+        winner = Player.find_or_create_by_nick( nick )
+        return if winner.nil?
         
         if not is_going and ( winner == @ignored_player )
             put( "You've already won #{winner.consecutive_wins} times in a row!  Give some other people a chance.", winner.nick )
