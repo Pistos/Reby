@@ -95,9 +95,13 @@ class WordX
         return if @game_parameters[ :state ] != :state_going and game_going?
 
         @channel = Channel.find_or_create_by_name( channel )
-        if not nick.nil?
+        if nick.nil?
             # Game Set is starting...
             @initial_ranking = ranking
+            @initial_titles = Hash.new
+            @players.each do |player|
+                @initial_titles[ player ] = player.title
+            end
         end
         @word = Word.random
 
@@ -355,11 +359,20 @@ class WordX
 
                 report = ''
                 @final_ranking = ranking
+                @final_titles = Hash.new
+                @players.each do |player|
+                    @final_titles[ player ] = player.title
+                end
                 @game.players.each do |player|
                     initial_rank, initial_score = @initial_ranking.rank_and_score( player )
                     final_rank, final_score     = @final_ranking.rank_and_score( player )
+                    initial_title = @initial_titles[ player ]
+                    final_title = @final_titles[ player ]
                     if initial_score != nil and final_score > initial_score
                         report << "  #{player.nick} gained #{final_score - initial_score} points"
+                        if initial_title != final_title
+                            report << " and advanced from #{initial_title} to #{final_title}!"
+                        end
                         if initial_rank != nil and final_rank < initial_rank
                             report << " and rose from ##{initial_rank} to ##{final_rank}!"
                         else
@@ -368,6 +381,9 @@ class WordX
                         end
                     elsif initial_score != nil and final_score < initial_score
                         report << "  #{player.nick} lost #{initial_score - final_score} points"
+                        if initial_title != final_title
+                            report << " and got demoted from #{initial_title} to #{final_title}!"
+                        end
                         if initial_rank != nil and final_rank > initial_rank
                             report << " and fell from ##{initial_rank} to ##{final_rank}!"
                         else
