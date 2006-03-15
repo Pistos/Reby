@@ -35,11 +35,23 @@ class GeoLocate
         t = Thread.new do
             open( "http://www.geobytes.com/IpLocator.htm?GetLocation&ipaddress=#{ip_address}" ) do |html|
                 soup = BeautifulSoup.new( html.read )
-                country = soup.find( 'input', :attrs => { 'name' => /ro-no_bots_pls13/ } )[ 'value' ]
-                region = soup.find( 'input', :attrs => { 'name' => /ro-no_bots_pls15/ } )[ 'value' ]
-                city = soup.find( 'input', :attrs => { 'name' => /ro-no_bots_pls17/ } )[ 'value' ]
-                timezone = soup.find( 'input', :attrs => { 'name' => /ro-no_bots_pls9/ } )[ 'value' ]
-                
+                itag = soup.find( 'input', :attrs => { 'name' => /ro-no_bots_pls13/ } )
+                if itag != nil
+                    country = itag[ 'value' ]
+                end
+                itag = soup.find( 'input', :attrs => { 'name' => /ro-no_bots_pls15/ } )
+                if itag != nil
+                    region = itag[ 'value' ]
+                end
+                itag = soup.find( 'input', :attrs => { 'name' => /ro-no_bots_pls17/ } )
+                if itag != nil
+                    city = itag[ 'value' ]
+                end
+                itag = soup.find( 'input', :attrs => { 'name' => /ro-no_bots_pls9/ } )
+                if itag != nil
+                    timezone = itag[ 'value' ]
+                end
+                    
                 found = ( not ( country.empty? or region.empty? or city.empty? or timezone.empty? ) )
             end
         end
