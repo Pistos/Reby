@@ -456,6 +456,8 @@ class WordX
         @GAME_BINDS.each do |command, method|
             $reby.bind( "pub", "-", command, method, "$wordx" )
         end
+        
+        $reby.utimer( 180, "setup_timeoutGame", "$wordx" )
     end
 
     def setup_addPlayer( nick, userhost, handle, channel, text )
@@ -509,6 +511,10 @@ class WordX
         end
     end
     
+    def setup_timeoutGame
+        doAbort
+    end
+    
     def setup_abort( nick, userhost, handle, channel, text )
         return if channel != @channel.name
         if (
@@ -519,7 +525,21 @@ class WordX
             return
         end
 
+        doAbort
+    end
+    
+    def killTimeoutTimer
+        $reby.utimers.each do |utimer|
+            case utimer[ 1 ]
+                when /setup_timeoutGame/
+                    $reby.killutimer( utimer[ 2 ] )
+            end
+        end
+    end
+    
+    def doAbort
         unbindSetupBinds
+        killTimeoutTimer
         @game_parameters[ :state ] = :state_none
         put "Game aborted."
         @channel = nil
@@ -537,6 +557,7 @@ class WordX
         end
 
         unbindSetupBinds
+        killTimeoutTimer
 
         @game_parameters[ :current_round ] = 1
         @channel = nil
