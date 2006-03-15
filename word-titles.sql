@@ -16,6 +16,8 @@ INSERT INTO title_levels VALUES (15, 2700);
 INSERT INTO title_levels VALUES (16, 2800);
 INSERT INTO title_levels VALUES (17, 2900);
 INSERT INTO title_levels VALUES (18, 3000);
+INSERT INTO title_levels VALUES (19, 3500);
+INSERT INTO title_levels VALUES (20, 4000);
 
 INSERT INTO title_sets (name) VALUES ( 'Knight' );
 INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 1, 1, 'Slave' );
@@ -32,10 +34,12 @@ INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 1, 11, 'New Kni
 INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 1, 12, 'Ordinary Knight' );
 INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 1, 13, 'Veteran Knight' );
 INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 1, 14, 'Bronze Knight' );
-INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 1, 15, 'Silver Knight' );
-INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 1, 16, 'Gold Knight' );
-INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 1, 17, 'Platinum Knight' );
-INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 1, 18, 'Paladin' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 1, 15, 'Azure Knight' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 1, 16, 'Silver Knight' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 1, 17, 'Gold Knight' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 1, 18, 'Platinum Knight' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 1, 19, 'Paladin' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 1, 20, 'Grand Paladin' );
 
 INSERT INTO title_sets (name) VALUES ( 'Some Class Name' );
 INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 2, 1, '' );
@@ -56,3 +60,5 @@ INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 2, 15, '' );
 INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 2, 16, '' );
 INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 2, 17, '' );
 INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 2, 18, '' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 2, 19, '' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 2, 20, '' );
