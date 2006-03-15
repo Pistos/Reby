@@ -8,6 +8,10 @@ class Word < ActiveRecord::Base
             :limit => 1
         )
     end
+    
+    def mixed
+        return word.split(//).sort_by{rand}.join
+    end
 end
 
 class Game < ActiveRecord::Base

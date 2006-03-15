@@ -121,14 +121,9 @@ class WordX
         
         # Mix up the letters
 
-        indices = Array.new
-        0.upto( @word.word.length ) do |index|
-            indices.push index
-        end
-        mixed_word = ""
-        0.upto( @word.word.length ) do
-            index = indices.delete_at( rand( indices.length ) )
-            mixed_word += @word.word[ index..index ]
+        mixed_word = @word.mixed
+        while mixed_word == @word.word
+            mixed_word = @word.mixed
         end
 
         $reby.bind( "pub", "-", @word.word, "correctGuess", "$wordx" )
