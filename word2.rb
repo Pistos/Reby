@@ -225,7 +225,7 @@ class WordX
     end
     
     def printRanking( nick, userhost, handle, channel, text )
-        if text !~ /^[\d -]+$/
+        if text =~ /^[^\d -]+$/
             printRating( nick, userhost, handle, channel, text )
             return
         end
