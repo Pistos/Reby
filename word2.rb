@@ -225,6 +225,10 @@ class WordX
     end
     
     def printRanking( nick, userhost, handle, channel, text )
+        if text !~ /^[\d -]+$/
+            printRating( nick, userhost, handle, channel, text )
+            return
+        end
         num_to_show, start_rank, end_rank = printing_parameters( text )
         
         num_shown = 0
