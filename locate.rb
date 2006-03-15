@@ -10,6 +10,7 @@
 # !locate <nick>
 
 require 'open-uri'
+require 'rubygems'
 require 'rubyful_soup'
 require 'net/http'
 
