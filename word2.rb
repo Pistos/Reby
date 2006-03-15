@@ -92,16 +92,16 @@ class WordX
     end
 
     def oneRound( nick, userhost, handle, channel, text )
-        return if @game_parameters[ :state ] != :state_going and game_going?
+        return if nick != nil and game_going?
 
         @channel = Channel.find_or_create_by_name( channel )
-        if nick.nil?
-            # Game Set is starting...
+        if @game_parameters[ :state ] == :state_starting
             @initial_ranking = ranking
             @initial_titles = Hash.new
             @players.each do |player|
                 @initial_titles[ player ] = player.title
             end
+            @game_parameters[ :state ] = :state_going
         end
         @word = Word.random
 
@@ -217,7 +217,7 @@ class WordX
         case text
             when /^\d+$/
                 num_to_show = text.to_i
-            when /^(\d+)\s*-\s*(\d+)$/
+            when /^(\d+)\s*-\s*(\d+)/
                 start_rank = $1.to_i
                 end_rank = $2.to_i
                 num_to_show = end_rank - start_rank + 1
@@ -244,7 +244,7 @@ class WordX
             break if num_shown >= num_to_show
         end
         
-        put "(#{r.size} players total)" , channel
+        put "(#{num_shown} of #{r.size} players shown)" , channel
     end
     
     def killTimers
@@ -276,7 +276,6 @@ class WordX
         @already_guessed = true
 
         killTimers
-
         $reby.unbind( "pub", "-", @word.word, "correctGuess", "$wordx" )
         
         @game.end_time = Time.now
@@ -429,10 +428,10 @@ class WordX
     def game_going?
         retval = false
         if @game_parameters[ :state ] == :state_setup
-            put "A game is currently being setup."
+            put "A battle is currently being setup in #{@channel.name}."
             retval = true
         elsif @game_parameters[ :state ] == :state_going
-            put "A game is currently underway in #{@channel.name}."
+            put "A battle is currently underway in #{@channel.name}."
             retval = true
         elsif @channel != nil
             put "A round is in progress in #{@channel.name}."
@@ -443,7 +442,7 @@ class WordX
 
     def setupGame( nick, userhost, handle, channel, text )
         return if game_going?
-
+        
         @game_parameters[ :state ] = :state_setup
         @channel = Channel.find_or_create_by_name( channel )
         player = Player.find_or_create_by_nick( nick )
@@ -492,8 +491,11 @@ class WordX
             sendNotice( "You can't leave the game, you started it.  Try the abort command.", player.nick )
             return
         end
-        @players.delete player
-        put "#{nick} has withdrawn from the game."
+        if not( @players.delete player )
+            put "#{nick} has withdrawn from the game."
+        else
+            put "#{nick}: You cannot leave what you have not joined."
+        end
     end
 
     def setup_listPlayers( nick, userhost, handle, channel, text )
@@ -502,22 +504,18 @@ class WordX
         put str
     end
 
-    def isStarter?( player )
-        return(
-            player == @game_parameters[ :starter ] or
-            not $reby.onchan( @game_parameters[ :starter ].nick )
-        )
-    end
-
     def unbindSetupBinds
         @GAME_BINDS.each do |command, method|
             $reby.unbind( "pub", "-", command, method, "$wordx" )
         end
     end
-
+    
     def setup_abort( nick, userhost, handle, channel, text )
         return if channel != @channel.name
-        if not isStarter?( Player.find_or_create_by_nick( nick ) )
+        if (
+            Player.find_or_create_by_nick( nick ) != @game_parameters[ :starter ] and
+            $reby.onchan( @game_parameters[ :starter ].nick )
+        )
             put "Only the person who invoked the battle can abort it."
             return
         end
@@ -530,7 +528,7 @@ class WordX
 
     def startGame( nick, userhost, handle, channel, text )
         return if channel != @channel.name
-        if not isStarter?( Player.find_or_create_by_nick( nick ) )
+        if Player.find_or_create_by_nick( nick ) != @game_parameters[ :starter ]
             put "Only the person who invoked the battle can start it."
             return
         end
@@ -543,7 +541,7 @@ class WordX
 
         @game_parameters[ :current_round ] = 1
         @channel = nil
-        @game_parameters[ :state ] = :state_going
+        @game_parameters[ :state ] = :state_starting
         oneRound( nick, userhost, handle, channel, text )
     end
 end
@@ -551,8 +549,8 @@ end
 $wordx = WordX.new
 
 $reby.bind( "pub", "-", "!word", "oneRound", "$wordx" )
-$reby.bind( "pub", "-", "!wordscore", "printScore", "$wordx" )
 $reby.bind( "pub", "-", "!wordbattle", "setupGame", "$wordx" )
+$reby.bind( "pub", "-", "!wordscore", "printScore", "$wordx" )
 $reby.bind( "pub", "-", "!wordrating", "printRating", "$wordx" )
 $reby.bind( "pub", "-", "!wordrank", "printRanking", "$wordx" )
 $reby.bind( "pub", "-", "!wordranking", "printRanking", "$wordx" )
