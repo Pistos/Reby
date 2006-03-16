@@ -79,7 +79,6 @@ class WordX
             :password => "word",
             :database => "word"
         )
-        
     end
 
     # Sends a line to the game channel.
