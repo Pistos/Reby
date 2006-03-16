@@ -34,7 +34,7 @@ end
 class WordX
     
     VERSION = '2.0.0'
-    LAST_MODIFIED = 'March 13, 2006'
+    LAST_MODIFIED = 'March 16, 2006'
     MIN_GAMES_PLAYED_TO_SHOW_SCORE = 0
     DEFAULT_INITIAL_POINT_VALUE = 100
     MAX_SCORES_TO_SHOW = 10
@@ -145,28 +145,16 @@ class WordX
     end
 
     def printScore( nick, userhost, handle, channel, text )
-        games = Game.find_by_sql [
-            " \
-                select games.winner, sum( points_awarded ) AS points \
-                from games \
-                where \
-                    not exists ( \
-                        select 1 from participations where game_id = games.id limit 1 \
-                    ) and winner is not null \
-                group by winner \
-                order by sum( points_awarded ) desc"
-        ]
-        
         num_to_show, start_rank, end_rank = printing_parameters( text )
         
         num_shown = 0
         index = 0
-        games.each do |game|
+        players = Player.find( :all, :conditions => [ 'warmup_points > 0' ] )
+        players.each do |player|
             index += 1
             next if index < start_rank
             
-            player = Player.find( game.winner )
-            put( "%2d. %-20s %5d" % [ index, player.nick, game.points ], channel )
+            put( "%2d. %-20s %5d" % [ index, player.nick, player.warmup_points ], channel )
             
             num_shown += 1
             break if num_shown >= num_to_show
@@ -300,15 +288,12 @@ class WordX
                     winner_award = loss
                 end
             end
+        else
+            winner.warmup_points += winner_award
         end
 
         put "#{winner.nick} got it ... #{@word.word} ... for #{winner_award} points."
         
-        if is_going
-            winner_p = @game.participations.find_by_player_id( winner.id )
-            winner_p.points_awarded = winner_award
-        end
-
         if winner == @last_winner
             winner.consecutive_wins += 1
             put "#{winner.consecutive_wins} wins in a row!"
@@ -330,12 +315,12 @@ class WordX
         # Record score.
         
         winner.save
-        @game.participations.each { |p|
+        @game.participations.each do |p|
             if p.player_id == winner.id
                 p.points_awarded = winner_award
             end
             p.save
-        }
+        end
         @game.save
         @channel.save
         
