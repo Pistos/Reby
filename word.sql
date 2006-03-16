@@ -21,21 +21,22 @@ CREATE TABLE players (
     nick VARCHAR( 64 ) NOT NULL UNIQUE,
     creation_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     consecutive_wins INTEGER NOT NULL DEFAULT 0,
-    title_set_id INTEGER NOT NULL DEFAULT 1 REFERENCES title_sets( id )
+    title_set_id INTEGER NOT NULL DEFAULT 1 REFERENCES title_sets( id ),
+    warmup_points INTEGER DEFAULT 0
 );
 
 CREATE TABLE games (
     id SERIAL PRIMARY KEY,
     word_id INTEGER NOT NULL REFERENCES words( id ),
     start_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    end_time TIMESTAMP,
-    winner INTEGER REFERENCES players( id ),
-    points_awarded INTEGER
+    end_time TIMESTAMP
 );
 
-CREATE TABLE games_players (
+CREATE TABLE participations (
+    id SERIAL PRIMARY KEY,
     game_id INTEGER NOT NULL REFERENCES games( id ),
-    player_id INTEGER NOT NULL REFERENCES players( id )
+    player_id INTEGER NOT NULL REFERENCES players( id ),
+    points_awarded INTEGER
 );
 
 CREATE TABLE channels (

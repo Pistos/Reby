@@ -94,6 +94,10 @@ class WordX
         return if nick != nil and game_going?
 
         @channel = Channel.find_or_create_by_name( channel )
+        @word = Word.random
+        @game = Game.create( { :word_id => @word.id } )
+        @initial_point_value = DEFAULT_INITIAL_POINT_VALUE
+        
         if @game_parameters[ :state ] == :state_starting
             @initial_ranking = ranking
             @initial_titles = Hash.new
@@ -102,20 +106,21 @@ class WordX
             end
             @game_parameters[ :state ] = :state_going
         end
-        @word = Word.random
-
-        @game = Game.create( {
-            :word_id => @word.id
-        } )
-        killTimers
-        @def_shown = false
-        @initial_point_value = DEFAULT_INITIAL_POINT_VALUE
-        @already_guessed = false
         
         if @game_parameters[ :state ] == :state_going
-            @initial_point_value += (@players.length - 2) * 15
-            @game.players = @players
+            @players.each do |player|
+                @game.participations << Participation.new(
+                    :player_id => player.id,
+                    :game_id => @game.id
+                )
+            end
+            @initial_point_value += (@game.participations.size - 2) * 15
         end
+
+        killTimers
+        @def_shown = false
+        @already_guessed = false
+        
         @point_value = @initial_point_value
         
         # Mix up the letters
@@ -146,7 +151,7 @@ class WordX
                 from games \
                 where \
                     not exists ( \
-                        select 1 from games_players where game_id = games.id limit 1 \
+                        select 1 from participations where game_id = games.id limit 1 \
                     ) and winner is not null \
                 group by winner \
                 order by sum( points_awarded ) desc"
@@ -266,7 +271,7 @@ class WordX
             put( "You've already won #{winner.consecutive_wins} times in a row!  Give some other people a chance.", winner.nick )
             return
         end
-        if is_going and ( not @players.include?( winner ) )
+        if is_going and ( not @game.participations.find_by_player_id( winner.id ) )
             sendNotice( "Since you did not join this game, your guesses are not counted.", winner.nick )
             return
         end
@@ -277,27 +282,32 @@ class WordX
         $reby.unbind( "pub", "-", @word.word, "correctGuess", "$wordx" )
         
         @game.end_time = Time.now
-        @game.winner = winner.id
         
+        winner_award = @point_value
         if is_going
             # Modify award based on comparison of ratings.
-            loser_rating = 0
-            loser = nil
-            @players.each do |player|
+            winner_award = 0
+            winner_rating = winner.rating.to_f
+            highest_opponent_rating = 0
+            @game.participations.each do |participation|
+                player = Player.find( participation.player_id )
                 next if player == winner
-                player_rating = player.rating
-                if player_rating > loser_rating
-                    loser_rating = player_rating
-                    loser = player
+                player_rating = player.rating.to_f
+                loss = ( @point_value * ( player_rating / winner_rating ) ).to_i
+                participation.points_awarded = -loss
+                if player_rating > highest_opponent_rating
+                    highest_opponent_rating = player_rating
+                    winner_award = loss
                 end
             end
-            @point_value *= ( loser_rating.to_f / winner.rating.to_f )
-            @point_value = @point_value.to_i
         end
 
-        put "#{winner.nick} got it ... #{@word.word} ... for #{@point_value} points."
+        put "#{winner.nick} got it ... #{@word.word} ... for #{winner_award} points."
         
-        @game.points_awarded = @point_value
+        if is_going
+            winner_p = @game.participations.find_by_player_id( winner.id )
+            winner_p.points_awarded = winner_award
+        end
 
         if winner == @last_winner
             winner.consecutive_wins += 1
@@ -320,6 +330,12 @@ class WordX
         # Record score.
         
         winner.save
+        @game.participations.each { |p|
+            if p.player_id == winner.id
+                p.points_awarded = winner_award
+            end
+            p.save
+        }
         @game.save
         @channel.save
         
@@ -360,7 +376,8 @@ class WordX
                 @players.each do |player|
                     @final_titles[ player ] = player.title
                 end
-                @game.players.each do |player|
+                @game.participations.each do |participation|
+                    player = Player.find( participation.player_id )
                     initial_rank, initial_score = @initial_ranking.rank_and_score( player )
                     final_rank, final_score     = @final_ranking.rank_and_score( player )
                     initial_title = @initial_titles[ player ]
@@ -373,7 +390,6 @@ class WordX
                         if initial_rank != nil and final_rank < initial_rank
                             report << " and rose from ##{initial_rank} to ##{final_rank}!"
                         else
-                            $reby.log "#{player.nick} init: #{initial_rank} final: #{final_rank}"
                             report << '.'
                         end
                     elsif initial_score != nil and final_score < initial_score
@@ -384,7 +400,6 @@ class WordX
                         if initial_rank != nil and final_rank > initial_rank
                             report << " and fell from ##{initial_rank} to ##{final_rank}!"
                         else
-                            $reby.log "#{player.nick} init: #{initial_rank} final: #{final_rank}"
                             report << '.'
                         end
                     end
@@ -489,9 +504,7 @@ class WordX
         player = Player.find_or_create_by_nick( nick )
         if player == @game_parameters[ :starter ]
             sendNotice( "You can't leave the game, you started it.  Try the abort command.", player.nick )
-            return
-        end
-        if not( @players.delete player )
+        elsif @players.delete( player )
             put "#{nick} has withdrawn from the game."
         else
             put "#{nick}: You cannot leave what you have not joined."
