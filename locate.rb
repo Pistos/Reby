@@ -17,11 +17,27 @@ require 'net/http'
 class GeoLocate
     def initialize
         $reby.bind( "pub", "-", "!locate", "locate", "$locate" )
+        @requests = 0
+    end
+    
+    def bindWhoisResponse
         $reby.bind( "raw", "-", "311", "locate_ip", "$locate" )
+    end
+    def unbindWhoisResponse
+        $reby.unbind( "raw", "-", "311", "locate_ip", "$locate" )
     end
     
     def locate_ip( from, keyword, text )
-        return if keyword != "311" or @ip_channel.empty? or $reby.isbotnick( @ip_nick )
+        return if(
+            keyword != "311" or
+            @ip_channel.empty? or
+            $reby.isbotnick( @ip_nick )
+        )
+        @requests -= 1
+        if @requests <= 0
+            unbindWhoisResponse
+            @requests = 0
+        end
         
         ip_address = text.split()[ 3 ]
         
@@ -131,6 +147,8 @@ class GeoLocate
         @ip_nick = args.split()[ 0 ]
         @ip_channel = channel
         $reby.putquick "PRIVMSG #{@ip_channel} :Searching for #{@ip_nick} ..."
+        @requests += 1
+        bindWhoisResponse
         $reby.putserv "WHOIS #{@ip_nick}"
     end
 end
