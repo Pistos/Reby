@@ -149,7 +149,7 @@ class WordX
         
         num_shown = 0
         index = 0
-        players = Player.find( :all, :conditions => [ 'warmup_points > 0' ] )
+        players = Player.find( :all, :conditions => [ 'warmup_points > 0' ], :order => 'warmup_points desc' )
         players.each do |player|
             index += 1
             next if index < start_rank
@@ -367,27 +367,29 @@ class WordX
                     final_rank, final_score     = @final_ranking.rank_and_score( player )
                     initial_title = @initial_titles[ player ]
                     final_title = @final_titles[ player ]
-                    if initial_score != nil and final_score > initial_score
-                        report << "  #{player.nick} gained #{final_score - initial_score} points"
+                    terminal_punctuation = '.'
+                    if final_score > ( initial_score || Player::BASE_RATING )
+                        sentence = [ "#{player.nick} gained #{final_score - initial_score} points" ]
                         if initial_title != final_title
-                            report << " and advanced from #{initial_title} to #{final_title}!"
+                            sentence << "advanced from #{initial_title} to #{final_title}"
+                            terminal_punctuation = '!'
                         end
-                        if initial_rank != nil and final_rank < initial_rank
-                            report << " and rose from ##{initial_rank} to ##{final_rank}!"
-                        else
-                            report << '.'
+                        if final_rank < ( initial_rank || 'unranked' )
+                            sentence << "rose from ##{initial_rank} to ##{final_rank}"
+                            terminal_punctuation = '!'
                         end
-                    elsif initial_score != nil and final_score < initial_score
-                        report << "  #{player.nick} lost #{initial_score - final_score} points"
+                    elsif final_score < ( initial_score || Player::BASE_RATING )
+                        sentence = [ "#{player.nick} lost #{initial_score - final_score} points" ]
                         if initial_title != final_title
-                            report << " and got demoted from #{initial_title} to #{final_title}!"
+                            sentence << "got demoted from #{initial_title} to #{final_title}"
+                            terminal_punctuation = '!'
                         end
-                        if initial_rank != nil and final_rank > initial_rank
-                            report << " and fell from ##{initial_rank} to ##{final_rank}!"
-                        else
-                            report << '.'
+                        if final_rank > ( initial_rank || 'unranked' )
+                            sentence << "fell from ##{initial_rank} to ##{final_rank}"
+                            terminal_punctuation = '!'
                         end
                     end
+                    report << "  " << sentence.join( ' and ' ) << terminal_punctuation
                 end
                 
                 put "Game over.#{report}"
