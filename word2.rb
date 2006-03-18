@@ -296,7 +296,7 @@ class WordX
         
         if winner == @last_winner
             winner.consecutive_wins += 1
-            put "#{winner.consecutive_wins} wins in a row!"
+            put "#{winner.consecutive_wins} consecutive victories!"
             if ( @game_parameters[ :state ] != :state_going ) and ( winner.consecutive_wins >= @MAX_WINS )
                 @ignored_player = winner
                 put "#{winner.nick}'s guesses will be ignored in the next non-game round."
@@ -364,27 +364,30 @@ class WordX
                 @game.participations.each do |participation|
                     player = Player.find( participation.player_id )
                     initial_rank, initial_score = @initial_ranking.rank_and_score( player )
+                    initial_score ||= Player::BASE_RATING
+                    initial_rank ||= 'unranked'
                     final_rank, final_score     = @final_ranking.rank_and_score( player )
                     initial_title = @initial_titles[ player ]
                     final_title = @final_titles[ player ]
                     terminal_punctuation = '.'
-                    if final_score > ( initial_score || Player::BASE_RATING )
+                    sentence = []
+                    if final_score > initial_score
                         sentence = [ "#{player.nick} gained #{final_score - initial_score} points" ]
                         if initial_title != final_title
                             sentence << "advanced from #{initial_title} to #{final_title}"
                             terminal_punctuation = '!'
                         end
-                        if final_rank < ( initial_rank || 'unranked' )
+                        if final_rank < initial_rank
                             sentence << "rose from ##{initial_rank} to ##{final_rank}"
                             terminal_punctuation = '!'
                         end
-                    elsif final_score < ( initial_score || Player::BASE_RATING )
+                    elsif final_score < initial_score
                         sentence = [ "#{player.nick} lost #{initial_score - final_score} points" ]
                         if initial_title != final_title
                             sentence << "got demoted from #{initial_title} to #{final_title}"
                             terminal_punctuation = '!'
                         end
-                        if final_rank > ( initial_rank || 'unranked' )
+                        if final_rank > initial_rank
                             sentence << "fell from ##{initial_rank} to ##{final_rank}"
                             terminal_punctuation = '!'
                         end
@@ -511,6 +514,13 @@ class WordX
     end
     
     def setup_timeoutGame
+        starter = @game_parameters[ :starter ]
+        r = starter.rating
+        if r > Player::BASE_RATING
+            put "Looks like you've got everyone running scared, #{starter.nick}..."
+        else
+            put "It must be hard for a lesser fighter to break into the big leagues, huh, #{starter.nick}?"
+        end
         doAbort
     end
     
