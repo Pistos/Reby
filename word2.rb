@@ -9,8 +9,9 @@
 # irc.freenode.net#mathetes
 
 # !word
-# !wordsetup
+# !wordbattle
 # !wordscore [number of scores to list]
+# !wordrank[ing] [number of ranks to list]
 
 require 'word-ar-defs'
 
@@ -39,12 +40,12 @@ class WordX
     DEFAULT_INITIAL_POINT_VALUE = 100
     MAX_SCORES_TO_SHOW = 10
     INCLUDE_PLAYERS_WITH_NO_GAMES = true
+    DEFAULT_NUM_ROUNDS = 3
     
     def initialize
         # Change these as you please.
         @say_answer = true
         @MAX_WINS = 4
-        @DEFAULT_NUM_ROUNDS = 3
         @TOO_MANY_ROUNDS = 50
         # End of configuration variables.
 
@@ -69,7 +70,8 @@ class WordX
             "start" => "startGame",
             "abort" => "setup_abort",
             "players" => "setup_listPlayers",
-            "leave" => "setup_removePlayer"
+            "leave" => "setup_removePlayer",
+            "lms" => 'setup_lastManStanding',
         }
 
         ActiveRecord::Base.establish_connection(
@@ -272,19 +274,25 @@ class WordX
         @game.end_time = Time.now
         
         winner_award = @point_value
+        losing_participation = nil
         if is_going
             # Modify award based on comparison of ratings.
             winner_award = 0
             winner_rating = winner.rating.to_f
             highest_opponent_rating = 0
+            high_loser = nil
             @game.participations.each do |participation|
                 player = Player.find( participation.player_id )
                 next if player == winner
                 player_rating = player.rating.to_f
                 loss = ( @point_value * ( player_rating / winner_rating ) ).to_i
-                participation.points_awarded = -loss
+                if not @game_parameters[ :lms ]
+                    participation.points_awarded = -loss
+                end
                 if player_rating > highest_opponent_rating
                     highest_opponent_rating = player_rating
+                    high_loser = player
+                    losing_participation = participation
                     winner_award = loss
                 end
             end
@@ -293,6 +301,13 @@ class WordX
         end
 
         put "#{winner.nick} got it ... #{@word.word} ... for #{winner_award} points."
+        
+        if @game_parameters[ :lms ]
+            losing_participation.points_awarded = -winner_award
+            if @players.delete( high_loser )
+                put "#{high_loser.nick} has been knocked out of contention!"
+            end
+        end
         
         if winner == @last_winner
             winner.consecutive_wins += 1
@@ -346,7 +361,10 @@ class WordX
     def nextRound
         retval = false
         if @game_parameters[ :state ] == :state_going
-            if @game_parameters[ :current_round ] < @game_parameters[ :num_rounds ]
+            if(
+                ( @game_parameters[ :current_round ] < @game_parameters[ :num_rounds ] ) and
+                @players.size > 1
+            )
                 @game_parameters[ :current_round ] += 1
                 oneRound( nil, nil, nil, @channel.name, nil )
                 retval = true
@@ -358,11 +376,12 @@ class WordX
                 report = ''
                 @final_ranking = ranking
                 @final_titles = Hash.new
-                @players.each do |player|
+                players = @initial_titles.keys
+                players.each do |player|
                     @final_titles[ player ] = player.title
                 end
-                @game.participations.each do |participation|
-                    player = Player.find( participation.player_id )
+                @initial
+                players.each do |player|
                     initial_rank, initial_score = @initial_ranking.rank_and_score( player )
                     initial_score ||= Player::BASE_RATING
                     final_rank, final_score     = @final_ranking.rank_and_score( player )
@@ -449,9 +468,9 @@ class WordX
         @channel = Channel.find_or_create_by_name( channel )
         player = Player.find_or_create_by_nick( nick )
         
-        put "Defaults: Rounds: #{@DEFAULT_NUM_ROUNDS}"
-        put "Commands: rounds <number>; join; leave; players; abort; start"
-        @game_parameters[ :num_rounds ] = @DEFAULT_NUM_ROUNDS
+        put "Defaults: Rounds: #{DEFAULT_NUM_ROUNDS}"
+        put "Commands: " + @GAME_BINDS.keys.join( '; ' )
+        @game_parameters[ :num_rounds ] = DEFAULT_NUM_ROUNDS
         @game_parameters[ :starter ] = player
         @players = Array.new
         setup_addPlayer( nick, userhost, handle, channel, text )
@@ -469,6 +488,9 @@ class WordX
         if not @players.include? player
             @players << player
             put "#{player.nick} has joined the game."
+            if @players.size > 2
+                setLMS
+            end
         else
             put "#{player.nick}: You're already in the game!"
         end
@@ -476,6 +498,12 @@ class WordX
 
     def setup_numRounds( nick, userhost, handle, channel, text )
         return if channel != @channel.name
+        
+        if @game_parameters[ :lms ]
+            put "Number of rounds cannot be altered when battle mode is Last Man Standing."
+            return
+        end
+        
         num_rounds = text.to_i
         if num_rounds < 1
             put "Usage: rounds <positive integer>"
@@ -487,6 +515,22 @@ class WordX
         @game_parameters[ :num_rounds ] = num_rounds
         put "Number of rounds set to #{@game_parameters[ :num_rounds ]}."
     end
+    
+    def setLMS
+        @game_parameters[ :lms ] = true
+        @game_parameters[ :num_rounds ] = 999
+        put "Battle mode: Last Man Standing"
+    end
+    def clearLMS
+        @game_parameters[ :lms ] = false
+        @game_parameters[ :num_rounds ] = DEFAULT_NUM_ROUNDS
+        put "Battle mode: Rounds (#{@game_parameters[ :num_rounds ]})"
+    end
+
+    def setup_lastManStanding( nick, userhost, handle, channel, text )
+        return if channel != @channel.name
+        setLMS
+    end
 
     def setup_removePlayer( nick, userhost, handle, channel, text )
         return if channel != @channel.name
@@ -495,6 +539,9 @@ class WordX
             sendNotice( "You can't leave the game, you started it.  Try the abort command.", player.nick )
         elsif @players.delete( player )
             put "#{nick} has withdrawn from the game."
+            if @players.size < 3
+                clearLMS
+            end
         else
             put "#{nick}: You cannot leave what you have not joined."
         end
@@ -505,7 +552,7 @@ class WordX
         str << ( @players.collect { |p| p.nick } ).join( ', ' )
         put str
     end
-
+    
     def unbindSetupBinds
         @GAME_BINDS.each do |command, method|
             $reby.unbind( "pub", "-", command, method, "$wordx" )
