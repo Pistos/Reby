@@ -365,7 +365,6 @@ class WordX
                     player = Player.find( participation.player_id )
                     initial_rank, initial_score = @initial_ranking.rank_and_score( player )
                     initial_score ||= Player::BASE_RATING
-                    initial_rank ||= 'unranked'
                     final_rank, final_score     = @final_ranking.rank_and_score( player )
                     initial_title = @initial_titles[ player ]
                     final_title = @final_titles[ player ]
@@ -377,7 +376,7 @@ class WordX
                             sentence << "advanced from #{initial_title} to #{final_title}"
                             terminal_punctuation = '!'
                         end
-                        if final_rank < initial_rank
+                        if initial_rank != nil and final_rank < initial_rank
                             sentence << "rose from ##{initial_rank} to ##{final_rank}"
                             terminal_punctuation = '!'
                         end
@@ -387,7 +386,7 @@ class WordX
                             sentence << "got demoted from #{initial_title} to #{final_title}"
                             terminal_punctuation = '!'
                         end
-                        if final_rank > initial_rank
+                        if initial_rank != nil and final_rank > initial_rank
                             sentence << "fell from ##{initial_rank} to ##{final_rank}"
                             terminal_punctuation = '!'
                         end
