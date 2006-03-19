@@ -35,7 +35,7 @@ end
 class WordX
     
     VERSION = '2.0.0'
-    LAST_MODIFIED = 'March 16, 2006'
+    LAST_MODIFIED = 'March 19, 2006'
     MIN_GAMES_PLAYED_TO_SHOW_SCORE = 0
     DEFAULT_INITIAL_POINT_VALUE = 100
     MAX_SCORES_TO_SHOW = 10
@@ -56,8 +56,8 @@ class WordX
         @consecutive_wins = 0
         @ignored_player = nil
 
-        @game_parameters = Hash.new
-        @game_parameters[ :state ] = :state_none
+        @battle_parameters = Hash.new
+        @battle_parameters[ :state ] = :state_none
 
         @num_syllables = Hash.new
         @part_of_speech = Hash.new
@@ -72,6 +72,7 @@ class WordX
             "players" => "setup_listPlayers",
             "leave" => "setup_removePlayer",
             "lms" => 'setup_lastManStanding',
+            "team" => 'setup_joinTeam',
         }
 
         ActiveRecord::Base.establish_connection(
@@ -100,16 +101,16 @@ class WordX
         @game = Game.create( { :word_id => @word.id } )
         @initial_point_value = DEFAULT_INITIAL_POINT_VALUE
         
-        if @game_parameters[ :state ] == :state_starting
+        if @battle_parameters[ :state ] == :state_starting
             @initial_ranking = ranking
             @initial_titles = Hash.new
             @players.each do |player|
                 @initial_titles[ player ] = player.title
             end
-            @game_parameters[ :state ] = :state_going
+            @battle_parameters[ :state ] = :state_going
         end
         
-        if @game_parameters[ :state ] == :state_going
+        if @battle_parameters[ :state ] == :state_going
             @players.each do |player|
                 @game.participations << Participation.new(
                     :player_id => player.id,
@@ -252,7 +253,7 @@ class WordX
     def correctGuess( nick, userhost, handle, channel, text )
         return if @already_guessed
         
-        is_going = ( @game_parameters[ :state ] == :state_going )
+        is_going = ( @battle_parameters[ :state ] == :state_going )
         
         winner = Player.find_or_create_by_nick( nick )
         return if winner.nil?
@@ -286,7 +287,7 @@ class WordX
                 next if player == winner
                 player_rating = player.rating.to_f
                 loss = ( @point_value * ( player_rating / winner_rating ) ).to_i
-                if not @game_parameters[ :lms ]
+                if not @battle_parameters[ :lms ]
                     participation.points_awarded = -loss
                 end
                 if player_rating > highest_opponent_rating
@@ -302,7 +303,7 @@ class WordX
 
         put "#{winner.nick} got it ... #{@word.word} ... for #{winner_award} points."
         
-        if @game_parameters[ :lms ]
+        if @battle_parameters[ :lms ]
             losing_participation.points_awarded = -winner_award
             if @players.delete( high_loser )
                 put "#{high_loser.nick} has been knocked out of contention!"
@@ -312,7 +313,7 @@ class WordX
         if winner == @last_winner
             winner.consecutive_wins += 1
             put "#{winner.consecutive_wins} consecutive victories!"
-            if ( @game_parameters[ :state ] != :state_going ) and ( winner.consecutive_wins >= @MAX_WINS )
+            if ( @battle_parameters[ :state ] != :state_going ) and ( winner.consecutive_wins >= @MAX_WINS )
                 @ignored_player = winner
                 put "#{winner.nick}'s guesses will be ignored in the next non-game round."
             end
@@ -360,18 +361,19 @@ class WordX
     # Returns true iff doing another round.
     def nextRound
         retval = false
-        if @game_parameters[ :state ] == :state_going
+        if @battle_parameters[ :state ] == :state_going
             if(
-                ( @game_parameters[ :current_round ] < @game_parameters[ :num_rounds ] ) and
+                ( @battle_parameters[ :current_round ] < @battle_parameters[ :num_rounds ] ) and
                 @players.size > 1
             )
-                @game_parameters[ :current_round ] += 1
+                @battle_parameters[ :current_round ] += 1
                 oneRound( nil, nil, nil, @channel.name, nil )
                 retval = true
             else
                 # No more rounds in the game.  GAME OVER.
                 
-                @game_parameters[ :state ] = :state_none
+                @battle_parameters[ :state ] = :state_none
+                @battle_parameters[ :lms ] = false
 
                 report = ''
                 @final_ranking = ranking
@@ -448,10 +450,10 @@ class WordX
 
     def game_going?
         retval = false
-        if @game_parameters[ :state ] == :state_setup
+        if @battle_parameters[ :state ] == :state_setup
             put "A battle is currently being setup in #{@channel.name}."
             retval = true
-        elsif @game_parameters[ :state ] == :state_going
+        elsif @battle_parameters[ :state ] == :state_going
             put "A battle is currently underway in #{@channel.name}."
             retval = true
         elsif @channel != nil
@@ -464,14 +466,14 @@ class WordX
     def setupGame( nick, userhost, handle, channel, text )
         return if game_going?
         
-        @game_parameters[ :state ] = :state_setup
+        @battle_parameters[ :state ] = :state_setup
         @channel = Channel.find_or_create_by_name( channel )
         player = Player.find_or_create_by_nick( nick )
         
         put "Defaults: Rounds: #{DEFAULT_NUM_ROUNDS}"
         put "Commands: " + @GAME_BINDS.keys.join( '; ' )
-        @game_parameters[ :num_rounds ] = DEFAULT_NUM_ROUNDS
-        @game_parameters[ :starter ] = player
+        @battle_parameters[ :num_rounds ] = DEFAULT_NUM_ROUNDS
+        @battle_parameters[ :starter ] = player
         @players = Array.new
         setup_addPlayer( nick, userhost, handle, channel, text )
 
@@ -499,7 +501,7 @@ class WordX
     def setup_numRounds( nick, userhost, handle, channel, text )
         return if channel != @channel.name
         
-        if @game_parameters[ :lms ]
+        if @battle_parameters[ :lms ]
             put "Number of rounds cannot be altered when battle mode is Last Man Standing."
             return
         end
@@ -512,19 +514,19 @@ class WordX
             put "Usage: rounds <some reasonable positive integer>"
             return
         end
-        @game_parameters[ :num_rounds ] = num_rounds
-        put "Number of rounds set to #{@game_parameters[ :num_rounds ]}."
+        @battle_parameters[ :num_rounds ] = num_rounds
+        put "Number of rounds set to #{@battle_parameters[ :num_rounds ]}."
     end
     
     def setLMS
-        @game_parameters[ :lms ] = true
-        @game_parameters[ :num_rounds ] = 999
+        @battle_parameters[ :lms ] = true
+        @battle_parameters[ :num_rounds ] = 999
         put "Battle mode: Last Man Standing"
     end
     def clearLMS
-        @game_parameters[ :lms ] = false
-        @game_parameters[ :num_rounds ] = DEFAULT_NUM_ROUNDS
-        put "Battle mode: Rounds (#{@game_parameters[ :num_rounds ]})"
+        @battle_parameters[ :lms ] = false
+        @battle_parameters[ :num_rounds ] = DEFAULT_NUM_ROUNDS
+        put "Battle mode: Rounds (#{@battle_parameters[ :num_rounds ]})"
     end
 
     def setup_lastManStanding( nick, userhost, handle, channel, text )
@@ -535,7 +537,7 @@ class WordX
     def setup_removePlayer( nick, userhost, handle, channel, text )
         return if channel != @channel.name
         player = Player.find_or_create_by_nick( nick )
-        if player == @game_parameters[ :starter ]
+        if player == @battle_parameters[ :starter ]
             sendNotice( "You can't leave the game, you started it.  Try the abort command.", player.nick )
         elsif @players.delete( player )
             put "#{nick} has withdrawn from the game."
@@ -560,7 +562,7 @@ class WordX
     end
     
     def setup_timeoutGame
-        starter = @game_parameters[ :starter ]
+        starter = @battle_parameters[ :starter ]
         r = starter.rating
         if r > Player::BASE_RATING
             put "Looks like you've got everyone running scared, #{starter.nick}..."
@@ -573,8 +575,8 @@ class WordX
     def setup_abort( nick, userhost, handle, channel, text )
         return if channel != @channel.name
         if (
-            Player.find_or_create_by_nick( nick ) != @game_parameters[ :starter ] and
-            $reby.onchan( @game_parameters[ :starter ].nick )
+            Player.find_or_create_by_nick( nick ) != @battle_parameters[ :starter ] and
+            $reby.onchan( @battle_parameters[ :starter ].nick )
         )
             put "Only the person who invoked the battle can abort it."
             return
@@ -595,14 +597,14 @@ class WordX
     def doAbort
         unbindSetupBinds
         killTimeoutTimer
-        @game_parameters[ :state ] = :state_none
+        @battle_parameters[ :state ] = :state_none
         put "Game aborted."
         @channel = nil
     end
 
     def startGame( nick, userhost, handle, channel, text )
         return if channel != @channel.name
-        if Player.find_or_create_by_nick( nick ) != @game_parameters[ :starter ]
+        if Player.find_or_create_by_nick( nick ) != @battle_parameters[ :starter ]
             put "Only the person who invoked the battle can start it."
             return
         end
@@ -614,9 +616,9 @@ class WordX
         unbindSetupBinds
         killTimeoutTimer
 
-        @game_parameters[ :current_round ] = 1
+        @battle_parameters[ :current_round ] = 1
         @channel = nil
-        @game_parameters[ :state ] = :state_starting
+        @battle_parameters[ :state ] = :state_starting
         oneRound( nick, userhost, handle, channel, text )
     end
 end
