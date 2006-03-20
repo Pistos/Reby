@@ -32,7 +32,288 @@ class Array
     end
 end
 
+class Battle
+    attr_reader :state, :channel, :starter, :mode, :current_round, :players
+
+    DEFAULT_NUM_ROUNDS = 3
+    GAME_BINDS = {
+        "rounds" => "setNumRounds",
+        "join" => "addPlayer",
+        "start" => "start",
+        "abort" => "abort",
+        "players" => "listPlayers",
+        "leave" => "removePlayer",
+        "team" => 'joinTeam',
+    }
+    
+    def initialize( channel, nick )
+        @channel = Channel.find_or_create_by_name( channel )
+        player = Player.find_or_create_by_nick( nick )
+        @mode = :rounds
+        
+        @num_rounds = DEFAULT_NUM_ROUNDS
+        @current_round = 0
+        @starter = player
+        @players = Array.new
+        @initial_titles = Hash.new
+        addPlayer( nick, nil, nil, channel, nil )
+        
+        GAME_BINDS.each do |command, method|
+            $reby.bind( "pub", "-", command, method, "$wordx.battle" )
+        end
+        
+        $reby.utimer( 180, "timeoutGame", "$wordx.battle" )
+        
+        put "Defaults: Rounds: #{DEFAULT_NUM_ROUNDS}"
+        put "Commands: " + GAME_BINDS.keys.join( '; ' )
+    end
+    
+    def put( text, destination = @channel.name )
+        $reby.putserv "PRIVMSG #{destination} :#{text}"
+    end
+    def sendNotice( text, destination = @channel.name )
+        $reby.putserv "NOTICE #{destination} :#{text}"
+    end
+    
+    def unbindSetupBinds
+    end
+    
+    def unbindSetupBinds
+        GAME_BINDS.each do |command, method|
+            $reby.unbind( "pub", "-", command, method, "$wordx.battle" )
+        end
+        $reby.utimers.each do |utimer|
+            case utimer[ 1 ]
+                when /timeoutGame/
+                    $reby.killutimer( utimer[ 2 ] )
+            end
+        end
+    end
+    
+    def lms_mode?
+        return( @mode == :lms )
+    end
+    def rounds_mode?
+        return( @mode == :rounds )
+    end
+    
+    def initial_players
+        return @initial_titles.keys
+    end
+    
+    def setNumRounds( nick, userhost, handle, channel, text )
+        return if channel != @channel.name
+        
+        if lms_mode?
+            put "Number of rounds cannot be altered when battle mode is Last Man Standing."
+            return
+        end
+        
+        num_rounds = text.to_i
+        if num_rounds < 1
+            put "Usage: rounds <positive integer>"
+            return
+        elsif num_rounds >= @TOO_MANY_ROUNDS
+            put "Usage: rounds <some reasonable positive integer>"
+            return
+        end
+        
+        @num_rounds = num_rounds
+        put "Number of rounds set to #{@num_rounds}."
+    end
+    
+    def more_rounds?
+        return( @current_round < @num_rounds and @players.size > 1 )
+    end
+    def inc_round
+        @current_round += 1
+    end
+    
+    def setMode( mode, arg )
+        okay = true
+        case mode
+            when :lms
+                @num_rounds = 99
+            when :rounds
+                @num_rounds = arg.to_i
+            else
+                put "Invalid game mode (#{mode.to_s})"
+                okay = false
+        end
+        if okay
+            @mode = mode
+        end
+    end
+
+    def clearLMS
+        if @mode == :lms
+            setMode( :rounds, DEFAULT_NUM_ROUNDS )
+            put "Battle mode: Rounds (#{@num_rounds})"
+        end
+    end
+
+    
+    def createTeam( team_name )
+        
+    end
+    
+    def joinTeam( nick, userhost, handle, channel, text )
+        return if channel != @channel.name
+        player = Player.find_or_create_by_nick( nick )
+        includePlayer( player )
+        team = createTeam( text.strip )
+        includeTeammate( team, player )
+    end
+
+    def includePlayer( player )
+        included = false
+        if not @players.include? player
+            @players << player
+            if @players.size > 2
+                setLMS
+            end
+            included = true
+        end
+        return included
+    end
+
+    def addPlayer( nick, userhost, handle, channel, text )
+        return if channel != @channel.name
+        
+        player = Player.find_or_create_by_nick( nick )
+        if includePlayer( player )
+            put "#{player.nick} has joined the game.", channel
+            @initial_titles[ player ] = player.title
+        else
+            put "#{player.nick}: You're already in the game!"
+        end
+    end
+    
+    def removePlayer( nick, userhost, handle, channel, text )
+        return if channel != @channel.name
+        
+        player = Player.find_or_create_by_nick( nick )
+        if player == @starter
+            sendNotice( "You can't leave the game, you started it.  Try the abort command.", player.nick )
+        elsif @players.delete( player )
+            put "#{nick} has withdrawn from the game."
+            if @players.size < 3
+                clearLMS
+            end
+        else
+            put "#{nick}: You cannot leave what you have not joined."
+        end
+    end
+
+    def listPlayers( nick, userhost, handle, channel, text )
+        str = "Players: "
+        str << ( @players.collect { |p| p.nick } ).join( ', ' )
+        put str
+    end
+    
+    def timeoutGame
+        r = @starter.rating
+        if r > Player::BASE_RATING
+            put "Looks like you've got everyone running scared, #{@starter.nick}..."
+        else
+            put "It must be hard for a lesser fighter to break into the big leagues, huh, #{@starter.nick}?"
+        end
+        doAbort
+    end
+    
+    def abort( nick, userhost, handle, channel, text )
+        return if channel != @channel.name
+        if (
+            Player.find_or_create_by_nick( nick ) != @starter and
+            $reby.onchan( @starter.nick )
+        )
+            put "Only the person who invoked the battle can abort it."
+            return
+        end
+
+        doAbort
+    end
+    
+    def doAbort
+        unbindSetupBinds
+        put "Game aborted."
+        $wordx.abortBattle
+    end
+    
+    def start( nick, userhost, handle, channel, text )
+        return if channel != @channel.name
+        
+        if Player.find_or_create_by_nick( nick ) != @starter
+            put "Only the person who invoked the battle can start it."
+            return
+        end
+        if @players.length < 2
+            put "At least two players need to be in the game."
+            return
+        end
+
+        unbindSetupBinds
+
+        @current_round = 1
+        @initial_ranking = $wordx.ranking
+        @players.each do |player|
+            @initial_titles[ player ] = player.title
+        end
+        
+        $wordx.oneRound( nick, userhost, handle, channel, text )
+    end
+    
+    def eliminate( player )
+        @players.delete( player )
+        put "#{player.nick} has been knocked out of contention!"
+    end
+    
+    def report
+        report_text = ''
+        @final_ranking = $wordx.ranking
+        @final_titles = Hash.new
+        players = @initial_titles.keys
+        players.each do |player|
+            @final_titles[ player ] = player.title
+        end
+        players.each do |player|
+            initial_rank, initial_score = @initial_ranking.rank_and_score( player )
+            initial_score ||= Player::BASE_RATING
+            final_rank, final_score     = @final_ranking.rank_and_score( player )
+            initial_title = @initial_titles[ player ]
+            final_title = @final_titles[ player ]
+            terminal_punctuation = '.'
+            sentence = []
+            if final_score > initial_score
+                sentence = [ "#{player.nick} gained #{final_score - initial_score} points" ]
+                if initial_title != final_title
+                    sentence << "advanced from #{initial_title} to #{final_title}"
+                    terminal_punctuation = '!'
+                end
+                if initial_rank != nil and final_rank < initial_rank
+                    sentence << "rose from ##{initial_rank} to ##{final_rank}"
+                    terminal_punctuation = '!'
+                end
+            elsif final_score < initial_score
+                sentence = [ "#{player.nick} lost #{initial_score - final_score} points" ]
+                if initial_title != final_title
+                    sentence << "got demoted from #{initial_title} to #{final_title}"
+                    terminal_punctuation = '!'
+                end
+                if initial_rank != nil and final_rank > initial_rank
+                    sentence << "fell from ##{initial_rank} to ##{final_rank}"
+                    terminal_punctuation = '!'
+                end
+            end
+            report_text << "  " << sentence.join( ' and ' ) << terminal_punctuation
+        end
+        
+        put "Game over.#{report_text}"
+    end
+end
+
 class WordX
+    attr_reader :battle
     
     VERSION = '2.0.0'
     LAST_MODIFIED = 'March 19, 2006'
@@ -40,7 +321,6 @@ class WordX
     DEFAULT_INITIAL_POINT_VALUE = 100
     MAX_SCORES_TO_SHOW = 10
     INCLUDE_PLAYERS_WITH_NO_GAMES = true
-    DEFAULT_NUM_ROUNDS = 3
     
     def initialize
         # Change these as you please.
@@ -56,24 +336,10 @@ class WordX
         @consecutive_wins = 0
         @ignored_player = nil
 
-        @battle_parameters = Hash.new
-        @battle_parameters[ :state ] = :state_none
-
         @num_syllables = Hash.new
         @part_of_speech = Hash.new
         @etymology = Hash.new
         @definition = Hash.new
-
-        @GAME_BINDS = {
-            "rounds" => "setup_numRounds",
-            "join" => "setup_addPlayer",
-            "start" => "startGame",
-            "abort" => "setup_abort",
-            "players" => "setup_listPlayers",
-            "leave" => "setup_removePlayer",
-            "lms" => 'setup_lastManStanding',
-            "team" => 'setup_joinTeam',
-        }
 
         ActiveRecord::Base.establish_connection(
             :adapter  => "postgresql",
@@ -94,24 +360,17 @@ class WordX
     end
 
     def oneRound( nick, userhost, handle, channel, text )
-        return if nick != nil and game_going?
+        #return if nick != nil and battle_going?( channel )
+
+        unbindPracticeCommand        
 
         @channel = Channel.find_or_create_by_name( channel )
         @word = Word.random
         @game = Game.create( { :word_id => @word.id } )
         @initial_point_value = DEFAULT_INITIAL_POINT_VALUE
         
-        if @battle_parameters[ :state ] == :state_starting
-            @initial_ranking = ranking
-            @initial_titles = Hash.new
-            @players.each do |player|
-                @initial_titles[ player ] = player.title
-            end
-            @battle_parameters[ :state ] = :state_going
-        end
-        
-        if @battle_parameters[ :state ] == :state_going
-            @players.each do |player|
+        if @battle != nil
+            @battle.players.each do |player|
                 @game.participations << Participation.new(
                     :player_id => player.id,
                     :game_id => @game.id
@@ -249,20 +508,25 @@ class WordX
             end
         end
     end
+    
+    def bindPracticeCommand
+        $reby.bind( "pub", "-", "!word", "oneRound", "$wordx" )
+    end
+    def unbindPracticeCommand
+        $reby.unbind( "pub", "-", "!word", "oneRound", "$wordx" )
+    end
 
     def correctGuess( nick, userhost, handle, channel, text )
         return if @already_guessed
         
-        is_going = ( @battle_parameters[ :state ] == :state_going )
-        
         winner = Player.find_or_create_by_nick( nick )
         return if winner.nil?
         
-        if not is_going and ( winner == @ignored_player )
+        if @battle.nil? and ( winner == @ignored_player )
             put( "You've already won #{winner.consecutive_wins} times in a row!  Give some other people a chance.", winner.nick )
             return
         end
-        if is_going and ( not @game.participations.find_by_player_id( winner.id ) )
+        if @battle != nil and ( not @game.participations.find_by_player_id( winner.id ) )
             sendNotice( "Since you did not join this game, your guesses are not counted.", winner.nick )
             return
         end
@@ -276,18 +540,20 @@ class WordX
         
         winner_award = @point_value
         losing_participation = nil
-        if is_going
+        if @battle != nil
             # Modify award based on comparison of ratings.
+            
             winner_award = 0
             winner_rating = winner.rating.to_f
             highest_opponent_rating = 0
             high_loser = nil
+            
             @game.participations.each do |participation|
                 player = Player.find( participation.player_id )
                 next if player == winner
                 player_rating = player.rating.to_f
                 loss = ( @point_value * ( player_rating / winner_rating ) ).to_i
-                if not @battle_parameters[ :lms ]
+                if not @battle.lms_mode?
                     participation.points_awarded = -loss
                 end
                 if player_rating > highest_opponent_rating
@@ -303,17 +569,15 @@ class WordX
 
         put "#{winner.nick} got it ... #{@word.word} ... for #{winner_award} points."
         
-        if @battle_parameters[ :lms ]
+        if @battle != nil and @battle.lms_mode?
             losing_participation.points_awarded = -winner_award
-            if @players.delete( high_loser )
-                put "#{high_loser.nick} has been knocked out of contention!"
-            end
+            @battle.eliminate( high_loser )
         end
         
         if winner == @last_winner
             winner.consecutive_wins += 1
             put "#{winner.consecutive_wins} consecutive victories!"
-            if ( @battle_parameters[ :state ] != :state_going ) and ( winner.consecutive_wins >= @MAX_WINS )
+            if @battle.nil? and ( winner.consecutive_wins >= @MAX_WINS )
                 @ignored_player = winner
                 put "#{winner.nick}'s guesses will be ignored in the next non-game round."
             end
@@ -337,12 +601,8 @@ class WordX
             end
             p.save
         end
-        @game.save
-        @channel.save
         
-        if not nextRound
-            @channel = nil
-        end
+        endRound
     end
 
     def nobodyGotIt
@@ -350,10 +610,16 @@ class WordX
         $reby.unbind( "pub", "-", @word.word, "correctGuess", "$wordx" )
         
         @game.end_time = Time.now
+        
+        endRound
+    end
+    
+    def endRound
         @game.save
         @channel.save
         
         if not nextRound
+            bindPracticeCommand
             @channel = nil
         end
     end
@@ -361,62 +627,16 @@ class WordX
     # Returns true iff doing another round.
     def nextRound
         retval = false
-        if @battle_parameters[ :state ] == :state_going
-            if(
-                ( @battle_parameters[ :current_round ] < @battle_parameters[ :num_rounds ] ) and
-                @players.size > 1
-            )
-                @battle_parameters[ :current_round ] += 1
+        if @battle != nil
+            if @battle.more_rounds?
+                @battle.inc_round
                 oneRound( nil, nil, nil, @channel.name, nil )
                 retval = true
             else
                 # No more rounds in the game.  GAME OVER.
                 
-                @battle_parameters[ :state ] = :state_none
-                @battle_parameters[ :lms ] = false
-
-                report = ''
-                @final_ranking = ranking
-                @final_titles = Hash.new
-                players = @initial_titles.keys
-                players.each do |player|
-                    @final_titles[ player ] = player.title
-                end
-                @initial
-                players.each do |player|
-                    initial_rank, initial_score = @initial_ranking.rank_and_score( player )
-                    initial_score ||= Player::BASE_RATING
-                    final_rank, final_score     = @final_ranking.rank_and_score( player )
-                    initial_title = @initial_titles[ player ]
-                    final_title = @final_titles[ player ]
-                    terminal_punctuation = '.'
-                    sentence = []
-                    if final_score > initial_score
-                        sentence = [ "#{player.nick} gained #{final_score - initial_score} points" ]
-                        if initial_title != final_title
-                            sentence << "advanced from #{initial_title} to #{final_title}"
-                            terminal_punctuation = '!'
-                        end
-                        if initial_rank != nil and final_rank < initial_rank
-                            sentence << "rose from ##{initial_rank} to ##{final_rank}"
-                            terminal_punctuation = '!'
-                        end
-                    elsif final_score < initial_score
-                        sentence = [ "#{player.nick} lost #{initial_score - final_score} points" ]
-                        if initial_title != final_title
-                            sentence << "got demoted from #{initial_title} to #{final_title}"
-                            terminal_punctuation = '!'
-                        end
-                        if initial_rank != nil and final_rank > initial_rank
-                            sentence << "fell from ##{initial_rank} to ##{final_rank}"
-                            terminal_punctuation = '!'
-                        end
-                    end
-                    report << "  " << sentence.join( ' and ' ) << terminal_punctuation
-                end
-                
-                put "Game over.#{report}"
-
+                @battle.report
+                @battle = nil
             end
         end
         return retval
@@ -448,184 +668,42 @@ class WordX
         @def_shown = true
     end
 
-    def game_going?
+    def battle_going?( channel )
         retval = false
-        if @battle_parameters[ :state ] == :state_setup
-            put "A battle is currently being setup in #{@channel.name}."
-            retval = true
-        elsif @battle_parameters[ :state ] == :state_going
-            put "A battle is currently underway in #{@channel.name}."
+        if @battle != nil
+            if @battle.current_round == 0
+                put( "A battle is being setup in #{@battle.channel.name} by #{@battle.starter.nick}.", channel )
+            else
+                put(
+                    "A battle is currently underway in #{@battle.channel.name} between " +
+                        @battle.initial_players.collect { |p| p.nick }.join(', ') + ".",
+                    channel
+                )
+            end
             retval = true
         elsif @channel != nil
-            put "A round is in progress in #{@channel.name}."
+            put "A round is in progress in #{@channel.name}.", channel
             retval = true
         end
         return retval
     end
 
     def setupGame( nick, userhost, handle, channel, text )
-        return if game_going?
+        return if battle_going?( channel )
         
-        @battle_parameters[ :state ] = :state_setup
-        @channel = Channel.find_or_create_by_name( channel )
-        player = Player.find_or_create_by_nick( nick )
-        
-        put "Defaults: Rounds: #{DEFAULT_NUM_ROUNDS}"
-        put "Commands: " + @GAME_BINDS.keys.join( '; ' )
-        @battle_parameters[ :num_rounds ] = DEFAULT_NUM_ROUNDS
-        @battle_parameters[ :starter ] = player
-        @players = Array.new
-        setup_addPlayer( nick, userhost, handle, channel, text )
-
-        @GAME_BINDS.each do |command, method|
-            $reby.bind( "pub", "-", command, method, "$wordx" )
-        end
-        
-        $reby.utimer( 180, "setup_timeoutGame", "$wordx" )
-    end
-
-    def setup_addPlayer( nick, userhost, handle, channel, text )
-        return if channel != @channel.name
-        player = Player.find_or_create_by_nick( nick )
-        if not @players.include? player
-            @players << player
-            put "#{player.nick} has joined the game."
-            if @players.size > 2
-                setLMS
-            end
-        else
-            put "#{player.nick}: You're already in the game!"
-        end
-    end
-
-    def setup_numRounds( nick, userhost, handle, channel, text )
-        return if channel != @channel.name
-        
-        if @battle_parameters[ :lms ]
-            put "Number of rounds cannot be altered when battle mode is Last Man Standing."
-            return
-        end
-        
-        num_rounds = text.to_i
-        if num_rounds < 1
-            put "Usage: rounds <positive integer>"
-            return
-        elsif num_rounds >= @TOO_MANY_ROUNDS
-            put "Usage: rounds <some reasonable positive integer>"
-            return
-        end
-        @battle_parameters[ :num_rounds ] = num_rounds
-        put "Number of rounds set to #{@battle_parameters[ :num_rounds ]}."
+        unbindPracticeCommand
+        @battle = Battle.new( channel, nick )
     end
     
-    def setLMS
-        @battle_parameters[ :lms ] = true
-        @battle_parameters[ :num_rounds ] = 999
-        put "Battle mode: Last Man Standing"
-    end
-    def clearLMS
-        @battle_parameters[ :lms ] = false
-        @battle_parameters[ :num_rounds ] = DEFAULT_NUM_ROUNDS
-        put "Battle mode: Rounds (#{@battle_parameters[ :num_rounds ]})"
-    end
-
-    def setup_lastManStanding( nick, userhost, handle, channel, text )
-        return if channel != @channel.name
-        setLMS
-    end
-
-    def setup_removePlayer( nick, userhost, handle, channel, text )
-        return if channel != @channel.name
-        player = Player.find_or_create_by_nick( nick )
-        if player == @battle_parameters[ :starter ]
-            sendNotice( "You can't leave the game, you started it.  Try the abort command.", player.nick )
-        elsif @players.delete( player )
-            put "#{nick} has withdrawn from the game."
-            if @players.size < 3
-                clearLMS
-            end
-        else
-            put "#{nick}: You cannot leave what you have not joined."
-        end
-    end
-
-    def setup_listPlayers( nick, userhost, handle, channel, text )
-        str = "Players: "
-        str << ( @players.collect { |p| p.nick } ).join( ', ' )
-        put str
-    end
-    
-    def unbindSetupBinds
-        @GAME_BINDS.each do |command, method|
-            $reby.unbind( "pub", "-", command, method, "$wordx" )
-        end
-    end
-    
-    def setup_timeoutGame
-        starter = @battle_parameters[ :starter ]
-        r = starter.rating
-        if r > Player::BASE_RATING
-            put "Looks like you've got everyone running scared, #{starter.nick}..."
-        else
-            put "It must be hard for a lesser fighter to break into the big leagues, huh, #{starter.nick}?"
-        end
-        doAbort
-    end
-    
-    def setup_abort( nick, userhost, handle, channel, text )
-        return if channel != @channel.name
-        if (
-            Player.find_or_create_by_nick( nick ) != @battle_parameters[ :starter ] and
-            $reby.onchan( @battle_parameters[ :starter ].nick )
-        )
-            put "Only the person who invoked the battle can abort it."
-            return
-        end
-
-        doAbort
-    end
-    
-    def killTimeoutTimer
-        $reby.utimers.each do |utimer|
-            case utimer[ 1 ]
-                when /setup_timeoutGame/
-                    $reby.killutimer( utimer[ 2 ] )
-            end
-        end
-    end
-    
-    def doAbort
-        unbindSetupBinds
-        killTimeoutTimer
-        @battle_parameters[ :state ] = :state_none
-        put "Game aborted."
-        @channel = nil
-    end
-
-    def startGame( nick, userhost, handle, channel, text )
-        return if channel != @channel.name
-        if Player.find_or_create_by_nick( nick ) != @battle_parameters[ :starter ]
-            put "Only the person who invoked the battle can start it."
-            return
-        end
-        if @players.length < 2
-            put "At least two players need to be in the game."
-            return
-        end
-
-        unbindSetupBinds
-        killTimeoutTimer
-
-        @battle_parameters[ :current_round ] = 1
-        @channel = nil
-        @battle_parameters[ :state ] = :state_starting
-        oneRound( nick, userhost, handle, channel, text )
+    def abortBattle
+        @battle = nil
+        bindPracticeCommand
     end
 end
 
 $wordx = WordX.new
 
-$reby.bind( "pub", "-", "!word", "oneRound", "$wordx" )
+$wordx.bindPracticeCommand
 $reby.bind( "pub", "-", "!wordbattle", "setupGame", "$wordx" )
 $reby.bind( "pub", "-", "!wordscore", "printScore", "$wordx" )
 $reby.bind( "pub", "-", "!wordrating", "printRating", "$wordx" )
