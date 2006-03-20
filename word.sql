@@ -22,7 +22,9 @@ CREATE TABLE players (
     creation_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     consecutive_wins INTEGER NOT NULL DEFAULT 0,
     title_set_id INTEGER NOT NULL DEFAULT 1 REFERENCES title_sets( id ),
-    warmup_points INTEGER DEFAULT 0
+    warmup_points INTEGER DEFAULT 0,
+    highest_rating INTEGER DEFAULT 2000,
+    lowest_rating INTEGER DEFAULT 2000
 );
 
 CREATE TABLE games (
@@ -36,7 +38,8 @@ CREATE TABLE participations (
     id SERIAL PRIMARY KEY,
     game_id INTEGER NOT NULL REFERENCES games( id ),
     player_id INTEGER NOT NULL REFERENCES players( id ),
-    points_awarded INTEGER
+    points_awarded INTEGER,
+    team VARCHAR( 32 ) NOT NULL
 );
 
 CREATE TABLE channels (

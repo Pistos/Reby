@@ -33,9 +33,12 @@ class Array
 end
 
 class Battle
-    attr_reader :state, :channel, :starter, :mode, :current_round, :players
+    attr_reader :state, :channel, :starter, :mode, :current_round, :players,
+        :player_teams
 
     DEFAULT_NUM_ROUNDS = 3
+    BATTLE_SETUP_TIMEOUT = 300 # seconds
+    MAX_TEAM_NAME_LENGTH = 32
     GAME_BINDS = {
         "rounds" => "setNumRounds",
         "join" => "addPlayer",
@@ -56,13 +59,14 @@ class Battle
         @starter = player
         @players = Array.new
         @initial_titles = Hash.new
+        @player_teams = Hash.new
         addPlayer( nick, nil, nil, channel, nil )
         
         GAME_BINDS.each do |command, method|
             $reby.bind( "pub", "-", command, method, "$wordx.battle" )
         end
         
-        $reby.utimer( 180, "timeoutGame", "$wordx.battle" )
+        $reby.utimer( BATTLE_SETUP_TIMEOUT, "timeoutGame", "$wordx.battle" )
         
         put "Defaults: Rounds: #{DEFAULT_NUM_ROUNDS}"
         put "Commands: " + GAME_BINDS.keys.join( '; ' )
@@ -73,9 +77,6 @@ class Battle
     end
     def sendNotice( text, destination = @channel.name )
         $reby.putserv "NOTICE #{destination} :#{text}"
-    end
-    
-    def unbindSetupBinds
     end
     
     def unbindSetupBinds
@@ -123,19 +124,31 @@ class Battle
     end
     
     def more_rounds?
-        return( @current_round < @num_rounds and @players.size > 1 )
+        retval = false
+        
+        if @current_round < @num_rounds
+            teams = Set.new
+            @players.each do |p|
+                teams << @player_teams[ p ]
+            end
+            retval = ( teams.size > 1 )
+        end
+        
+        return retval
     end
     def inc_round
         @current_round += 1
     end
     
-    def setMode( mode, arg )
+    def setMode( mode, arg = DEFAULT_NUM_ROUNDS )
         okay = true
         case mode
             when :lms
                 @num_rounds = 99
+                put "Battle mode: Last Man Standing"
             when :rounds
                 @num_rounds = arg.to_i
+                put "Battle mode: Rounds (#{@num_rounds})"
             else
                 put "Invalid game mode (#{mode.to_s})"
                 okay = false
@@ -148,41 +161,43 @@ class Battle
     def clearLMS
         if @mode == :lms
             setMode( :rounds, DEFAULT_NUM_ROUNDS )
-            put "Battle mode: Rounds (#{@num_rounds})"
         end
     end
 
-    
-    def createTeam( team_name )
-        
+    def teammates?( player1, player2 )
+        return( @player_teams[ player1 ] == @player_teams[ player2 ] )
     end
     
     def joinTeam( nick, userhost, handle, channel, text )
         return if channel != @channel.name
         player = Player.find_or_create_by_nick( nick )
         includePlayer( player )
-        team = createTeam( text.strip )
-        includeTeammate( team, player )
+        team = text.strip[ 0...MAX_TEAM_NAME_LENGTH ]
+        @player_teams[ player ] = team
+        if team != player.nick
+            put "#{player.nick} joined Team #{team}."
+        end
     end
-
+    
     def includePlayer( player )
         included = false
         if not @players.include? player
             @players << player
             if @players.size > 2
-                setLMS
+                setMode( :lms )
             end
+            @player_teams[ player ] = player.nick
+            put "#{player.nick} has joined the game.", @channel.name
             included = true
         end
         return included
     end
-
+    
     def addPlayer( nick, userhost, handle, channel, text )
         return if channel != @channel.name
         
         player = Player.find_or_create_by_nick( nick )
         if includePlayer( player )
-            put "#{player.nick} has joined the game.", channel
             @initial_titles[ player ] = player.title
         else
             put "#{player.nick}: You're already in the game!"
@@ -207,7 +222,13 @@ class Battle
 
     def listPlayers( nick, userhost, handle, channel, text )
         str = "Players: "
-        str << ( @players.collect { |p| p.nick } ).join( ', ' )
+        str << ( @players.collect { |p|
+            p.nick + (
+                @player_teams[ p ] != p.nick ?
+                " (#{@player_teams[ p ]})" :
+                ''
+            )
+        } ).join( ', ' )
         put str
     end
     
@@ -276,10 +297,13 @@ class Battle
         players.each do |player|
             @final_titles[ player ] = player.title
         end
+        if @players.size > 1
+            report_text << "  Team #{@player_teams[ @players[ 0 ] ]} won!"
+        end
         players.each do |player|
             initial_rank, initial_score = @initial_ranking.rank_and_score( player )
             initial_score ||= Player::BASE_RATING
-            final_rank, final_score     = @final_ranking.rank_and_score( player )
+            final_rank, final_score = @final_ranking.rank_and_score( player )
             initial_title = @initial_titles[ player ]
             final_title = @final_titles[ player ]
             terminal_punctuation = '.'
@@ -308,7 +332,7 @@ class Battle
             report_text << "  " << sentence.join( ' and ' ) << terminal_punctuation
         end
         
-        put "Game over.#{report_text}"
+        put "Battle over.#{report_text}"
     end
 end
 
@@ -373,7 +397,8 @@ class WordX
             @battle.players.each do |player|
                 @game.participations << Participation.new(
                     :player_id => player.id,
-                    :game_id => @game.id
+                    :game_id => @game.id,
+                    :team => @battle.player_teams[ player ]
                 )
             end
             @initial_point_value += (@game.participations.size - 2) * 15
@@ -551,6 +576,8 @@ class WordX
             @game.participations.each do |participation|
                 player = Player.find( participation.player_id )
                 next if player == winner
+                next if @battle.teammates?( player, winner )
+                
                 player_rating = player.rating.to_f
                 loss = ( @point_value * ( player_rating / winner_rating ) ).to_i
                 if not @battle.lms_mode?
