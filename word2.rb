@@ -340,7 +340,7 @@ class WordX
     attr_reader :battle
     
     VERSION = '2.0.0'
-    LAST_MODIFIED = 'March 19, 2006'
+    LAST_MODIFIED = 'March 20, 2006'
     MIN_GAMES_PLAYED_TO_SHOW_SCORE = 0
     DEFAULT_INITIAL_POINT_VALUE = 100
     MAX_SCORES_TO_SHOW = 10
@@ -467,7 +467,7 @@ class WordX
                     break
                 end
             end
-            put "#{player.nick}, #{player.title} - Battle rating: #{player.rating} (Rank: ##{rank}) (#{player.games_played} games)", channel
+            put "#{player.nick}, #{player.title} (L#{player.level}) - Battle rating: #{player.rating} (Rank: ##{rank}) (#{player.games_played} games)", channel
         else
             put "#{nick}: You're not a !word warrior!  Play a !wordbattle.", channel
         end
@@ -517,7 +517,7 @@ class WordX
             index += 1
             next if index < start_rank
             
-            put( "%2d. %-32s %5d" % [ index, "#{player.nick}, #{player.title}", rating ], channel )
+            put( "%2d. %-32s %-5s %5d" % [ index, "#{player.nick}, #{player.title}", "(L#{player.level})", rating ], channel )
             num_shown += 1
             break if num_shown >= num_to_show
         end
@@ -726,6 +726,31 @@ class WordX
         @battle = nil
         bindPracticeCommand
     end
+    
+    def listCharacterClasses( nick, userhost, handle, channel, text )
+        classes = []
+        TitleSet.find( :all ).each do |ts|
+            classes << ts.name
+        end
+        put "Character Classes: #{classes.join( ', ' )}", channel
+    end
+    
+    def setCharacterClass( nick, userhost, handle, channel, text )
+        cl = text.strip.capitalize
+        ts = TitleSet.find_by_name( cl )
+        if ts.nil?
+            put "'#{cl}' is not a class.  Try !wordclasses to get a list of available classes.", channel
+        else
+            player = Player.find_by_nick( nick )
+            if player.nil?
+                put "#{nick}: You are not a player.  Join a !wordbattle first.", channel
+            else
+                player.title_set_id = ts.id
+                player.save
+                put "#{player.nick} is now a#{ts.name =~ /^[aoeuiAOEUI]/ ? 'n' : ''} #{ts.name}.", channel
+            end
+        end
+    end
 end
 
 $wordx = WordX.new
@@ -736,4 +761,6 @@ $reby.bind( "pub", "-", "!wordscore", "printScore", "$wordx" )
 $reby.bind( "pub", "-", "!wordrating", "printRating", "$wordx" )
 $reby.bind( "pub", "-", "!wordrank", "printRanking", "$wordx" )
 $reby.bind( "pub", "-", "!wordranking", "printRanking", "$wordx" )
+$reby.bind( "pub", "-", "!wordclass", "setCharacterClass", "$wordx" )
+$reby.bind( "pub", "-", "!wordclasses", "listCharacterClasses", "$wordx" )
 

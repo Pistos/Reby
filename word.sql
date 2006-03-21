@@ -24,7 +24,7 @@ CREATE TABLE players (
     title_set_id INTEGER NOT NULL DEFAULT 1 REFERENCES title_sets( id ),
     warmup_points INTEGER DEFAULT 0,
     highest_rating INTEGER DEFAULT 2000,
-    lowest_rating INTEGER DEFAULT 2000
+    lowest_rating INTEGER DEFAULT 2000,
 );
 
 CREATE TABLE games (
