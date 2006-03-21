@@ -123,14 +123,18 @@ class Battle
         put "Number of rounds set to #{@num_rounds}."
     end
     
+    def teams
+        t = Set.new
+        @players.each do |p|
+            t << @player_teams[ p ]
+        end
+        return t
+    end
+    
     def more_rounds?
         retval = false
         
         if @current_round < @num_rounds
-            teams = Set.new
-            @players.each do |p|
-                teams << @player_teams[ p ]
-            end
             retval = ( teams.size > 1 )
         end
         
@@ -297,7 +301,7 @@ class Battle
         players.each do |player|
             @final_titles[ player ] = player.title
         end
-        if @players.size > 1
+        if @players.size > 1 and teams.size < @players.size
             report_text << "  Team #{@player_teams[ @players[ 0 ] ]} won!"
         end
         players.each do |player|
