@@ -425,12 +425,13 @@ class WordX
         
         # Set the timers to reveal the clues
 
-        $reby.utimer( 90, "nobodyGotIt", "$wordx" )
+        $reby.utimer( 100, "nobodyGotIt", "$wordx" )
         $reby.utimer( 15, "clue1", "$wordx" )
         $reby.utimer( 20, "clue2", "$wordx" )
         $reby.utimer( 25, "clue3", "$wordx" )
         $reby.utimer( 40, "clue4", "$wordx" )
         $reby.utimer( 55, "clue5", "$wordx" )
+        $reby.utimer( 70, "clue6", "$wordx" )
         
         put "Unscramble ... #{mixed_word}"
     end
@@ -690,7 +691,14 @@ class WordX
         put "Starts with: #{ @word.word[ 0..0 ] }"
     end
     def clue5
-        @point_value = (@initial_point_value * 0.30).to_i
+        @point_value = (@initial_point_value * 0.40).to_i
+        put "Starts and ends with: " +
+            @word.word[ 0..0 ] +
+            "." * ( @word.word.length - 2 ) +
+            @word.word[ -1..-1 ]
+    end
+    def clue6
+        @point_value = (@initial_point_value * 0.15).to_i
         showDefinition
     end
 
