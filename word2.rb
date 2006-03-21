@@ -741,7 +741,7 @@ class WordX
     
     def listCharacterClasses( nick, userhost, handle, channel, text )
         classes = []
-        TitleSet.find( :all ).each do |ts|
+        TitleSet.find( :all, :order => 'name' ).each do |ts|
             classes << ts.name
         end
         put "Character Classes: #{classes.join( ', ' )}", channel

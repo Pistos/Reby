@@ -107,6 +107,28 @@ INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 4, 18, '8th Dan
 INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 4, 19, '9th Dan Black Belt' );
 INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 4, 20, 'Sensei' );
 
+INSERT INTO title_sets (name) VALUES ( 'Barbarian' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 5, 1, 'Cretin' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 5, 2, 'Clod' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 5, 3, 'Neanderthal' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 5, 4, 'Troglodyte' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 5, 5, 'Brute' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 5, 6, 'Savage' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 5, 7, 'Nomad' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 5, 8, 'Wanderer' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 5, 9, 'Scavenger' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 5, 10, 'Hunter' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 5, 11, 'Barbarian' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 5, 12, 'Raider' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 5, 13, 'Ranger' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 5, 14, 'Warrior' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 5, 15, 'Strong Warrior' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 5, 16, 'Mighty Warrior' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 5, 17, 'Barbarian Leader' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 5, 18, 'Barbarian Commander' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 5, 19, 'Barbarian General' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 5, 20, 'Barbarian Chief' );
+
 INSERT INTO title_sets (name) VALUES ( 'Some Class Name' );
 INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 4, 1, '' );
 INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 4, 2, '' );

@@ -8,9 +8,11 @@ require 'thread'
 
 class StoredHash
     attr_reader :hash
+    attr_accessor :no_sync
     
     def initialize( filename, default_value = nil )
         @filename = filename
+        @no_sync = false
         if FileTest.exist?( @filename )
             # Read instance from file.
             File.open( filename ) do |f|
@@ -21,13 +23,19 @@ class StoredHash
         end
     end
     
+    def StoredHash.fromHash( filename, other_hash )
+        hash = StoredHash.new( filename )
+        hash.replace( other_hash )
+        return hash
+    end
+    
     # Writes the hash out to file.
     def sync
+        return if @no_sync
         File.open( @filename, "w" ) do |f|
             Marshal.dump( @hash, f )
         end
     end
-    private :sync
     
     def ==( other )
         return ( @hash == other.hash )
@@ -137,10 +145,20 @@ class StoredHash
         return @hash.member?( key )
     end
     
+    def replace( other_hash )
+        @hash = other_hash
+        sync
+        return @hash
+    end
+    
     def shift
         retval = @hash.shift
         sync
         return retval
+    end
+    
+    def sort( &block )
+        return hash.sort( &block )
     end
     
     def size
