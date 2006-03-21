@@ -85,6 +85,28 @@ INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 3, 18, 'Lesser 
 INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 3, 19, 'Greater Assassin' );
 INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 3, 20, 'Master Assassin' );
 
+INSERT INTO title_sets (name) VALUES ( 'Martial Artist' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 4, 1, 'Wuss' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 4, 2, 'Bully' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 4, 3, 'Rabblerouser' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 4, 4, 'Brawler' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 4, 5, 'White Belt' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 4, 6, 'Yellow Belt' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 4, 7, 'Orange Belt' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 4, 8, 'Green Belt' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 4, 9, 'Blue Belt' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 4, 10, 'Brown Belt' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 4, 11, '1st Dan Black Belt' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 4, 12, '2nd Dan Black Belt' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 4, 13, '3rd Dan Black Belt' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 4, 14, '4th Dan Black Belt' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 4, 15, '5th Dan Black Belt' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 4, 16, '6th Dan Black Belt' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 4, 17, '7th Dan Black Belt' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 4, 18, '8th Dan Black Belt' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 4, 19, '9th Dan Black Belt' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 4, 20, 'Sensei' );
+
 INSERT INTO title_sets (name) VALUES ( 'Some Class Name' );
 INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 4, 1, '' );
 INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 4, 2, '' );

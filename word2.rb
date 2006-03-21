@@ -748,7 +748,7 @@ class WordX
     end
     
     def setCharacterClass( nick, userhost, handle, channel, text )
-        cl = text.strip.capitalize
+        cl = text.strip.split.collect { |w| w.capitalize }.join( ' ' )
         ts = TitleSet.find_by_name( cl )
         if ts.nil?
             put "'#{cl}' is not a class.  Try !wordclasses to get a list of available classes.", channel
