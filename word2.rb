@@ -286,7 +286,7 @@ class Battle
             @initial_titles[ player ] = player.title
         end
         
-        $wordx.oneRound( nick, userhost, handle, channel, text )
+        $wordx.oneRound( nil, nil, nil, @channel.name, nil )
     end
     
     def eliminate( player )
@@ -354,7 +354,6 @@ class WordX
     def initialize
         # Change these as you please.
         @say_answer = true
-        @MAX_WINS = 4
         # End of configuration variables.
 
         @channel = nil
@@ -362,7 +361,6 @@ class WordX
         @game = nil
         @last_winner = nil
         @consecutive_wins = 0
-        @ignored_player = nil
 
         @num_syllables = Hash.new
         @part_of_speech = Hash.new
@@ -389,6 +387,15 @@ class WordX
 
     def oneRound( nick, userhost, handle, channel, text )
         #return if nick != nil and battle_going?( channel )
+        
+        if nick != nil
+            # Practice game.
+            player = Player.find_by_nick( nick )
+            if player != nil and player.winning_too_much?
+                put "#{nick}: You have already demonstrated your great skill in the game.  It is time for you to graduate to !wordbattle.  If you insist, you may practice again in about an hour.", channel
+                return
+            end
+        end
 
         unbindPracticeCommand        
 
@@ -552,11 +559,12 @@ class WordX
         winner = Player.find_or_create_by_nick( nick )
         return if winner.nil?
         
-        if @battle.nil? and ( winner == @ignored_player )
-            put( "You've already won #{winner.consecutive_wins} times in a row!  Give some other people a chance.", winner.nick )
-            return
-        end
-        if @battle != nil and ( not @game.participations.find_by_player_id( winner.id ) )
+        if @battle.nil?
+            if winner.winning_too_much?
+                put "#{nick}: You have already demonstrated your great skill in the game.  It is time for you to graduate to !wordbattle.  If you insist, you may practice again in about an hour.", nick
+                return
+            end
+        elsif not @game.participations.find_by_player_id( winner.id )
             sendNotice( "Since you did not join this game, your guesses are not counted.", winner.nick )
             return
         end
@@ -601,23 +609,20 @@ class WordX
 
         put "#{winner.nick} got it ... #{@word.word} ... for #{winner_award} points."
         
-        if @battle != nil and @battle.lms_mode?
+        if @battle.nil?
+            @game.warmup_winner = winner.id
+        elsif @battle.lms_mode?
             losing_participation.points_awarded = -winner_award
             @battle.eliminate( high_loser )
         end
-        
+
         if winner == @last_winner
             winner.consecutive_wins += 1
             put "#{winner.consecutive_wins} consecutive victories!"
-            if @battle.nil? and ( winner.consecutive_wins >= @MAX_WINS )
-                @ignored_player = winner
-                put "#{winner.nick}'s guesses will be ignored in the next non-game round."
-            end
         else
             winner.consecutive_wins = 1
-            @ignored_player = nil
         end
-
+        
         @last_winner = winner
 
         if not @def_shown

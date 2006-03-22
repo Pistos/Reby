@@ -20,6 +20,7 @@ end
 
 class Player < ActiveRecord::Base
     BASE_RATING = 2000
+    MAX_WINS_PER_HOUR = 6
     
     has_many :participations
     
@@ -79,6 +80,11 @@ class Player < ActiveRecord::Base
             retval = t[ 0 ].id
         end
         return retval
+    end
+    
+    def winning_too_much?
+        count = Game.count( [ "warmup_winner = ? AND start_time > NOW() - '1 hour'::INTERVAL", id ] )
+        return( count >= MAX_WINS_PER_HOUR )
     end
 end
 

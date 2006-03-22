@@ -31,7 +31,8 @@ CREATE TABLE games (
     id SERIAL PRIMARY KEY,
     word_id INTEGER NOT NULL REFERENCES words( id ),
     start_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    end_time TIMESTAMP
+    end_time TIMESTAMP,
+    warmup_winner INTEGER REFERENCES players( id )
 );
 
 CREATE TABLE participations (
