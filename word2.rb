@@ -39,6 +39,7 @@ class Battle
     DEFAULT_NUM_ROUNDS = 3
     BATTLE_SETUP_TIMEOUT = 300 # seconds
     MAX_TEAM_NAME_LENGTH = 32
+    TOO_MANY_ROUNDS = 50
     GAME_BINDS = {
         "rounds" => "setNumRounds",
         "join" => "addPlayer",
@@ -114,7 +115,7 @@ class Battle
         if num_rounds < 1
             put "Usage: rounds <positive integer>"
             return
-        elsif num_rounds >= @TOO_MANY_ROUNDS
+        elsif num_rounds >= TOO_MANY_ROUNDS
             put "Usage: rounds <some reasonable positive integer>"
             return
         end
@@ -354,7 +355,6 @@ class WordX
         # Change these as you please.
         @say_answer = true
         @MAX_WINS = 4
-        @TOO_MANY_ROUNDS = 50
         # End of configuration variables.
 
         @channel = nil
