@@ -46,6 +46,17 @@ class Player < ActiveRecord::Base
         return points
     end
     
+    def save_rating_records
+        r = rating
+        if r > highest_rating
+            highest_rating = r
+        end
+        if r < lowest_rating
+            lowest_rating = r
+        end
+        save
+    end
+    
     def title
         retval = nil
         t = Title.find_by_sql [

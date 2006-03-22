@@ -479,7 +479,7 @@ class WordX
                     break
                 end
             end
-            put "#{player.nick}, #{player.title} (L#{player.level}) - Battle rating: #{player.rating} (Rank: ##{rank}) (#{player.games_played} games)", channel
+            put "\002#{player.nick}\002, \002#{player.title}\002 (L\002#{player.level}\002) - Battle rating: \002#{player.rating}\002 (Rank: \002##{rank}\002) (#{player.games_played} games) High/Low Rating: #{player.highest_rating}/#{player.lowest_rating}", channel
         else
             put "#{nick}: You're not a !word warrior!  Play a !wordbattle.", channel
         end
@@ -671,6 +671,10 @@ class WordX
                 retval = true
             else
                 # No more rounds in the game.  GAME OVER.
+                
+                @battle.initial_players.each do |player|
+                    player.save_rating_records
+                end
                 
                 @battle.report
                 @battle = nil
