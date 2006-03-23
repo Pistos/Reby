@@ -355,6 +355,9 @@ class WordX
     CURRENCY = 'gold'
     MONETARY_AWARD_FRACTION = 0.25
     PARTICIPATION_BONUS = 10
+    CLUE4_FRACTION = 0.70
+    CLUE5_FRACTION = 0.40
+    CLUE6_FRACTION = 0.15
     
     def initialize
         # Change these as you please.
@@ -438,12 +441,14 @@ class WordX
         # Set the timers to reveal the clues
 
         $reby.utimer( 100, "nobodyGotIt", "$wordx" )
-        $reby.utimer( 15, "clue1", "$wordx" )
-        $reby.utimer( 20, "clue2", "$wordx" )
-        $reby.utimer( 25, "clue3", "$wordx" )
-        $reby.utimer( 40, "clue4", "$wordx" )
-        $reby.utimer( 55, "clue5", "$wordx" )
-        $reby.utimer( 70, "clue6", "$wordx" )
+        $reby.utimer( 15, "showClue1", "$wordx" )
+        $reby.utimer( 20, "showClue2", "$wordx" )
+        $reby.utimer( 25, "showClue3", "$wordx" )
+        $reby.utimer( 40, "showClue4", "$wordx" )
+        $reby.utimer( 55, "showClue5", "$wordx" )
+        $reby.utimer( 70, "showClue6", "$wordx" )
+        
+        bindBuyCommand
         
         put "Unscramble ... #{mixed_word}"
     end
@@ -545,7 +550,7 @@ class WordX
     def killTimers
         $reby.utimers.each do |utimer|
             case utimer[ 1 ]
-                when /nobodyGotIt|clue\d/
+                when /nobodyGotIt|showClue\d/
                     $reby.killutimer( utimer[ 2 ] )
             end
         end
@@ -556,6 +561,12 @@ class WordX
     end
     def unbindPracticeCommand
         $reby.unbind( "pub", "-", "!word", "oneRound", "$wordx" )
+    end
+    def bindBuyCommand
+        $reby.bind( "pub", "-", "!wordbuy", "buy", "$wordx" )
+    end
+    def unbindBuyCommand
+        $reby.unbind( "pub", "-", "!wordbuy", "buy", "$wordx" )
     end
 
     def correctGuess( nick, userhost, handle, channel, text )
@@ -665,8 +676,9 @@ class WordX
     def endRound
         @game.save
         @channel.save
-        
+
         if not nextRound
+            bindBuyCommand
             bindPracticeCommand
             @channel = nil
         end
@@ -695,35 +707,53 @@ class WordX
     end
 
     def clue1
-        @point_value = (@initial_point_value * 0.95).to_i
-        put "Part of speech: #{ @word.pos }"
+        return "Part of speech: #{ @word.pos }"
     end
     def clue2
-        @point_value = (@initial_point_value * 0.90).to_i
-        put "Etymology: #{ @word.etymology }"
+        return "Etymology: #{ @word.etymology }"
     end
     def clue3
-        @point_value = (@initial_point_value * 0.85).to_i
-        put "Number of syllables: #{ @word.num_syllables }"
+        return "Number of syllables: #{ @word.num_syllables }"
     end
     def clue4
-        @point_value = (@initial_point_value * 0.70).to_i
-        put "Starts with: #{ @word.word[ 0..0 ] }"
+        return "Starts with: #{ @word.word[ 0..0 ] }"
     end
     def clue5
-        @point_value = (@initial_point_value * 0.40).to_i
-        put "Starts and ends with: " +
+        return "Starts and ends with: " +
             @word.word[ 0..0 ] +
             "." * ( @word.word.length - 2 ) +
             @word.word[ -1..-1 ]
     end
     def clue6
-        @point_value = (@initial_point_value * 0.15).to_i
+        "Definition: #{ @word.definition }"
+    end
+    def showClue1
+        @point_value = (@initial_point_value * 0.95).to_i
+        put clue1
+    end
+    def showClue2
+        @point_value = (@initial_point_value * 0.90).to_i
+        put clue2
+    end
+    def showClue3
+        @point_value = (@initial_point_value * 0.85).to_i
+        put clue3
+    end
+    def showClue4
+        @point_value = (@initial_point_value * CLUE4_FRACTION).to_i
+        put clue4
+    end
+    def showClue5
+        @point_value = (@initial_point_value * CLUE5_FRACTION).to_i
+        put clue5
+    end
+    def showClue6
+        @point_value = (@initial_point_value * CLUE6_FRACTION).to_i
         showDefinition
     end
 
-    def showDefinition( word = @word )
-        put "Definition: #{ @word.definition }"
+    def showDefinition
+        put clue6
         @def_shown = true
     end
 
@@ -781,6 +811,32 @@ class WordX
                 player.save
                 put "#{player.nick} is now a#{ts.name =~ /^[aoeuiAOEUI]/ ? 'n' : ''} #{ts.name}.", channel
             end
+        end
+    end
+    
+    def buy( nick, userhost, handle, channel, text )
+        arg = text.strip
+        
+        player = Player.find_by_nick( nick )
+        
+        case arg
+            when '4'
+                buyClue( player, clue4, CLUE4_FRACTION )
+            when '5'
+                buyClue( player, clue5, CLUE5_FRACTION )
+            when '6'
+                buyClue( player, clue6, CLUE6_FRACTION )
+            else
+                put "No such item for sale."
+        end
+    end
+    
+    def buyClue( player, clue, fraction )
+        cost = ( @initial_point_value * ( 1.0 - fraction ) ).to_i
+        if player.debit( cost )
+            put clue, player.nick
+        else
+            put "#{player.nick}: You don't have the #{cost} #{CURRENCY} needed to buy that!"
         end
     end
 end

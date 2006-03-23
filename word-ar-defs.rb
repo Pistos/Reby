@@ -101,6 +101,17 @@ class Player < ActiveRecord::Base
         #$reby.log caller.join( "\n\t" )
         #super
     #end
+    
+    # Returns true if the amount was successfully debited from the player's money.
+    # Returns false if the player has insufficient funds.
+    def debit( amount )
+        debitted = false
+        if money >= amount
+            update_attribute( :money, money - amount )
+            debitted = true
+        end
+        return debitted
+    end
 end
 
 class Participation < ActiveRecord::Base
