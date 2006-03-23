@@ -354,7 +354,7 @@ class WordX
     INCLUDE_PLAYERS_WITH_NO_GAMES = true
     CURRENCY = 'gold'
     MONETARY_AWARD_FRACTION = 0.25
-    PARTICIPATION_BONUS = 10
+    PARTICIPATION_AWARD = 5
     CLUE4_FRACTION = 0.70
     CLUE5_FRACTION = 0.40
     CLUE6_FRACTION = 0.15
@@ -648,17 +648,16 @@ class WordX
         # Record score.
         
         @game.participations.each do |p|
+            monetary_award = PARTICIPATION_AWARD
             if p.player_id == winner.id
                 p.update_attribute( :points_awarded, winner_award )
-                player = p.player
-                $reby.log "1 --- #{player.inspect}"
-                player.money += ( winner_award * MONETARY_AWARD_FRACTION ).to_i
-                player.save
-                $reby.log "2 --- #{player.inspect}"
-                
+                monetary_award += ( winner_award * MONETARY_AWARD_FRACTION ).to_i
             else
                 p.save
             end
+            player = p.player
+            player.money += monetary_award
+            player.save
         end
         
         endRound
@@ -801,7 +800,8 @@ class WordX
         cl = text.strip.split.collect { |w| w.capitalize }.join( ' ' )
         ts = TitleSet.find_by_name( cl )
         if ts.nil?
-            put "'#{cl}' is not a class.  Try !wordclasses to get a list of available classes.", channel
+            put "'#{cl}' is not a class.", channel
+            listCharacterClasses( nil, nil, nil, channel, nil )
         else
             player = Player.find_by_nick( nick )
             if player.nil?
