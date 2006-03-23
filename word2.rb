@@ -58,7 +58,8 @@ class Battle
         @num_rounds = DEFAULT_NUM_ROUNDS
         @current_round = 0
         @starter = player
-        @players = Array.new
+        @battlers = Array.new # All battlers in this battle
+        @players = Array.new # Only those playing in this and subsequent rounds
         @initial_titles = Hash.new
         @player_teams = Hash.new
         addPlayer( nick, nil, nil, channel, nil )
@@ -99,8 +100,8 @@ class Battle
         return( @mode == :rounds )
     end
     
-    def initial_players
-        return @initial_titles.keys
+    def battlers
+        return @battlers.collect! { |b| b.reload }
     end
     
     def setNumRounds( nick, userhost, handle, channel, text )
@@ -187,6 +188,7 @@ class Battle
     def includePlayer( player )
         included = false
         if not @players.include? player
+            @battlers << player
             @players << player
             if @players.size > 2
                 setMode( :lms )
@@ -298,7 +300,7 @@ class Battle
         report_text = ''
         @final_ranking = $wordx.ranking
         @final_titles = Hash.new
-        players = @initial_titles.keys
+        players = battlers
         players.each do |player|
             @final_titles[ player ] = player.title
         end
@@ -345,11 +347,14 @@ class WordX
     attr_reader :battle
     
     VERSION = '2.0.0'
-    LAST_MODIFIED = 'March 20, 2006'
+    LAST_MODIFIED = 'March 22, 2006'
     MIN_GAMES_PLAYED_TO_SHOW_SCORE = 0
     DEFAULT_INITIAL_POINT_VALUE = 100
     MAX_SCORES_TO_SHOW = 10
     INCLUDE_PLAYERS_WITH_NO_GAMES = true
+    CURRENCY = 'gold'
+    MONETARY_AWARD_FRACTION = 0.25
+    PARTICIPATION_BONUS = 10
     
     def initialize
         # Change these as you please.
@@ -479,7 +484,7 @@ class WordX
                     break
                 end
             end
-            put "\002#{player.nick}\002, \002#{player.title}\002 (L\002#{player.level}\002) - Battle rating: \002#{player.rating}\002 (Rank: \002##{rank}\002) (#{player.games_played} games) High/Low Rating: #{player.highest_rating}/#{player.lowest_rating}", channel
+            put "\002#{player.nick}\002, \002#{player.title}\002 (L\002#{player.level}\002) - Battle rating: \002#{player.rating}\002 (Rank: \002##{rank}\002) (#{player.money} #{CURRENCY}) (#{player.games_played} games) High/Low Rating: #{player.highest_rating}/#{player.lowest_rating}", channel
         else
             put "#{nick}: You're not a !word warrior!  Play a !wordbattle.", channel
         end
@@ -631,12 +636,18 @@ class WordX
 
         # Record score.
         
-        winner.save
         @game.participations.each do |p|
             if p.player_id == winner.id
-                p.points_awarded = winner_award
+                p.update_attribute( :points_awarded, winner_award )
+                player = p.player
+                $reby.log "1 --- #{player.inspect}"
+                player.money += ( winner_award * MONETARY_AWARD_FRACTION ).to_i
+                player.save
+                $reby.log "2 --- #{player.inspect}"
+                
+            else
+                p.save
             end
-            p.save
         end
         
         endRound
@@ -672,7 +683,7 @@ class WordX
             else
                 # No more rounds in the game.  GAME OVER.
                 
-                @battle.initial_players.each do |player|
+                @battle.battlers.each do |player|
                     player.save_rating_records
                 end
                 

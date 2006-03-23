@@ -25,6 +25,7 @@ CREATE TABLE players (
     warmup_points INTEGER DEFAULT 0,
     highest_rating INTEGER DEFAULT 2000,
     lowest_rating INTEGER DEFAULT 2000,
+    money INTEGER DEFAULT 0
 );
 
 CREATE TABLE games (

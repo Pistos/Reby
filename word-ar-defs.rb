@@ -49,12 +49,10 @@ class Player < ActiveRecord::Base
     def save_rating_records
         r = rating
         if r > highest_rating
-            highest_rating = r
+            update_attribute( :highest_rating, r )
+        elsif r < lowest_rating
+            update_attribute( :lowest_rating, r )
         end
-        if r < lowest_rating
-            lowest_rating = r
-        end
-        save
     end
     
     def title
@@ -97,10 +95,20 @@ class Player < ActiveRecord::Base
         count = Game.count( [ "warmup_winner = ? AND start_time > NOW() - '1 hour'::INTERVAL", id ] )
         return( count >= MAX_WINS_PER_HOUR )
     end
+    
+    #def save
+        #$reby.log "Saving: #{inspect}"
+        #$reby.log caller.join( "\n\t" )
+        #super
+    #end
 end
 
 class Participation < ActiveRecord::Base
     belongs_to :game
+    
+    def player
+        return Player.find( player_id )
+    end
 end
 
 class Channel < ActiveRecord::Base
