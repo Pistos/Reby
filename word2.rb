@@ -397,6 +397,7 @@ class WordX
     INCLUDE_PLAYERS_WITH_NO_GAMES = true
     CURRENCY = 'gold'
     MONETARY_AWARD_FRACTION = 0.25
+    GIVE_AWAY_REDUCTION = 0.10
     PARTICIPATION_AWARD = 5
     CLUE4_FRACTION = 0.70
     CLUE5_FRACTION = 0.40
@@ -460,6 +461,8 @@ class WordX
         @word = Word.random
         @game = Game.create( { :word_id => @word.id } )
         @initial_point_value = DEFAULT_INITIAL_POINT_VALUE
+        @given_away_by = nil
+        @word_regexp = Regexp.new( @word.word.split( // ).join( ".*" ) )
         
         if @battle != nil
             @battle.players.each do |player|
@@ -631,6 +634,7 @@ class WordX
             end
         elsif not @game.participations.find_by_player_id( winner.id )
             sendNotice( "Since you did not join this game, your guesses are not counted.", winner.nick )
+            @given_away_by = nick
             return
         end
 
@@ -641,6 +645,10 @@ class WordX
         
         @game.end_time = Time.now
         
+        if @given_away_by != nil
+            put "Since #{@given_away_by} gave the answer away, the award is reduced."
+            @point_value = ( @point_value * GIVE_AWAY_REDUCTION ).to_i
+        end
         winner_award = @point_value
         losing_participation = nil
         if @battle != nil
@@ -715,6 +723,7 @@ class WordX
     def endRound
         @game.save
         @channel.save
+        @word = nil
 
         if not nextRound
             bindBuyCommand
@@ -975,6 +984,29 @@ class WordX
                 end
         end
     end
+    
+    def listen( nick, userhost, handle, channel, args )
+        return if @word.nil?
+        
+        $reby.log "listen_args: #{args.inspect}"
+        
+        text = nil
+        case args
+            when Array
+                text = args.join( ' ' )
+            when String
+                text = args
+            else
+                text = args.to_s
+        end
+        checkGiveAway( nick, text )
+    end
+    
+    def checkGiveAway( nick, text )
+        if text =~ @word_regexp
+            @given_away_by = nick
+        end
+    end
 end
 
 $wordx = WordX.new
@@ -990,3 +1022,4 @@ $reby.bind( "pub", "-", "!wordclasses", "listCharacterClasses", "$wordx" )
 $reby.bind( "raw", "-", "320", "registrationNotification", "$wordx" )
 $reby.bind( "raw", "-", "318", "registrationCheck", "$wordx" )
 $reby.bind( "pub", "-", "!wordop", "opCommand", "$wordx" )
+$reby.bind( "pubm", "-", "#mathetes *", "listen", "$wordx" )
