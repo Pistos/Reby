@@ -205,7 +205,7 @@ class Battle
             @player_teams[ player ] = player.nick
             put "#{player.nick} has joined the game.", @channel.name
             included = true
-            $wordx.initiateRegistrationCheck( player.nick )
+            $wordx.initiateRegistrationCheck( player )
         end
         return included
     end
