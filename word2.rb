@@ -61,8 +61,9 @@ class Battle
         @battlers = Array.new # All battlers in this battle
         @players = Array.new # Only those playing in this and subsequent rounds
         @initial_titles = Hash.new
+        @initial_money = Hash.new
         @player_teams = Hash.new
-        addPlayer( nick, nil, nil, channel, nil )
+        @registered_players = Hash.new
         
         GAME_BINDS.each do |command, method|
             $reby.bind( "pub", "-", command, method, "$wordx.battle" )
@@ -72,6 +73,8 @@ class Battle
         
         put "Defaults: Rounds: #{DEFAULT_NUM_ROUNDS}"
         put "Commands: " + GAME_BINDS.keys.join( '; ' )
+        
+        addPlayer( nick, nil, nil, channel, nil )
     end
     
     def put( text, destination = @channel.name )
@@ -176,9 +179,15 @@ class Battle
     
     def joinTeam( nick, userhost, handle, channel, text )
         return if channel != @channel.name
+        
+        team = text.strip[ 0...MAX_TEAM_NAME_LENGTH ]
+        if team.empty?
+            put "#{nick}: team <team name>"
+            return
+        end
+        
         player = Player.find_or_create_by_nick( nick )
         includePlayer( player )
-        team = text.strip[ 0...MAX_TEAM_NAME_LENGTH ]
         @player_teams[ player ] = team
         if team != player.nick
             put "#{player.nick} joined Team #{team}."
@@ -196,6 +205,8 @@ class Battle
             @player_teams[ player ] = player.nick
             put "#{player.nick} has joined the game.", @channel.name
             included = true
+            @registered_players[ player ] = false
+            $reby.putserv "WHOIS #{player.nick}"
         end
         return included
     end
@@ -204,9 +215,7 @@ class Battle
         return if channel != @channel.name
         
         player = Player.find_or_create_by_nick( nick )
-        if includePlayer( player )
-            @initial_titles[ player ] = player.title
-        else
+        if not includePlayer( player )
             put "#{player.nick}: You're already in the game!"
         end
     end
@@ -216,7 +225,11 @@ class Battle
         
         player = Player.find_or_create_by_nick( nick )
         if player == @starter
-            sendNotice( "You can't leave the game, you started it.  Try the abort command.", player.nick )
+            if @registered_players[ player ]
+                put "#{player.nick}: You can't leave the game, you started it.  Try the abort command."
+            else
+                doAbort
+            end
         elsif @players.delete( player )
             put "#{nick} has withdrawn from the game."
             if @players.size < 3
@@ -237,6 +250,17 @@ class Battle
             )
         } ).join( ', ' )
         put str
+    end
+    
+    def markRegistered( nick )
+        @registered_players[ Player.find_by_nick( nick ) ] = true
+    end
+    def checkRegistered( nick )
+        p = Player.find_by_nick( nick )
+        if p != nil and not @registered_players[ p ]
+            put "#{p.nick} is not identified with network services.  Forcing withdrawl..."
+            removePlayer( p.nick, nil, nil, @channel.name, nil )
+        end
     end
     
     def timeoutGame
@@ -275,17 +299,29 @@ class Battle
             put "Only the person who invoked the battle can start it."
             return
         end
+        
+        all_players_registered = true
+        @players.each do |p|
+            r = @registered_players[ p ]
+            all_players_registered &&= ( r != nil and r )
+        end
+        if not all_players_registered
+            put "Please wait until all players are determined to be registered..."
+            return
+        end
+
         if @players.length < 2
             put "At least two players need to be in the game."
             return
         end
-
+        
         unbindSetupBinds
 
         @current_round = 1
         @initial_ranking = $wordx.ranking
         @players.each do |player|
             @initial_titles[ player ] = player.title
+            @initial_money[ player ] = player.money
         end
         
         $wordx.oneRound( nil, nil, nil, @channel.name, nil )
@@ -300,9 +336,11 @@ class Battle
         report_text = ''
         @final_ranking = $wordx.ranking
         @final_titles = Hash.new
+        @final_money = Hash.new
         players = battlers
         players.each do |player|
             @final_titles[ player ] = player.title
+            @final_money[ player ] = player.money
         end
         if @players.size > 1 and teams.size < @players.size
             report_text << "  Team #{@player_teams[ @players[ 0 ] ]} won!"
@@ -310,11 +348,16 @@ class Battle
         players.each do |player|
             initial_rank, initial_score = @initial_ranking.rank_and_score( player )
             initial_score ||= Player::BASE_RATING
-            final_rank, final_score = @final_ranking.rank_and_score( player )
             initial_title = @initial_titles[ player ]
+            initial_money = @initial_money[ player ]
+            
+            final_rank, final_score = @final_ranking.rank_and_score( player )
             final_title = @final_titles[ player ]
+            final_money = @final_money[ player ]
+            
             terminal_punctuation = '.'
             sentence = []
+            
             if final_score > initial_score
                 sentence = [ "#{player.nick} gained #{final_score - initial_score} points" ]
                 if initial_title != final_title
@@ -335,6 +378,11 @@ class Battle
                     sentence << "fell from ##{initial_rank} to ##{final_rank}"
                     terminal_punctuation = '!'
                 end
+            end
+            if final_money > initial_money
+                sentence << "gained #{final_money - initial_money} #{WordX::CURRENCY}"
+            elsif final_money < initial_money
+                sentence << "incurred a net loss of #{initial_money - final_money} #{WordX::CURRENCY}"
             end
             report_text << "  " << sentence.join( ' and ' ) << terminal_punctuation
         end
@@ -367,14 +415,12 @@ class WordX
         @channel = nil
         @word = nil
         @game = nil
-        @last_winner = nil
-        @consecutive_wins = 0
 
         @num_syllables = Hash.new
         @part_of_speech = Hash.new
         @etymology = Hash.new
         @definition = Hash.new
-
+        
         ActiveRecord::Base.establish_connection(
             :adapter  => "postgresql",
             :host     => "localhost",
@@ -632,15 +678,6 @@ class WordX
             @battle.eliminate( high_loser )
         end
 
-        if winner == @last_winner
-            winner.consecutive_wins += 1
-            put "#{winner.consecutive_wins} consecutive victories!"
-        else
-            winner.consecutive_wins = 1
-        end
-        
-        @last_winner = winner
-
         if not @def_shown
             showDefinition
         end
@@ -764,7 +801,7 @@ class WordX
             else
                 put(
                     "A battle is currently underway in #{@battle.channel.name} between " +
-                        @battle.initial_players.collect { |p| p.nick }.join(', ') + ".",
+                        @battle.battlers.collect { |p| p.nick }.join(', ') + ".",
                     channel
                 )
             end
@@ -839,6 +876,24 @@ class WordX
             put "#{player.nick}: You don't have the #{cost} #{CURRENCY} needed to buy that!"
         end
     end
+    
+    def registrationNotification( from, keyword, text )
+        return if keyword != "320"
+        return if @battle.nil?
+        
+        if text =~ /(\S+) :is identified to services/
+            $reby.log "#{$1} is registered"
+            @battle.markRegistered( $1 )
+        end
+    end
+    def registrationCheck( from, keyword, text )
+        return if keyword != "318"  # end of WHOIS
+        return if @battle.nil?
+        
+        if text =~ /(\S+) :End of \/WHOIS list./
+            @battle.checkRegistered( $1 )
+        end
+    end
 end
 
 $wordx = WordX.new
@@ -851,4 +906,5 @@ $reby.bind( "pub", "-", "!wordrank", "printRanking", "$wordx" )
 $reby.bind( "pub", "-", "!wordranking", "printRanking", "$wordx" )
 $reby.bind( "pub", "-", "!wordclass", "setCharacterClass", "$wordx" )
 $reby.bind( "pub", "-", "!wordclasses", "listCharacterClasses", "$wordx" )
-
+$reby.bind( "raw", "-", "320", "registrationNotification", "$wordx" )
+$reby.bind( "raw", "-", "318", "registrationCheck", "$wordx" )
