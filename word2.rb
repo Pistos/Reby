@@ -14,6 +14,7 @@
 # !wordrank[ing] [number of ranks to list]
 
 require 'word-ar-defs'
+require 'set'
 
 class Array
     def rank_and_score( player )
@@ -63,7 +64,6 @@ class Battle
         @initial_titles = Hash.new
         @initial_money = Hash.new
         @player_teams = Hash.new
-        @registered_players = Hash.new
         
         GAME_BINDS.each do |command, method|
             $reby.bind( "pub", "-", command, method, "$wordx.battle" )
@@ -205,8 +205,7 @@ class Battle
             @player_teams[ player ] = player.nick
             put "#{player.nick} has joined the game.", @channel.name
             included = true
-            @registered_players[ player ] = false
-            $reby.putserv "WHOIS #{player.nick}"
+            $wordx.initiateRegistrationCheck( player.nick )
         end
         return included
     end
@@ -225,7 +224,7 @@ class Battle
         
         player = Player.find_or_create_by_nick( nick )
         if player == @starter
-            if @registered_players[ player ]
+            if $wordx.registered?( player )
                 put "#{player.nick}: You can't leave the game, you started it.  Try the abort command."
             else
                 doAbort
@@ -252,12 +251,9 @@ class Battle
         put str
     end
     
-    def markRegistered( nick )
-        @registered_players[ Player.find_by_nick( nick ) ] = true
-    end
     def checkRegistered( nick )
         p = Player.find_by_nick( nick )
-        if p != nil and not @registered_players[ p ]
+        if p != nil and not $wordx.registered?( p )
             put "#{p.nick} is not identified with network services.  Forcing withdrawl..."
             removePlayer( p.nick, nil, nil, @channel.name, nil )
         end
@@ -302,8 +298,7 @@ class Battle
         
         all_players_registered = true
         @players.each do |p|
-            r = @registered_players[ p ]
-            all_players_registered &&= ( r != nil and r )
+            all_players_registered &&= $wordx.registered?( p )
         end
         if not all_players_registered
             put "Please wait until all players are determined to be registered..."
@@ -395,7 +390,7 @@ class WordX
     attr_reader :battle
     
     VERSION = '2.0.0'
-    LAST_MODIFIED = 'March 22, 2006'
+    LAST_MODIFIED = 'March 24, 2006'
     MIN_GAMES_PLAYED_TO_SHOW_SCORE = 0
     DEFAULT_INITIAL_POINT_VALUE = 100
     MAX_SCORES_TO_SHOW = 10
@@ -406,6 +401,11 @@ class WordX
     CLUE4_FRACTION = 0.70
     CLUE5_FRACTION = 0.40
     CLUE6_FRACTION = 0.15
+    CONFIRMATION_TIMEOUT = 5 # seconds
+    
+    OPS = Set.new [
+        "Pistos",
+    ]
     
     def initialize
         # Change these as you please.
@@ -420,6 +420,9 @@ class WordX
         @part_of_speech = Hash.new
         @etymology = Hash.new
         @definition = Hash.new
+        
+        @registered_players = Hash.new
+        @registration_check_pending = Hash.new
         
         ActiveRecord::Base.establish_connection(
             :adapter  => "postgresql",
@@ -871,7 +874,7 @@ class WordX
     def buyClue( player, clue, fraction )
         cost = ( @initial_point_value * ( 1.0 - fraction ) ).to_i
         if player.debit( cost )
-            put clue, player.nick
+            sendNotice( clue, player.nick )
         else
             put "#{player.nick}: You don't have the #{cost} #{CURRENCY} needed to buy that!"
         end
@@ -879,19 +882,97 @@ class WordX
     
     def registrationNotification( from, keyword, text )
         return if keyword != "320"
-        return if @battle.nil?
         
         if text =~ /(\S+) :is identified to services/
-            $reby.log "#{$1} is registered"
-            @battle.markRegistered( $1 )
+            player = Player.find_by_nick( $1 )
+            if player != nil
+                @registered_players[ player ] = true
+            end
         end
     end
     def registrationCheck( from, keyword, text )
         return if keyword != "318"  # end of WHOIS
-        return if @battle.nil?
         
         if text =~ /(\S+) :End of \/WHOIS list./
-            @battle.checkRegistered( $1 )
+            player = Player.find_by_nick( $1 )
+            if player != nil
+                @registration_check_pending[ player ] = false
+            end
+            if @battle != nil
+                @battle.checkRegistered( $1 )
+            end
+        end
+    end
+    
+    def registered?( player )
+        return( @registered_players[ player ] == true )
+    end
+
+    def initiateRegistrationCheck( player )
+        @registered_players[ player ] = false
+        $reby.putserv "WHOIS #{player.nick}"
+    end
+    
+    def confirmRegistration( nick )
+        retval = false
+        player = Player.find_by_nick( nick )
+        @registration_check_pending[ player ] = true
+        initiateRegistrationCheck( player )
+        t1 = Time.now
+        while @registration_check_pending[ player ]
+            sleep 0.5
+            if Time.now - t1 > CONFIRMATION_TIMEOUT
+                break
+            end
+        end
+        if not @registration_check_pending[ player ]
+            retval = registered?( player )
+        end
+        
+        return retval
+    end
+    
+    def op?( nick )
+        retval = OPS.include?( nick ) && confirmRegistration( nick )
+    end
+    
+    def opCommand( nick, userhost, handle, channel, text )
+        if not op?( nick )
+            put "#{nick}: You are not a !word operator who has identified with the network.", channel
+            return
+        end
+        
+        command = text.strip
+        case command
+            when /^del\S*\s+(\S+)/
+                nick = $1
+                victim = Player.find_by_nick( nick )
+                if victim != nil
+                    games_to_delete = Game.find(
+                        :all,
+                        :conditions => [
+                            "EXISTS ( \
+                                SELECT 1 \
+                                FROM participations \
+                                WHERE participations.game_id = games.id \
+                                    AND player_id = ? \
+                            )",
+                            victim.id
+                        ]
+                    )
+                    
+                    num_games = games_to_delete.length
+                    games_to_delete.each do |game|
+                        Participation.delete_all(
+                            [ "game_id = ?", game.id ]
+                        )
+                        Game.delete( game.id )
+                    end
+                    victim.destroy
+                    put "Deleted #{nick} and #{num_games} games.", channel
+                else
+                    put "No such player: '#{nick}'", channel
+                end
         end
     end
 end
@@ -908,3 +989,4 @@ $reby.bind( "pub", "-", "!wordclass", "setCharacterClass", "$wordx" )
 $reby.bind( "pub", "-", "!wordclasses", "listCharacterClasses", "$wordx" )
 $reby.bind( "raw", "-", "320", "registrationNotification", "$wordx" )
 $reby.bind( "raw", "-", "318", "registrationCheck", "$wordx" )
+$reby.bind( "pub", "-", "!wordop", "opCommand", "$wordx" )
