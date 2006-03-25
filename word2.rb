@@ -40,7 +40,9 @@ class Battle
     DEFAULT_NUM_ROUNDS = 3
     BATTLE_SETUP_TIMEOUT = 300 # seconds
     MAX_TEAM_NAME_LENGTH = 32
-    TOO_MANY_ROUNDS = 50
+    TOO_MANY_ROUNDS = 20
+    TOO_MANY_LOSSES = 4
+    DEFAULT_KO_LOSSES = 2
     GAME_BINDS = {
         "rounds" => "setNumRounds",
         "join" => "addPlayer",
@@ -50,6 +52,7 @@ class Battle
         "leave" => "removePlayer",
         "team" => 'joinTeam',
         'mode' => 'changeMode',
+        'losses' => 'setNumLosses',
     }
     
     def initialize( channel, nick )
@@ -66,6 +69,8 @@ class Battle
         @initial_money = Hash.new
         @player_teams = Hash.new
         @king = nil
+        @lms_losses = Hash.new( 0 )
+        @ko_losses = DEFAULT_KO_LOSSES
         
         GAME_BINDS.each do |command, method|
             $reby.bind( "pub", "-", command, method, "$wordx.battle" )
@@ -73,7 +78,7 @@ class Battle
         
         $reby.utimer( BATTLE_SETUP_TIMEOUT, "timeoutGame", "$wordx.battle" )
         
-        put "Defaults: Rounds: #{DEFAULT_NUM_ROUNDS}"
+        put "Defaults: Rounds: #{DEFAULT_NUM_ROUNDS} LMS Losses: #{DEFAULT_KO_LOSSES}"
         put "Commands: " + GAME_BINDS.keys.join( '; ' )
         
         addPlayer( nick, nil, nil, channel, nil )
@@ -121,6 +126,27 @@ class Battle
         
         @num_rounds = num_rounds
         put "Number of rounds set to #{@num_rounds}."
+    end
+    
+    def setNumLosses( nick, userhost, handle, channel, text )
+        return if channel != @channel.name
+        
+        if @mode != :lms
+            put "Number of losses can only be set when battle mode is Last Man Standing."
+            return
+        end
+        
+        num_losses = text.to_i
+        if num_losses < 1
+            put "Usage: losses <positive integer>"
+            return
+        elsif num_losses >= TOO_MANY_LOSSES
+            put "Usage: losses <some reasonable positive integer>"
+            return
+        end
+        
+        @ko_losses = num_losses
+        put "Number of losses set to #{@num_losses}."
     end
     
     def teams
@@ -339,8 +365,11 @@ class Battle
     end
     
     def eliminate( player )
-        @players.delete( player )
-        put "#{player.nick} has been knocked out of contention!"
+        @lms_losses[ player ] += 1
+        if @lms_losses[ player ] >= @ko_losses
+            @players.delete( player )
+            put "#{player.nick} has been knocked out of contention!"
+        end
     end
     
     def report
