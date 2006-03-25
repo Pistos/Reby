@@ -347,6 +347,7 @@ class Battle
             initial_money = @initial_money[ player ]
             
             final_rank, final_score = @final_ranking.rank_and_score( player )
+            final_score ||= Player::BASE_RATING
             final_title = @final_titles[ player ]
             final_money = @final_money[ player ]
             
@@ -677,7 +678,7 @@ class WordX
                 end
             end
         else
-            winner.warmup_points += winner_award
+            winner.update_attribute( :warmup_points, winner.warmup_points + winner_award )
         end
 
         put "#{winner.nick} got it ... #{@word.word} ... for #{winner_award} points."
