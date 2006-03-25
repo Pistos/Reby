@@ -215,7 +215,7 @@ class Battle
         if not @players.include? player
             @battlers << player
             @players << player
-            if @players.size > 2
+            if @players.size > 2 and @mode == :rounds
                 setMode( :lms )
             end
             @player_teams[ player ] = player.nick
@@ -368,7 +368,7 @@ class Battle
             final_money = @final_money[ player ]
             
             terminal_punctuation = '.'
-            sentence = []
+            sentence = [ player.nick ]
             
             if final_score > initial_score
                 sentence = [ "#{player.nick} gained #{final_score - initial_score} points" ]
