@@ -35,7 +35,7 @@ end
 
 class Battle
     attr_reader :state, :channel, :starter, :mode, :current_round, :players,
-        :player_teams
+        :player_teams, :king
 
     DEFAULT_NUM_ROUNDS = 3
     BATTLE_SETUP_TIMEOUT = 300 # seconds
@@ -49,6 +49,7 @@ class Battle
         "players" => "listPlayers",
         "leave" => "removePlayer",
         "team" => 'joinTeam',
+        'mode' => 'changeMode',
     }
     
     def initialize( channel, nick )
@@ -64,6 +65,7 @@ class Battle
         @initial_titles = Hash.new
         @initial_money = Hash.new
         @player_teams = Hash.new
+        @king = nil
         
         GAME_BINDS.each do |command, method|
             $reby.bind( "pub", "-", command, method, "$wordx.battle" )
@@ -96,13 +98,6 @@ class Battle
         end
     end
     
-    def lms_mode?
-        return( @mode == :lms )
-    end
-    def rounds_mode?
-        return( @mode == :rounds )
-    end
-    
     def battlers
         return @battlers.collect! { |b| b.reload }
     end
@@ -110,7 +105,7 @@ class Battle
     def setNumRounds( nick, userhost, handle, channel, text )
         return if channel != @channel.name
         
-        if lms_mode?
+        if @mode == :lms
             put "Number of rounds cannot be altered when battle mode is Last Man Standing."
             return
         end
@@ -152,6 +147,9 @@ class Battle
     def setMode( mode, arg = DEFAULT_NUM_ROUNDS )
         okay = true
         case mode
+            when :koth
+                @num_rounds = arg.to_i
+                put "Battle mode: King of the Hill (#{@num_rounds} rounds)"
             when :lms
                 @num_rounds = 99
                 put "Battle mode: Last Man Standing"
@@ -166,10 +164,23 @@ class Battle
             @mode = mode
         end
     end
-
-    def clearLMS
-        if @mode == :lms
-            setMode( :rounds, DEFAULT_NUM_ROUNDS )
+    def changeMode( nick, userhost, handle, channel, text )
+        mode = text.strip
+        case mode
+            when 'lms'
+                if @battlers.size < 3
+                    put "At least 3 players are needed for Last Man Standing."
+                else
+                    setMode( :lms )
+                end
+            when 'koth'
+                if @battlers.size < 3
+                    put "At least 3 players are needed for King of the Hill."
+                else
+                    setMode( :koth )
+                end
+            else
+                put "Valid modes: lms, koth"
         end
     end
 
@@ -179,6 +190,11 @@ class Battle
     
     def joinTeam( nick, userhost, handle, channel, text )
         return if channel != @channel.name
+        
+        if @mode == :koth
+            put "There are no teams in King of the Hill."
+            return
+        end
         
         team = text.strip[ 0...MAX_TEAM_NAME_LENGTH ]
         if team.empty?
@@ -232,7 +248,7 @@ class Battle
         elsif @players.delete( player )
             put "#{nick} has withdrawn from the game."
             if @players.size < 3
-                clearLMS
+                setMode( :rounds, DEFAULT_NUM_ROUNDS )
             end
         else
             put "#{nick}: You cannot leave what you have not joined."
@@ -466,13 +482,37 @@ class WordX
         @word_regexp = Regexp.new( @word.word.split( // ).join( ".*" ) )
         
         if @battle != nil
+            highest_rating = 0
+            _king = nil
+            _king_participation = nil
             @battle.players.each do |player|
-                @game.participations << Participation.new(
+                partic = Participation.new(
                     :player_id => player.id,
                     :game_id => @game.id,
                     :team => @battle.player_teams[ player ]
                 )
+                @game.participations << partic
+                
+                if @battle.mode == :koth
+                    if @king.nil?
+                        r = player.rating
+                        if r > highest_rating
+                            highest_rating = r
+                            _king = player
+                            _king_participation = partic
+                        end
+                    elsif player == @king
+                        @king_participation = partic
+                    end
+                end
             end
+            if @king.nil?
+                @king = _king
+                @king_participation = _king_participation
+            else
+                put "#{@king.nick} is the king."
+            end
+            
             @initial_point_value += (@game.participations.size - 2) * 15
         end
 
@@ -622,6 +662,10 @@ class WordX
         $reby.unbind( "pub", "-", "!wordbuy", "buy", "$wordx" )
     end
 
+    def calculatedLoss( winner, loser )
+        return ( @point_value * ( loser.rating.to_f / winner.rating.to_f ) ).to_i
+    end
+    
     def correctGuess( nick, userhost, handle, channel, text )
         return if @already_guessed
         
@@ -653,28 +697,36 @@ class WordX
         winner_award = @point_value
         losing_participation = nil
         if @battle != nil
-            # Modify award based on comparison of ratings.
-            
-            winner_award = 0
-            winner_rating = winner.rating.to_f
-            highest_opponent_rating = 0
-            high_loser = nil
-            
-            @game.participations.each do |participation|
-                player = Player.find( participation.player_id )
-                next if player == winner
-                next if @battle.teammates?( player, winner )
+            if @battle.mode == :koth and winner != @king
+                losing_participation = @king_participation
+                winner_award = calculatedLoss( winner, @king )
+            else
+                # Modify award based on comparison of ratings.
                 
-                player_rating = player.rating.to_f
-                loss = ( @point_value * ( player_rating / winner_rating ) ).to_i
-                if not @battle.lms_mode?
-                    participation.points_awarded = -loss
-                end
-                if player_rating > highest_opponent_rating
-                    highest_opponent_rating = player_rating
-                    high_loser = player
-                    losing_participation = participation
-                    winner_award = loss
+                winner_award = 0
+                winner_rating = winner.rating.to_f
+                highest_opponent_rating = 0
+                high_loser = nil
+                
+                @game.participations.each do |participation|
+                    player = Player.find( participation.player_id )
+                    next if player == winner
+                    next if @battle.teammates?( player, winner )
+                    
+                    loss = calculatedLoss( winner, player )
+                    if @battle.mode == :rounds
+                        participation.points_awarded = -loss
+                        losing_participation = participation
+                        winner_award = loss
+                    else
+                        player_rating = player.rating
+                        if player_rating > highest_opponent_rating
+                            highest_opponent_rating = player_rating
+                            high_loser = player
+                            losing_participation = participation
+                            winner_award = loss
+                        end
+                    end
                 end
             end
         else
@@ -685,9 +737,14 @@ class WordX
         
         if @battle.nil?
             @game.warmup_winner = winner.id
-        elsif @battle.lms_mode?
+        else
             losing_participation.points_awarded = -winner_award
-            @battle.eliminate( high_loser )
+            case @battle.mode
+                when :lms
+                    @battle.eliminate( high_loser )
+                when :koth
+                    @king = winner
+            end
         end
 
         if not @def_shown
@@ -831,6 +888,7 @@ class WordX
         
         unbindPracticeCommand
         @battle = Battle.new( channel, nick )
+        @king = nil
     end
     
     def abortBattle
