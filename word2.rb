@@ -35,7 +35,7 @@ end
 
 class Battle
     attr_reader :state, :channel, :starter, :mode, :current_round, :players,
-        :player_teams, :king
+        :player_teams, :king, :wins
 
     DEFAULT_NUM_ROUNDS = 3
     BATTLE_SETUP_TIMEOUT = 300 # seconds
@@ -71,6 +71,7 @@ class Battle
         @king = nil
         @lms_losses = Hash.new( 0 )
         @ko_losses = DEFAULT_KO_LOSSES
+        @wins = Hash.new( 0 )
         
         GAME_BINDS.each do |command, method|
             $reby.bind( "pub", "-", command, method, "$wordx.battle" )
@@ -375,6 +376,10 @@ class Battle
         end
     end
     
+    def addWin( player )
+        @wins[ player ] += 1
+    end
+    
     def report
         report_text = ''
         @final_ranking = $wordx.ranking
@@ -400,10 +405,10 @@ class Battle
             final_money = @final_money[ player ] || 0
             
             terminal_punctuation = '.'
-            sentence = [ player.nick ]
+            sentence = [ ]
             
             if final_score > initial_score
-                sentence = [ "#{player.nick} gained #{final_score - initial_score} points" ]
+                sentence << "gained #{final_score - initial_score} points"
                 if initial_title != final_title
                     sentence << "advanced from #{initial_title} to #{final_title}"
                     terminal_punctuation = '!'
@@ -413,7 +418,7 @@ class Battle
                     terminal_punctuation = '!'
                 end
             elsif final_score < initial_score
-                sentence = [ "#{player.nick} lost #{initial_score - final_score} points" ]
+                sentence << "lost #{initial_score - final_score} points"
                 if initial_title != final_title
                     sentence << "got demoted from #{initial_title} to #{final_title}"
                     terminal_punctuation = '!'
@@ -428,7 +433,7 @@ class Battle
             elsif final_money < initial_money
                 sentence << "incurred a net loss of #{initial_money - final_money} #{WordX::CURRENCY}"
             end
-            report_text << "  " << sentence.join( ' and ' ) << terminal_punctuation
+            report_text << "  #{player.nick} " << sentence.join( ' and ' ) << terminal_punctuation
         end
         
         put "Battle over.#{report_text}"
@@ -438,8 +443,8 @@ end
 class WordX
     attr_reader :battle
     
-    VERSION = '2.0.0'
-    LAST_MODIFIED = 'March 24, 2006'
+    VERSION = '2.1.0'
+    LAST_MODIFIED = 'March 26, 2006'
     MIN_GAMES_PLAYED_TO_SHOW_SCORE = 0
     DEFAULT_INITIAL_POINT_VALUE = 100
     MAX_SCORES_TO_SHOW = 10
@@ -698,7 +703,40 @@ class WordX
         return ( @point_value * ( loser.rating.to_f / winner.rating.to_f ) ).to_i
     end
     
+    def highest_loser( winner )
+        winner_award = 0
+        winner_rating = winner.rating.to_f
+        highest_opponent_rating = 0
+        losing_participation = nil
+        low_wins = 999
+        
+        @battle.players.each do |player|
+            next if player == winner
+            if @battle.wins[ player ] < low_wins
+                low_wins = @battle.wins[ player ]
+            end
+        end
+        
+        @game.participations.each do |participation|
+            player = Player.find( participation.player_id )
+            next if player == winner
+            next if @battle.wins[ player ] > low_wins
+            
+            loss = calculatedLoss( winner, player )
+            player_rating = player.rating
+            if player_rating > highest_opponent_rating
+                highest_opponent_rating = player_rating
+                losing_participation = participation
+                winner_award = loss
+            end
+        end
+        
+        return losing_participation, winner_award
+    end
+    
     def correctGuess( nick, userhost, handle, channel, text )
+        # Validity checks:
+        
         return if @already_guessed
         
         winner = Player.find_or_create_by_nick( nick )
@@ -714,6 +752,8 @@ class WordX
             @given_away_by = nick
             return
         end
+        
+        # -----
 
         @already_guessed = true
 
@@ -722,63 +762,56 @@ class WordX
         
         @game.end_time = Time.now
         
+        put "#{winner.nick} got it ... #{@word.word}"
+        
         if @given_away_by != nil
             put "Since #{@given_away_by} gave the answer away, the award is reduced."
             @point_value = ( @point_value * GIVE_AWAY_REDUCTION ).to_i
         end
+        
+        if @battle.mode == :lms
+            @battle.addWin( winner )
+        end
+        
         winner_award = @point_value
         losing_participation = nil
-        if @battle != nil
-            if @battle.mode == :koth and winner != @king
-                losing_participation = @king_participation
-                winner_award = calculatedLoss( winner, @king )
-            else
-                # Modify award based on comparison of ratings.
-                
-                winner_award = 0
-                winner_rating = winner.rating.to_f
-                highest_opponent_rating = 0
-                high_loser = nil
-                
-                @game.participations.each do |participation|
-                    player = Player.find( participation.player_id )
-                    next if player == winner
-                    next if @battle.teammates?( player, winner )
-                    
-                    loss = calculatedLoss( winner, player )
-                    if @battle.mode == :rounds
+        if @battle.nil?
+            winner.update_attribute( :warmup_points, winner.warmup_points + winner_award )
+            @game.warmup_winner = winner.id
+        else
+            # Determine loser.
+            
+            case @battle.mode
+                when :rounds
+                    @game.participations.each do |participation|
+                        player = Player.find( participation.player_id )
+                        next if player == winner
+                        
+                        loss = calculatedLoss( winner, player )
                         participation.points_awarded = -loss
                         losing_participation = participation
                         winner_award = loss
-                    else
-                        player_rating = player.rating
-                        if player_rating > highest_opponent_rating
-                            highest_opponent_rating = player_rating
-                            high_loser = player
-                            losing_participation = participation
-                            winner_award = loss
-                        end
                     end
-                end
-            end
-        else
-            winner.update_attribute( :warmup_points, winner.warmup_points + winner_award )
-        end
-
-        put "#{winner.nick} got it ... #{@word.word} ... for #{winner_award} points."
-        
-        if @battle.nil?
-            @game.warmup_winner = winner.id
-        else
-            losing_participation.points_awarded = -winner_award
-            case @battle.mode
-                when :lms
-                    @battle.eliminate( high_loser )
                 when :koth
+                    if winner != @king
+                        losing_participation = @king_participation
+                        winner_award = calculatedLoss( winner, @king )
+                    else
+                        losing_participation, winner_award = highest_loser( winner )
+                    end
                     @king = winner
+                when :lms
+                    losing_participation, winner_award = highest_loser( winner )
+                    p = losing_participation.player
+                    @battle.eliminate( p )
+                    put "#{winner.nick} strikes #{p.nick}"
             end
+            
+            losing_participation.points_awarded = -winner_award
         end
 
+        put "... for #{winner_award} points."
+        
         if not @def_shown
             showDefinition
         end
