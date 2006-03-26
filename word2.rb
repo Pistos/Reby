@@ -769,10 +769,6 @@ class WordX
             @point_value = ( @point_value * GIVE_AWAY_REDUCTION ).to_i
         end
         
-        if @battle.mode == :lms
-            @battle.addWin( winner )
-        end
-        
         winner_award = @point_value
         losing_participation = nil
         if @battle.nil?
@@ -801,6 +797,7 @@ class WordX
                     end
                     @king = winner
                 when :lms
+                    @battle.addWin( winner )
                     losing_participation, winner_award = highest_loser( winner )
                     p = losing_participation.player
                     @battle.eliminate( p )
@@ -1127,7 +1124,9 @@ class WordX
     end
     
     def checkGiveAway( nick, text )
-        if not @battle.players.collect{ |p| p.nick }.include?( nick ) and text =~ @word_regexp
+        if(
+            @battle != nil and not @battle.players.collect{ |p| p.nick }.include?( nick ) 
+        ) and text =~ @word_regexp
             @given_away_by = nick
         end
     end

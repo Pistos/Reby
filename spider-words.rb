@@ -485,13 +485,21 @@ class WordSpider
                 throw :problem
             end
             
-            word_rec = Word.create( {
-                :word => @word,
-                :num_syllables => syllabification.length,
-                :pos => part_of_speech,
-                :etymology => etymology,
-                :definition => definition
-            } )
+            loop do
+                begin
+                    word_rec = Word.create( {
+                        :word => @word,
+                        :num_syllables => syllabification.length,
+                        :pos => part_of_speech,
+                        :etymology => etymology,
+                        :definition => definition
+                    } )
+                    break
+                rescue ActiveRecord::StatementInvalid
+                    $stderr.puts "StatementInvalid error.  Pausing..."
+                    sleep 60 * 5
+                end
+            end
             
             @num_spidered += 1
         end
