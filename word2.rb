@@ -172,15 +172,18 @@ class Battle
     
     def setMode( mode, arg = DEFAULT_NUM_ROUNDS )
         okay = true
+        if @mode != :lms
+            old_rounds = @num_rounds
+        end
         case mode
             when :koth
-                @num_rounds = arg.to_i
+                @num_rounds = old_rounds || arg.to_i
                 put "Battle mode: King of the Hill (#{@num_rounds} rounds)"
             when :lms
                 @num_rounds = 99
                 put "Battle mode: Last Man Standing"
             when :rounds
-                @num_rounds = arg.to_i
+                @num_rounds = old_rounds || arg.to_i
                 put "Battle mode: Rounds (#{@num_rounds})"
             else
                 put "Invalid game mode (#{mode.to_s})"
@@ -242,7 +245,7 @@ class Battle
             @battlers << player
             @players << player
             if @players.size > 2 and @mode == :rounds
-                setMode( :lms )
+                setMode( :koth )
             end
             @player_teams[ player ] = player.nick
             put "#{player.nick} has joined the game.", @channel.name
@@ -389,12 +392,12 @@ class Battle
             initial_rank, initial_score = @initial_ranking.rank_and_score( player )
             initial_score ||= Player::BASE_RATING
             initial_title = @initial_titles[ player ]
-            initial_money = @initial_money[ player ]
+            initial_money = @initial_money[ player ] || 0
             
             final_rank, final_score = @final_ranking.rank_and_score( player )
             final_score ||= Player::BASE_RATING
             final_title = @final_titles[ player ]
-            final_money = @final_money[ player ]
+            final_money = @final_money[ player ] || 0
             
             terminal_punctuation = '.'
             sentence = [ player.nick ]
@@ -707,7 +710,7 @@ class WordX
                 return
             end
         elsif not @game.participations.find_by_player_id( winner.id )
-            sendNotice( "Since you did not join this game, your guesses are not counted.", winner.nick )
+            sendNotice( "Since you are not a surviving battler, your guesses are not counted.", winner.nick )
             @given_away_by = nick
             return
         end
@@ -1091,7 +1094,7 @@ class WordX
     end
     
     def checkGiveAway( nick, text )
-        if text =~ @word_regexp
+        if not @battle.players.collect{ |p| p.nick }.include?( nick ) and text =~ @word_regexp
             @given_away_by = nick
         end
     end
