@@ -86,7 +86,7 @@ class Battle
     end
     
     def put( text, destination = @channel.name )
-        $reby.putserv "PRIVMSG #{destination} :#{text}"
+        $reby.putserv "PRIVMSG #{destination} :[b] #{text}"
     end
     def sendNotice( text, destination = @channel.name )
         $reby.putserv "NOTICE #{destination} :#{text}"
@@ -444,7 +444,7 @@ class WordX
     attr_reader :battle
     
     VERSION = '2.1.0'
-    LAST_MODIFIED = 'March 26, 2006'
+    LAST_MODIFIED = 'March 27, 2006'
     MIN_GAMES_PLAYED_TO_SHOW_SCORE = 0
     DEFAULT_INITIAL_POINT_VALUE = 100
     MAX_SCORES_TO_SHOW = 10
@@ -490,7 +490,7 @@ class WordX
 
     # Sends a line to the game channel.
     def put( text, destination = @channel.name )
-        $reby.putserv "PRIVMSG #{destination} :#{text}"
+        $reby.putserv "PRIVMSG #{destination} :#{@battle.nil? ? '' : '[b] '}#{text}"
     end
 
     def sendNotice( text, destination = @channel.name )
