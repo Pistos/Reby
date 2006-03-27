@@ -495,9 +495,17 @@ class WordSpider
                         :definition => definition
                     } )
                     break
-                rescue ActiveRecord::StatementInvalid
-                    $stderr.puts "StatementInvalid error.  Pausing..."
-                    sleep 60 * 5
+                rescue ActiveRecord::StatementInvalid => e
+                    case e.message
+                        when /no connection to the server/
+                            $stderr.puts "Pausing for StatementInvalid error (#{e.message})"
+                            sleep 60 * 5
+                        when /duplicate key violates unique constraint "words_word_key"/
+                            $stderr.puts "Word already exists?"
+                            break
+                        else
+                            raise e
+                    end
                 end
             end
             

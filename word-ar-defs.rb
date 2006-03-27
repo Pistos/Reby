@@ -2,11 +2,24 @@ require 'active_record'
 
 class Word < ActiveRecord::Base
     def Word::random
-        return Word.find(
-            :first,
-            :order => 'RANDOM()',
-            :limit => 1
-        )
+        retval = nil
+        w = Word.find_by_sql( " \
+            SELECT \
+                words.id, \
+                ( \
+                    select count(*) \
+                    from games \
+                    where word_id = words.id\
+                ) as times_used \
+            FROM words \
+            group by words.id \
+            order by times_used, random() \
+            limit 1 \
+        " )
+        if w != nil and not w.empty?
+            retval = Word.find( w[ 0 ].id )
+        end
+        return retval
     end
     
     def mixed
