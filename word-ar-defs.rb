@@ -68,6 +68,15 @@ class Player < ActiveRecord::Base
         end
     end
     
+    def title_set
+        retval = nil
+        ts = TitleSet.find( title_set_id )
+        if ts != nil
+            retval = ts.name
+        end
+        return retval
+    end
+    
     def title
         retval = nil
         t = Title.find_by_sql [
