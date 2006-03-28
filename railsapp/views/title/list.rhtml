@@ -1,0 +1,44 @@
+<html>
+    
+<head>
+    <title>Character Class Titles</title>
+    <%= stylesheet_link_tag 'word' %>
+</head>
+    
+<body>
+    
+<h1>Character Class Titles</h1>
+
+<%
+@title_sets.keys.each do |title_set|
+%>
+<h3><%= title_set %></h3>
+
+<table>
+<thead>
+<tr>
+    <td>Level</td>
+    <td>Rating</td>
+    <td>Title</td>
+</tr>
+</thead>
+<%
+    @title_sets[ title_set ].each_with_index do |title,index|
+        %>
+        <tr class="rowtype<%= index % 2 %>">
+            <td class="numeric"><%= title.title_level_id %></td>
+            <td class="numeric"><%= TitleLevel.find( title.title_level_id ).points %></td>
+            <td><%= title.text %></td>
+        </tr>
+        <%
+    end
+%>
+</table>
+
+<%
+end
+%>
+    
+</body>
+    
+</html>
