@@ -1,15 +1,5 @@
-<html>
-    
-<head>
-    <title><%= @player.nick %>, <%= @player.title %></title>
-    <%= stylesheet_link_tag 'word' %>
-</head>
-    
-<body>
-
+<% @page_title = "#{@player.nick}, #{@player.title}" %>
 <div class="playerstats">
-
-<h2><%= @player.nick %>, <%= @player.title %></h2>
 
 <table>
 <tr>
@@ -48,7 +38,3 @@
 <p>
     <a href="list">Back to Character List</a>
 </p>
-
-</body>
-    
-</html>

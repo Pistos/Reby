@@ -1,4 +1,6 @@
 class PlayerController < ApplicationController
+    layout 'standard'
+    
     def index
         redirect_to :action => 'list'
     end

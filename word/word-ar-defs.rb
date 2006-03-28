@@ -33,7 +33,7 @@ end
 
 class Player < ActiveRecord::Base
     BASE_RATING = 2000
-    MAX_WINS_PER_HOUR = 3
+    MAX_WINS_PER_HOUR = 4
     
     has_many :participations
     

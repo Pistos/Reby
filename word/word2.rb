@@ -444,7 +444,7 @@ class WordX
     attr_reader :battle
     
     VERSION = '2.1.0'
-    LAST_MODIFIED = 'March 28, 2006'
+    LAST_MODIFIED = 'March 27, 2006'
     MIN_GAMES_PLAYED_TO_SHOW_SCORE = 0
     DEFAULT_INITIAL_POINT_VALUE = 100
     MAX_SCORES_TO_SHOW = 10
@@ -578,6 +578,8 @@ class WordX
         $reby.utimer( 55, "showClue5", "$wordx" )
         $reby.utimer( 70, "showClue6", "$wordx" )
         
+        bindBuyCommand
+        
         put "Unscramble ... #{mixed_word}"
     end
 
@@ -689,6 +691,12 @@ class WordX
     end
     def unbindPracticeCommand
         $reby.unbind( "pub", "-", "!word", "oneRound", "$wordx" )
+    end
+    def bindBuyCommand
+        $reby.bind( "pub", "-", "!wordbuy", "buy", "$wordx" )
+    end
+    def unbindBuyCommand
+        $reby.unbind( "pub", "-", "!wordbuy", "buy", "$wordx" )
     end
 
     def calculatedLoss( winner, loser )
@@ -834,11 +842,11 @@ class WordX
     
     def endRound
         @game.save
-        @game = nil
         @channel.save
         @word = nil
 
         if not nextRound
+            bindBuyCommand
             bindPracticeCommand
             @channel = nil
         end
@@ -982,32 +990,23 @@ class WordX
         player = Player.find_by_nick( nick )
         
         case arg
-            when 'aoeunthaoenuth'
-                bleh = 1
+            when '4'
+                buyClue( player, clue4, CLUE4_FRACTION )
+            when '5'
+                buyClue( player, clue5, CLUE5_FRACTION )
+            when '6'
+                buyClue( player, clue6, CLUE6_FRACTION )
             else
-                if @game != nil
-                    case arg
-                        when '4'
-                            buyClue( channel, player, clue4, CLUE4_FRACTION )
-                        when '5'
-                            buyClue( channel, player, clue5, CLUE5_FRACTION )
-                        when '6'
-                            buyClue( channel, player, clue6, CLUE6_FRACTION )
-                        else
-                            put "No such item for sale.", channel
-                    end
-                else
-                    put "No such item for sale.", channel
-                end
+                put "No such item for sale."
         end
     end
     
-    def buyClue( channel, player, clue, fraction )
+    def buyClue( player, clue, fraction )
         cost = ( @initial_point_value * ( 1.0 - fraction ) ).to_i
         if player.debit( cost )
             sendNotice( clue, player.nick )
         else
-            put "#{player.nick}: You don't have the #{cost} #{CURRENCY} needed to buy that!", channel
+            put "#{player.nick}: You don't have the #{cost} #{CURRENCY} needed to buy that!"
         end
     end
     
@@ -1147,4 +1146,3 @@ $reby.bind( "raw", "-", "320", "registrationNotification", "$wordx" )
 $reby.bind( "raw", "-", "318", "registrationCheck", "$wordx" )
 $reby.bind( "pub", "-", "!wordop", "opCommand", "$wordx" )
 $reby.bind( "pubm", "-", "#mathetes *", "listen", "$wordx" )
-$reby.bind( "pub", "-", "!wordbuy", "buy", "$wordx" )

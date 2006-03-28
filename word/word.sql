@@ -20,6 +20,7 @@ CREATE TABLE players (
     id SERIAL PRIMARY KEY,
     nick VARCHAR( 64 ) NOT NULL UNIQUE,
     creation_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    consecutive_wins INTEGER NOT NULL DEFAULT 0,
     title_set_id INTEGER NOT NULL DEFAULT 1 REFERENCES title_sets( id ),
     warmup_points INTEGER DEFAULT 0,
     highest_rating INTEGER DEFAULT 2000,

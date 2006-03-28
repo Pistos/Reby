@@ -1,13 +1,4 @@
-<html>
-    
-<head>
-    <title>Character Class Titles</title>
-    <%= stylesheet_link_tag 'word' %>
-</head>
-    
-<body>
-    
-<h1>Character Class Titles</h1>
+<% @page_title = 'Character Class Titles' %>
 
 <%
 @title_sets.keys.each do |title_set|
@@ -38,7 +29,3 @@
 <%
 end
 %>
-    
-</body>
-    
-</html>
