@@ -1,0 +1,54 @@
+<html>
+    
+<head>
+    <title><%= @player.nick %>, <%= @player.title %></title>
+    <%= stylesheet_link_tag 'word' %>
+</head>
+    
+<body>
+
+<div class="playerstats">
+
+<h2><%= @player.nick %>, <%= @player.title %></h2>
+
+<table>
+<tr>
+    <td class="leftlabel">Level, Class:</td>
+    <td>Level <%= @player.level %> <%= @player.title_set %></td>
+</tr>
+<tr>
+    <td class="leftlabel">Rating:</td>
+    <td><%= @player.rating %></td>
+</tr>
+<tr>
+    <td class="leftlabel">Gold:</td>
+    <td><%= @player.money %> gold</td>
+</tr>
+<tr>
+    <td class="leftlabel">Practice Score:</td>
+    <td><%= @player.warmup_points %> points</td>
+</tr>
+<tr>
+    <td class="leftlabel">Highest/Lowest Rating Achieved:</td>
+    <td><%= @player.highest_rating %> / <%= @player.lowest_rating %></td>
+</tr>
+<tr>
+    <td class="leftlabel">Battle Rounds Fought:</td>
+    <td><%= @player.games_played %></td>
+</tr>
+<tr>
+    <td class="leftlabel">Entered the realm:</td>
+    <td><%= ( ( Time.now - @player.creation_time ) / 86400 ).to_i %> days ago</td>
+</tr>
+
+</table>
+
+</div>
+
+<p>
+    <a href="list">Back to Character List</a>
+</p>
+
+</body>
+    
+</html>
