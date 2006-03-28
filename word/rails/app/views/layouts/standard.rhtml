@@ -7,20 +7,27 @@
     
 <body>
 
-<div class="menu">
-<ul>
-    <li><a href="player/list">Characters</a></li>
-    <li><a href="title/list">Classes</a></li>
-</ul>
-</div>
+<table>
+<tr>
 
-<div class="content">
+<td class="menu">
+<h4>Statistics</h4>
+<ul>
+    <li><a href="/player/list">Characters</a></li>
+    <li><a href="/title/list">Classes</a></li>
+</ul>
+</td>
+
+<td class="content">
     
 <h1><%= @page_title %></h1>
     
 <%= @content_for_layout %>
 
-</div>
+</td>
+
+</tr>
+</table>
 
 </body>
     
