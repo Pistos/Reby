@@ -20,6 +20,9 @@ INSERT INTO title_levels VALUES (19, 3000);
 INSERT INTO title_levels VALUES (20, 3500);
 INSERT INTO title_levels VALUES (21, 4000);
 
+INSERT INTO title_sets (id, name) VALUES ( 0, 'Newbie' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 0, 1, 'Newbie' );
+
 INSERT INTO title_sets (name) VALUES ( 'Knight' );
 INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 1, 1, 'Slave' );
 INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 1, 2, 'Servant' );

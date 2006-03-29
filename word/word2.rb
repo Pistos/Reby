@@ -619,6 +619,7 @@ class WordX
                     break
                 end
             end
+            put "http://word.purepistos.net/player/view?id=#{player.id}", channel
             put "\002#{player.nick}\002, \002#{player.title}\002 (L\002#{player.level}\002) - Battle rating: \002#{player.rating}\002 (Rank: \002##{rank}\002) (#{player.money} #{CURRENCY}) (#{player.games_played} games) High/Low Rating: #{player.highest_rating}/#{player.lowest_rating}", channel
         else
             put "#{nick}: You're not a !word warrior!  Play a !wordbattle.", channel

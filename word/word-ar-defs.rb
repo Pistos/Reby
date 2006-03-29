@@ -92,12 +92,15 @@ class Player < ActiveRecord::Base
                 select titles.text \
                 from titles \
                 where \
-                    title_level_id = ? \
-                    and title_set_id = ?",
+                    title_level_id <= ? \
+                    and title_set_id = ? \
+                order by title_level_id desc \
+                limit 1 \
+                ",
             level,
             title_set_id
         ]
-        if not t.nil?
+        if not t.nil? and not t.empty?
             retval = t[ 0 ].text
         end
         return retval
