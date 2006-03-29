@@ -660,6 +660,7 @@ class WordX
             printRating( nick, userhost, handle, channel, text )
             return
         end
+        
         num_to_show, start_rank, end_rank = printing_parameters( text )
         
         num_shown = 0
