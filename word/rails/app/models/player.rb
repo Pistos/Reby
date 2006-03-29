@@ -1,1 +1,1 @@
-/home/pistos/svn/reby/word-ar-defs.rb
+/home/pistos/svn/reby/word/word-ar-defs.rb
