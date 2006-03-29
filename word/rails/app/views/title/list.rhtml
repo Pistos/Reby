@@ -5,6 +5,10 @@
 %>
 <h3><%= title_set %></h3>
 
+<table><tr>
+
+<td>
+
 <table>
 <thead>
 <tr>
@@ -25,6 +29,18 @@
     end
 %>
 </table>
+
+</td>
+
+<td class="classicons"><table>
+<%
+@title_icons[ title_set ].each do |icon|
+    %><tr><td><img class="classicon" src="<%= image_path icon %>" /></td></tr><%
+end
+%>
+</table></td>
+
+</tr></table>
 
 <%
 end

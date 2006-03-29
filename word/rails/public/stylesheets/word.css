@@ -88,3 +88,19 @@ p {
     border: 1px solid black;
     background-color: #ffffff;
 }
+
+td.classicons {
+    vertical-align: top;
+    height: 100%;
+}
+
+td.classicons table {
+    height: 100%;
+}
+
+td.classicons table tr, td.classicons table td {
+    height: 50%;
+}
+
+img.classicon {
+}
