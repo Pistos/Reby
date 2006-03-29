@@ -1,0 +1,61 @@
+body {
+    padding: 20px;
+}
+
+a {
+    color: #3399ff;
+}
+
+a:visited {
+    color: #0066cc;
+}
+
+td {
+    font-family: Verdana, sans-serif;
+    font-size: 10pt;
+    padding: 0.15em 1em;
+}
+
+.rowtype0 {
+    background-color: #eeffff;
+}
+
+.rowtype1 {
+    background-color: #ddeeff;
+}
+
+.numeric {
+    text-align: right;
+}
+
+.leftlabel {
+    text-align: right;
+}
+
+thead td {
+    font-weight: bold;
+    background-color: #cceeff;
+    color: #0066cc;
+}
+
+thead a:visited {
+    color: inherit;
+}
+
+.sortkey {
+    background-color: #ffffcc;
+}
+
+.playerstats {
+    background-color: #ddffff;
+    padding: 1em;
+}
+
+.playerstats h2 {
+    margin-top: 0px;
+    padding-top: 0px;
+}
+
+p {
+    margin: 0.5em 0px;
+}
