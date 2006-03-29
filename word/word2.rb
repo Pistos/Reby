@@ -457,6 +457,7 @@ class WordX
     CLUE5_FRACTION = 0.40
     CLUE6_FRACTION = 0.15
     CONFIRMATION_TIMEOUT = 5 # seconds
+    COST_CLASS_CHANGE = 5 # gold
     
     OPS = Set.new [
         "Pistos",
@@ -967,6 +968,7 @@ class WordX
         TitleSet.find( :all, :order => 'name' ).each do |ts|
             classes << ts.name
         end
+        put "http://word.purepistos.net/title/list", channel
         put "Character Classes: #{classes.join( ', ' )}", channel
     end
     
@@ -981,9 +983,15 @@ class WordX
             if player.nil?
                 put "#{nick}: You are not a player.  Join a !wordbattle first.", channel
             else
-                player.title_set_id = ts.id
-                player.save
-                put "#{player.nick} is now a#{ts.name =~ /^[aoeuiAOEUI]/ ? 'n' : ''} #{ts.name}.", channel
+                cost = COST_CLASS_CHANGE
+                if player.debit( cost )
+                    player.title_set_id = ts.id
+                    player.save
+                    put "#{player.nick} is now a#{ts.name =~ /^[aoeuiAOEUI]/ ? 'n' : ''} #{ts.name}.", channel
+                else
+                    put "#{player.nick}: You don't have the #{cost} #{CURRENCY} needed to change classes.", channel
+                end
+                
             end
         end
     end
