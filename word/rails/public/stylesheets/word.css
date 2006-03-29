@@ -80,3 +80,11 @@ p {
 
 .content {
 }
+
+.playericon {
+    float: left;
+    margin: 15px;
+    padding: 10px;
+    border: 1px solid black;
+    background-color: #ffffff;
+}
