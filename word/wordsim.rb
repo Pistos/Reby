@@ -23,6 +23,8 @@ class Player
     
     def agree_to_play?( opponent )
         # A player would be willing to play the nearest +/- PLAYER_PROXIMITY percent of players.
+        
+        #return true
         return (
             @skill > opponent.skill - ( $simulator.skill_delta ) * ( $simulator.num_players * PLAYER_PROXIMITY )
         )
@@ -69,8 +71,8 @@ class Simulator
     attr_reader :num_players, :skill_delta
     
     def initialize
-        @num_players = 100
-        @num_rounds = 10000
+        @num_players = 50
+        @num_rounds = 100000
         @top_skill = 9.0
         @bottom_skill = 1.0
         @skill_delta = ( @top_skill - @bottom_skill ) / @num_players 
