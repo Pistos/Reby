@@ -661,6 +661,8 @@ class WordX
             return
         end
         
+        put "http://word.purepistos.net", channel
+        
         num_to_show, start_rank, end_rank = printing_parameters( text )
         
         num_shown = 0

@@ -35,6 +35,14 @@ class Player < ActiveRecord::Base
     BASE_RATING = 2000
     MAX_WINS_PER_HOUR = 3
     
+    ICON_PREFIXES = {
+        1 => 'knight',
+        2 => 'archer',
+        3 => 'rogue',
+        4 => 'martial-artist',
+        5 => 'barbarian',
+    }
+    
     has_many :participations
     
     def games_played
@@ -114,7 +122,7 @@ class Player < ActiveRecord::Base
     end
     
     def winning_too_much?
-        count = Game.count( [ "warmup_winner = ? AND start_time > NOW() - '1 hour'::INTERVAL", id ] )
+        count = Game.count( [ "warmup_winner = ? AND end_time > NOW() - '1 hour'::INTERVAL", id ] )
         return( count >= MAX_WINS_PER_HOUR )
     end
     
@@ -133,6 +141,16 @@ class Player < ActiveRecord::Base
             debitted = true
         end
         return debitted
+    end
+    
+    def icon
+        if rating <= BASE_RATING
+            the_icon = ICON_PREFIXES[ title_set_id ] + "1"
+        else
+            the_icon = ICON_PREFIXES[ title_set_id ] + "2"
+        end
+        
+        return the_icon
     end
 end
 
