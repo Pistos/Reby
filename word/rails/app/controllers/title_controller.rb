@@ -6,7 +6,7 @@ class TitleController < ApplicationController
     end
     
     def list
-        title_set_rows = TitleSet.find( :all, :order => :name )
+        title_set_rows = TitleSet.find( :all )
         @title_sets = Hash.new
         @title_icons = Hash.new
         title_set_rows.each do |row|
