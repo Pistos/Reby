@@ -170,10 +170,20 @@ class Channel < ActiveRecord::Base
 end
 
 class Title < ActiveRecord::Base
+    belongs_to :title_level
 end
 
 class TitleSet < ActiveRecord::Base
+    has_many :titles, :order => 'title_level_id'
+    has_many :players
+    
+    def icons
+        retval = []
+        retval << Player::ICON_PREFIXES[ id ] + "1"
+        retval << Player::ICON_PREFIXES[ id ] + "2"
+    end
 end
 
 class TitleLevel < ActiveRecord::Base
+    has_many :titles
 end

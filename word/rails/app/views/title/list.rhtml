@@ -1,9 +1,18 @@
-<% @page_title = 'Character Class Titles' %>
+<%
+@page_title = 'Character Classes'
+player_count = Player.count
+%>
 
 <%
-@title_sets.keys.sort.each do |title_set|
+@title_sets.each do |title_set|
 %>
-<h3><%= title_set %></h3>
+<h3><%= title_set.name %></h3>
+
+<ul>
+<% count = title_set.players.count %>
+<li><%= pluralize( count, title_set.name ) %> in the realm</li>
+<li><%= "%.1f" % [ 100.0 * count.to_f / player_count.to_f ] %>% of population</li>
+</ul>
 
 <table><tr>
 
@@ -18,11 +27,11 @@
 </tr>
 </thead>
 <%
-    @title_sets[ title_set ].each_with_index do |title,index|
+    title_set.titles.each_with_index do |title,index|
         %>
         <tr class="rowtype<%= index % 2 %>">
             <td class="numeric"><%= title.title_level_id %></td>
-            <td class="numeric"><%= TitleLevel.find( title.title_level_id ).points %></td>
+            <td class="numeric"><%= title.title_level.points %></td>
             <td><%= title.text %></td>
         </tr>
         <%
@@ -34,7 +43,7 @@
 
 <td class="classicons"><table>
 <%
-@title_icons[ title_set ].each do |icon|
+title_set.icons.each do |icon|
     %><tr><td><img class="classicon" src="<%= image_path icon %>" /></td></tr><%
 end
 %>
