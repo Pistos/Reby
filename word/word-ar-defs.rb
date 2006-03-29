@@ -36,6 +36,7 @@ class Player < ActiveRecord::Base
     MAX_WINS_PER_HOUR = 3
     
     ICON_PREFIXES = {
+        0 => 'newbie',
         1 => 'knight',
         2 => 'archer',
         3 => 'rogue',
