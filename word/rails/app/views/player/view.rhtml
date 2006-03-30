@@ -1,4 +1,7 @@
-<% @page_title = "#{@player.nick}, #{@player.title}" %>
+<%
+@page_title = "#{@player.nick}, #{@player.title}"
+class_name = @player.title_set.name
+%>
 <img class="playericon" src="<%= image_path @player.icon %>" />
 
 <div class="playerstats">
@@ -6,7 +9,7 @@
 <table>
 <tr>
     <td class="leftlabel">Level, Class:</td>
-    <td>Level <%= @player.level %> <%= @player.title_set.name %></td>
+    <td>Level <%= @player.level %> <a href="/title/list#<%= class_name.downcase %>"><%= class_name %></a></td>
 </tr>
 <tr>
     <td class="leftlabel">Rating:</td>

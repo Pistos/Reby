@@ -13,6 +13,7 @@
 </thead>
 <%
     @players.each_with_index do |player,index|
+        class_name = player.title_set.name
         %>
         <tr class="rowtype<%= index % 2 %>">
             <td class="numeric"><%= index + 1 %></td>
@@ -21,7 +22,7 @@
             <td class="numeric"><%= player.rating %></td>
             <td class="numeric"><%= player.games_played %></td>
             <td class="numeric"><%= player.money %></td>
-            <td><%= player.title_set.name %></td>
+            <td><a href="/title/list#<%= class_name.downcase %>"><%= class_name %></a></td>
         </tr>
         <%
     end

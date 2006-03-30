@@ -6,7 +6,7 @@ player_count = Player.count
 <%
 @title_sets.each do |title_set|
 %>
-<h3><%= title_set.name %></h3>
+<h3 id="<%= title_set.name.downcase %>"><%= title_set.name %></h3>
 
 <ul>
 <% count = title_set.players.count %>
