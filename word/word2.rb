@@ -514,7 +514,7 @@ class WordX
 
         @channel = Channel.find_or_create_by_name( channel )
         @word = Word.random
-        @game = Game.create( { :word_id => @word.id } )
+        @game = Game.create( { :word_id => @word.id, :start_time => Time.now } )
         @initial_point_value = DEFAULT_INITIAL_POINT_VALUE
         @given_away_by = nil
         @word_regexp = Regexp.new( @word.word.split( // ).join( ".*" ) )
@@ -621,7 +621,7 @@ class WordX
                 end
             end
             put "http://word.purepistos.net/player/view?id=#{player.id}", channel
-            put "\002#{player.nick}\002, \002#{player.title}\002 (L\002#{player.level}\002) - Battle rating: \002#{player.rating}\002 (Rank: \002##{rank}\002) (#{player.money} #{CURRENCY}) (#{player.games_played} games) High/Low Rating: #{player.highest_rating}/#{player.lowest_rating}", channel
+            put "\002#{player.nick}\002, \002#{player.title}\002 (L\002#{player.level}\002) - Battle rating: \002#{player.rating}\002 (Rank: \002##{rank}\002) (#{player.money} #{CURRENCY}) (#{player.games_played} rounds) High/Low Rating: #{player.highest_rating}/#{player.lowest_rating}", channel
         else
             put "#{nick}: You're not a !word warrior!  Play a !wordbattle.", channel
         end
@@ -1111,7 +1111,7 @@ class WordX
                         Game.delete( game.id )
                     end
                     victim.destroy
-                    put "Deleted #{nick} and #{num_games} games.", channel
+                    put "Deleted #{nick} and #{num_games} rounds.", channel
                 else
                     put "No such player: '#{nick}'", channel
                 end

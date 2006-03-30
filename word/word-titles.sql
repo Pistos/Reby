@@ -138,8 +138,31 @@ INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 5, 19, 'Barbari
 INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 5, 20, 'Barbarian Chief' );
 INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 5, 21, 'Barbarian King' );
 
+INSERT INTO title_sets (id, name) VALUES ( 6, 'Samurai' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 6, 1, 'Sushi Chef' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 6, 2, 'Iron Chef' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 6, 3, 'Unarmed Samurai' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 6, 4, 'Butterknifer' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 6, 5, 'Wooden Swordsman' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 6, 6, 'Rusty Swordsman' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 6, 7, 'Dull Swordsman' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 6, 8, 'Ronin' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 6, 9, 'Kenin' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 6, 10, 'Ashigaru' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 6, 11, 'Samurai' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 6, 12, 'Sohei' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 6, 13, 'Power Slicer' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 6, 14, 'Iron Slicer' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 6, 15, 'Lighting Slicer' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 6, 16, 'Mounted Samurai' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 6, 17, 'Samurai General' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 6, 18, 'Gokenin' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 6, 19, 'Hatamoto' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 6, 20, 'Daimyo' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 6, 21, 'Shogun' );
+
 INSERT INTO title_sets (name) VALUES ( 'Some Class Name' );
-INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 4, 1, '' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 6, 1, '' );
 INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 4, 2, '' );
 INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 4, 3, '' );
 INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 4, 4, '' );
