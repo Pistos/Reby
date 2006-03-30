@@ -1,5 +1,9 @@
-require 'rubygems'
-require_gem 'activerecord', '<= 1.13.2'
+if __FILE__ == 'word-ar-defs.rb'
+    require 'rubygems'
+    require_gem 'activerecord', '<= 1.13.2'
+else
+    require 'active_record'
+end
 
 class Word < ActiveRecord::Base
     def Word::random
