@@ -35,16 +35,8 @@ class Player < ActiveRecord::Base
     BASE_RATING = 2000
     MAX_WINS_PER_HOUR = 3
     
-    ICON_PREFIXES = {
-        0 => 'newbie',
-        1 => 'knight',
-        2 => 'archer',
-        3 => 'rogue',
-        4 => 'martial-artist',
-        5 => 'barbarian',
-    }
-    
     has_many :participations
+    belongs_to :title_set
     
     def games_played
         return Participation.count( "player_id = #{id}" )
@@ -75,15 +67,6 @@ class Player < ActiveRecord::Base
         elsif r < lowest_rating
             update_attribute( :lowest_rating, r )
         end
-    end
-    
-    def title_set
-        retval = nil
-        ts = TitleSet.find( title_set_id )
-        if ts != nil
-            retval = ts.name
-        end
-        return retval
     end
     
     def title
@@ -149,9 +132,9 @@ class Player < ActiveRecord::Base
     
     def icon
         if rating <= BASE_RATING
-            the_icon = ICON_PREFIXES[ title_set_id ] + "1"
+            the_icon = title_set.icons[ 0 ]
         else
-            the_icon = ICON_PREFIXES[ title_set_id ] + "2"
+            the_icon = title_set.icons[ 1 ]
         end
         
         return the_icon
@@ -179,8 +162,9 @@ class TitleSet < ActiveRecord::Base
     
     def icons
         retval = []
-        retval << Player::ICON_PREFIXES[ id ] + "1"
-        retval << Player::ICON_PREFIXES[ id ] + "2"
+        file_prefix = name.downcase.gsub( / /, '-' )
+        retval << file_prefix + "1"
+        retval << file_prefix + "2"
     end
 end
 
