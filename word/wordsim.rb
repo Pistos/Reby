@@ -4,7 +4,8 @@ require './random.rb'
 
 $generator = RandomDotOrg.new
 def random( ceiling = 0 )
-    $generator.generate( ceiling )[ 0 ]
+    #$generator.generate( ceiling )[ 0 ]
+    rand( ceiling )
 end
 
 class Player
@@ -22,9 +23,20 @@ class Player
     end
     
     def agree_to_play?( opponent )
-        # A player would be willing to play the nearest +/- PLAYER_PROXIMITY percent of players.
+        # Different assumptions:
         
+        # 1) All players never refuse a fight.
         #return true
+        
+        
+        # 2) The bottom half fights the top half only.
+        #mid_skill = $simulator.top_skill / 2
+        #return (
+            #@skill <= mid_skill && opponent.skill >= mid_skill ||
+            #@skill >= mid_skill && opponent.skill <= mid_skill
+        #)
+        
+        # 3) A player would be willing to play the nearest +/- PLAYER_PROXIMITY percent of players.
         return (
             @skill > opponent.skill - ( $simulator.skill_delta ) * ( $simulator.num_players * PLAYER_PROXIMITY )
         )
@@ -68,11 +80,11 @@ class Game
 end
 
 class Simulator
-    attr_reader :num_players, :skill_delta
+    attr_reader :num_players, :skill_delta, :top_skill, :bottom_skill
     
     def initialize
         @num_players = 50
-        @num_rounds = 100000
+        @num_rounds = 10000
         @top_skill = 9.0
         @bottom_skill = 1.0
         @skill_delta = ( @top_skill - @bottom_skill ) / @num_players 
