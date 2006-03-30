@@ -16,6 +16,15 @@
 require 'word-ar-defs'
 require 'set'
 
+def find_or_create_player( nick )
+    player = Player.find_by_nick( nick )
+    if not player
+        player = Player.create( :nick => nick, :creation_time => Time.now )
+    end
+    return player
+end
+
+
 class Array
     def rank_and_score( player )
         rank = nil
@@ -259,7 +268,7 @@ class Battle
     def addPlayer( nick, userhost, handle, channel, text )
         return if channel != @channel.name
         
-        player = Player.find_or_create_by_nick( nick )
+        player = find_or_create_player( nick )
         if not includePlayer( player )
             put "#{player.nick}: You're already in the game!"
         end
@@ -268,7 +277,7 @@ class Battle
     def removePlayer( nick, userhost, handle, channel, text )
         return if channel != @channel.name
         
-        player = Player.find_or_create_by_nick( nick )
+        player = find_or_create_player( nick )
         if player == @starter
             if $wordx.registered?( player )
                 put "#{player.nick}: You can't leave the game, you started it.  Try the abort command."
@@ -318,7 +327,7 @@ class Battle
     def abort( nick, userhost, handle, channel, text )
         return if channel != @channel.name
         if (
-            Player.find_or_create_by_nick( nick ) != @starter and
+            find_or_create_player( nick ) != @starter and
             $reby.onchan( @starter.nick )
         )
             put "Only the person who invoked the battle can abort it."
@@ -337,7 +346,7 @@ class Battle
     def start( nick, userhost, handle, channel, text )
         return if channel != @channel.name
         
-        if Player.find_or_create_by_nick( nick ) != @starter
+        if find_or_create_player( nick ) != @starter
             put "Only the person who invoked the battle can start it."
             return
         end
@@ -443,8 +452,8 @@ end
 class WordX
     attr_reader :battle
     
-    VERSION = '2.1.0'
-    LAST_MODIFIED = 'March 27, 2006'
+    VERSION = '2.1.1'
+    LAST_MODIFIED = 'March 30, 2006'
     MIN_GAMES_PLAYED_TO_SHOW_SCORE = 0
     DEFAULT_INITIAL_POINT_VALUE = 100
     MAX_SCORES_TO_SHOW = 10
@@ -480,6 +489,10 @@ class WordX
         @registered_players = Hash.new
         @registration_check_pending = Hash.new
         
+        connect_to_db
+    end
+
+    def connect_to_db
         ActiveRecord::Base.establish_connection(
             :adapter  => "postgresql",
             :host     => "localhost",
@@ -488,7 +501,7 @@ class WordX
             :database => "word"
         )
     end
-
+    
     # Sends a line to the game channel.
     def put( text, destination = @channel.name )
         $reby.putserv "PRIVMSG #{destination} :#{@battle.nil? ? '' : '[b] '}#{text}"
@@ -499,8 +512,6 @@ class WordX
     end
 
     def oneRound( nick, userhost, handle, channel, text )
-        #return if nick != nil and battle_going?( channel )
-        
         if nick != nil
             # Practice game.
             player = Player.find_by_nick( nick )
@@ -744,7 +755,7 @@ class WordX
         
         return if @already_guessed
         
-        winner = Player.find_or_create_by_nick( nick )
+        winner = find_or_create_player( nick )
         return if winner.nil?
         
         if @battle.nil?

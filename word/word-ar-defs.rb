@@ -1,4 +1,5 @@
-require 'active_record'
+require 'rubygems'
+require_gem 'activerecord', '<= 1.13.2'
 
 class Word < ActiveRecord::Base
     def Word::random
