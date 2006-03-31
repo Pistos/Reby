@@ -4,7 +4,7 @@
 #
 # Ruby-Eggdrop Bridge Yes-this-letter-has-no-meaning-in-the-acronym
 # :title: Reby
-# Version:: 0.7.1 (February 18, 2006)
+# Version:: 0.7.2 (March 30, 2006)
 #
 # Author:: Pistos (irc.freenode.net)
 # http://purepistos.net/eggdrop/reby
@@ -77,8 +77,8 @@ class Reby
         @LOOP_CHECK_MILESTONE = 10
         @REBY_PREFIX = "^\\[\\d+:\\d+\\] REBY"
 
-        @VERSION = "0.7.1"
-        @LAST_MODIFIED = "January 9, 2006"
+        @VERSION = "0.7.2"
+        @LAST_MODIFIED = "March 30, 2006"
         @GOD_IS_GOOD = true
 
         @registered_methods = Array.new
@@ -111,6 +111,7 @@ class Reby
                         begin
                             load( fn )
                         rescue Exception => e
+                            putserv "PRIVMSG #mathetes: Eep!  A critical Reby error!"
                             log "Reby error: " + e.message
                             log e.backtrace.join( "\n" )
                         end
@@ -478,6 +479,7 @@ class Reby
                                         <<-EOS
                                         
                                             rescue Exception => e
+                                                putserv "PRIVMSG #mathetes :Eep!  A critical Reby error!"
                                                 log "Reby error: " + e.message
                                                 log e.backtrace.join( "\n" )
                                             end
