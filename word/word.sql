@@ -13,7 +13,8 @@ CREATE TABLE words (
     pos VARCHAR( 32 ) NOT NULL,
     etymology VARCHAR( 256 ) NOT NULL,
     num_syllables INTEGER NOT NULL,
-    definition VARCHAR( 512 ) NOT NULL
+    definition VARCHAR( 512 ) NOT NULL,
+    suggester INTEGER REFERENCES players( id )
 );
 
 CREATE TABLE players (

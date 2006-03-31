@@ -299,7 +299,7 @@ class WordSpider
         'West Saxon' => 'West Saxon',
     }
     
-    def initialize( seed_word, num_to_spider )
+    def initialize( seed_word, suggester = nil, num_to_spider = 500 )
         @seen_words = Array.new
         @next_words = [ seed_word ]
         @num_spidered = 0
@@ -310,6 +310,13 @@ class WordSpider
         
         @connection_attempts = 0
         ensureConnectedToDB
+        
+        @suggester = Player.find_by_nick( suggester )
+        if @suggester != nil
+            @suggester_id = @suggester.id
+        else
+            $stderr.puts "No such player: '#{suggester}'"
+        end
     end
     
     def ensureConnectedToDB
@@ -556,19 +563,24 @@ class WordSpider
                         :num_syllables => syllabification.length,
                         :pos => part_of_speech,
                         :etymology => etymology,
-                        :definition => definition
+                        :definition => definition,
+                        :suggester => @suggester_id
                     } )
+                    @suggester_id = nil
+                    if @suggester != nil
+                        @suggester.update_attribute( :money, @suggester.money + 10 )
+                    end
                     break
                 rescue ActiveRecord::StatementInvalid => e
                     case e.message
                         when /no connection to the server/
-                            $stderr.puts "No DB connection?  Attempting reconnect... (@connection_attempts)"
+                            $stderr.puts "No DB connection?  Attempting reconnect... (#{@connection_attempts})"
                             sleep 5
+                            ActiveRecord::Base.clear_active_connections!
                             ensureConnectedToDB
-                            #$stderr.puts "Pausing for StatementInvalid error (#{e.message})"
-                            #sleep 60 * 5
                         when /duplicate key violates unique constraint "words_word_key"/
                             $stderr.puts "#{@word} already in DB?"
+                            @suggester_id = nil
                             break
                         else
                             raise e
@@ -583,12 +595,12 @@ end
 
 
 if $0 == __FILE__
-    if ARGV.length < 2
-        puts "#{$0} <seed word> <number of words to get>"
+    if ARGV.length < 1
+        puts "#{$0} <seed word> [suggester] [number of words to get]"
         exit 1
     end
 
-    spider = WordSpider.new( ARGV[ 0 ], ARGV[ 1 ] )
+    spider = WordSpider.new( ARGV[ 0 ], ARGV[ 1 ], ARGV[ 2 ] || 500 )
     spider.start
 end
 

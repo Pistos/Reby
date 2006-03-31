@@ -1040,6 +1040,7 @@ class WordX
         cost = ( @initial_point_value * ( 1.0 - fraction ) ).to_i
         if player.debit( cost )
             sendNotice( clue, player.nick )
+            put "#{player.nick} has spent #{cost} #{CURRENCY}."
         else
             put "#{player.nick}: You don't have the #{cost} #{CURRENCY} needed to buy that!"
         end
@@ -1187,8 +1188,10 @@ class WordX
         if confirmRegistration( nick )
             if @memo_counts[ nick ] >= MAX_MEMOS_PER_PLAYER
                 put "#{nick}: You have sent too many memos already.", channel
+            elsif args.to_s.strip.empty?
+                put "#{nick}: !wordreport <suggested new word | problem word | bug report>", channel
             else
-                sendMemo( nick, args.to_s )
+                sendMemo( nick, args.to_s.strip )
             end
         else
             put "Only registered players may report things.", channel
