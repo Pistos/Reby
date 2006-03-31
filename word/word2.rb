@@ -452,7 +452,7 @@ end
 class WordX
     attr_reader :battle
     
-    VERSION = '2.1.2'
+    VERSION = '2.1.3'
     LAST_MODIFIED = 'March 31, 2006'
     MIN_GAMES_PLAYED_TO_SHOW_SCORE = 0
     DEFAULT_INITIAL_POINT_VALUE = 100
@@ -468,6 +468,7 @@ class WordX
     CONFIRMATION_TIMEOUT = 5 # seconds
     COST_CLASS_CHANGE = 5 # gold
     MAX_WARMUP_POINTS = 2000
+    MAX_MEMOS_PER_PLAYER = 3
     
     OPS = Set.new [
         "Pistos",
@@ -489,6 +490,7 @@ class WordX
         
         @registered_players = Hash.new
         @registration_check_pending = Hash.new
+        @memo_counts = Hash.new( 0 )
         
         connect_to_db
     end
@@ -1079,17 +1081,19 @@ class WordX
     def confirmRegistration( nick )
         retval = false
         player = Player.find_by_nick( nick )
-        @registration_check_pending[ player ] = true
-        initiateRegistrationCheck( player )
-        t1 = Time.now
-        while @registration_check_pending[ player ]
-            sleep 0.5
-            if Time.now - t1 > CONFIRMATION_TIMEOUT
-                break
+        if player != nil
+            @registration_check_pending[ player ] = true
+            initiateRegistrationCheck( player )
+            t1 = Time.now
+            while @registration_check_pending[ player ]
+                sleep 0.5
+                if Time.now - t1 > CONFIRMATION_TIMEOUT
+                    break
+                end
             end
-        end
-        if not @registration_check_pending[ player ]
-            retval = registered?( player )
+            if not @registration_check_pending[ player ]
+                retval = registered?( player )
+            end
         end
         
         return retval
@@ -1107,6 +1111,15 @@ class WordX
         
         command = text.strip
         case command
+            when /^clearmemo\s+(\S+)/
+                nick = $1
+                victim = Player.find_by_nick( nick )
+                if victim != nil
+                    @memo_counts[ victim.nick ] = 0
+                    put "Reset memo count for #{victim.nick}.", channel
+                else
+                    put "No such player, '#{nick}'", channel
+                end                
             when /^del\S*\s+(\S+)/
                 nick = $1
                 victim = Player.find_by_nick( nick )
@@ -1136,7 +1149,13 @@ class WordX
                 else
                     put "No such player: '#{nick}'", channel
                 end
+            when /^msg\s+(.+)$/
+                sendMemo nick, $1
         end
+    end
+    
+    def sendMemo( sender, message, recipient = "Pistos" )
+        $reby.putserv "PRIVMSG MemoServ :send #{recipient} <#{sender}> #{message}"
     end
     
     def listen( nick, userhost, handle, channel, args )
@@ -1163,6 +1182,18 @@ class WordX
             @given_away_by = nick
         end
     end
+    
+    def reportProblem( nick, userhost, handle, channel, args )
+        if confirmRegistration( nick )
+            if @memo_counts[ nick ] >= MAX_MEMOS_PER_PLAYER
+                put "#{nick}: You have sent too many memos already.", channel
+            else
+                sendMemo( nick, args.to_s )
+            end
+        else
+            put "Only registered players may report things.", channel
+        end
+    end
 end
 
 $wordx = WordX.new
@@ -1179,3 +1210,4 @@ $reby.bind( "raw", "-", "320", "registrationNotification", "$wordx" )
 $reby.bind( "raw", "-", "318", "registrationCheck", "$wordx" )
 $reby.bind( "pub", "-", "!wordop", "opCommand", "$wordx" )
 $reby.bind( "pubm", "-", "#mathetes *", "listen", "$wordx" )
+$reby.bind( "pub", "-", "!wordreport", "reportProblem", "$wordx" )
