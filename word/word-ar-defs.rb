@@ -1,26 +1,36 @@
-if __FILE__ == 'word-ar-defs.rb'
+if __FILE__ =~ /word-ar-defs.rb/
     require 'rubygems'
     require_gem 'activerecord', '<= 1.13.2'
+    $reby.log "ActiveRecord <= 1.13.2"
 else
     require 'active_record'
+    $reby.log "ActiveRecord > 1.13.2"
 end
 
 class Word < ActiveRecord::Base
-    def Word::random
+    NOT_PRACTICE = false
+    PRACTICE = true
+    
+    def Word::random( practice = NOT_PRACTICE )
         retval = nil
-        w = Word.find_by_sql( " \
-            SELECT \
-                words.id, \
-                ( \
-                    select count(*) \
-                    from games \
-                    where word_id = words.id\
-                ) as times_used \
-            FROM words \
-            group by words.id \
-            order by times_used, random() \
-            limit 1 \
-        " )
+        
+        if practice
+            w = Word.find_by_sql( " \
+                SELECT * \
+                FROM word_frequency \
+                WHERE times_used > 0 \
+                ORDER BY random() \
+                limit 1 \
+            " )
+        else
+            w = Word.find_by_sql( " \
+                SELECT * \
+                FROM word_frequency \
+                ORDER BY times_used, random() \
+                limit 1 \
+            " )
+        end
+        
         if w != nil and not w.empty?
             retval = Word.find( w[ 0 ].id )
         end
@@ -114,8 +124,9 @@ class Player < ActiveRecord::Base
     end
     
     def winning_too_much?
-        count = Game.count( [ "warmup_winner = ? AND end_time > NOW() - '1 hour'::INTERVAL", id ] )
-        return( count >= MAX_WINS_PER_HOUR )
+        return false
+        #count = Game.count( [ "warmup_winner = ? AND end_time > NOW() - '1 hour'::INTERVAL", id ] )
+        #return( count >= MAX_WINS_PER_HOUR )
     end
     
     #def save

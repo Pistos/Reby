@@ -67,3 +67,16 @@ CREATE TABLE titles (
     text VARCHAR( 128 ) NOT NULL,
     UNIQUE( title_set_id, text )
 );
+
+CREATE VIEW word_frequency AS
+SELECT
+    words.id,
+    (
+        SELECT count(*) AS count
+        FROM games
+        WHERE games.word_id = words.id
+            AND games.warmup_winner IS NULL
+    ) AS times_used
+FROM words
+GROUP BY words.id
+;
