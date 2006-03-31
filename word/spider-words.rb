@@ -313,7 +313,9 @@ class WordSpider
     end
     
     def ensureConnectedToDB
-        if not ActiveRecord::Base.connected?
+        if ActiveRecord::Base.connected?
+            $stderr.puts "(already connected)"
+        else
             @connection_attempts += 1
             ActiveRecord::Base.establish_connection(
                 :adapter  => "postgresql",
@@ -521,7 +523,7 @@ class WordSpider
                         def_tags = soup2.find_all( 'p' ).find_all { |p| p.contents[ 0 ] =~ /\\/ }
                         if not def_tags.empty?
                             defn = def_tags[ 0 ].string_contents
-                            defn = defn[ /^(.+?)--/, 1 ].strip
+                            defn = defn[ /^(.+?)(?:--|$)/, 1 ].strip
                             if defn =~ /^\\(\S+?)\\, ([\w.]+?) \[((?:[A-Z][a-z]*\. )+).+\] (.+)$/
                                 lm = Regexp.last_match
                                 part_of_speech = lm[ 2 ]
@@ -560,7 +562,7 @@ class WordSpider
                 rescue ActiveRecord::StatementInvalid => e
                     case e.message
                         when /no connection to the server/
-                            $stderr.puts "No DB connection?  Attempting reconnect..."
+                            $stderr.puts "No DB connection?  Attempting reconnect... (@connection_attempts)"
                             sleep 5
                             ensureConnectedToDB
                             #$stderr.puts "Pausing for StatementInvalid error (#{e.message})"
