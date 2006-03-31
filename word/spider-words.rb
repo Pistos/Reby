@@ -80,6 +80,35 @@ class String
     end
 end
 
+class Tag
+    def string_contents
+        definition = ''
+        contents.each do |item|
+            if item.respond_to? :string_contents
+                definition << item.string_contents
+            else
+                definition << item
+            end
+        end
+        return definition
+    end
+    
+    def has_anchor_in_front?
+        x = contents[ 0 ]
+        if x != nil
+            if x.respond_to? :contents
+                y = x.contents[ 0 ]
+                if y != nil
+                    if y.name == 'a'
+                        return true
+                    end
+                end
+            end
+        end
+        return false
+    end
+end
+
 class WordSpider
     MIN_WORD_LENGTH = 4
     HIGH_QUEUE_LEVEL = 500
@@ -279,13 +308,25 @@ class WordSpider
             Regexp.escape( lang )
         }
         
-        ActiveRecord::Base.establish_connection(
-            :adapter  => "postgresql",
-            :host     => "localhost",
-            :username => "word",
-            :password => "word",
-            :database => "word"
-        )
+        @connection_attempts = 0
+        ensureConnectedToDB
+    end
+    
+    def ensureConnectedToDB
+        if not ActiveRecord::Base.connected?
+            @connection_attempts += 1
+            ActiveRecord::Base.establish_connection(
+                :adapter  => "postgresql",
+                :host     => "localhost",
+                :username => "word",
+                :password => "word",
+                :database => "word"
+            )
+            if ! ActiveRecord::Base.connected? && @connection_attempts > 20
+                $stderr.puts "Too many failed DB connection attempts."
+                @die = true
+            end
+        end
     end
     
     def start
@@ -459,8 +500,12 @@ class WordSpider
                 
                 if definition.empty? or part_of_speech.empty?
                     tag = soup2.find( [ 'dd', 'li' ] )
-                    if tag
-                        definition = tag.string || ''
+                    if tag != nil and ! tag.has_anchor_in_front?
+                        if tag.string
+                            definition = tag.string
+                        else
+                            definition = tag.string_contents
+                        end
                         definition.gsub!( /\n/, " " )
                         definition.strip!
                         
@@ -472,6 +517,23 @@ class WordSpider
                         end
                     end
                     
+                    if definition.empty?
+                        def_tags = soup2.find_all( 'p' ).find_all { |p| p.contents[ 0 ] =~ /\\/ }
+                        if not def_tags.empty?
+                            defn = def_tags[ 0 ].string_contents
+                            defn = defn[ /^(.+?)--/, 1 ].strip
+                            if defn =~ /^\\(\S+?)\\, ([\w.]+?) \[((?:[A-Z][a-z]*\. )+).+\] (.+)$/
+                                lm = Regexp.last_match
+                                part_of_speech = lm[ 2 ]
+                                if etymology == 'unknown'
+                                    etymology = lm[ 3 ].strip
+                                end
+                                definition = lm[ 4 ].strip
+                                syllables = lm[ 1 ]
+                                syllabification = syllables.split( /\W+/ )
+                            end
+                        end
+                    end
                 end
             end
         
@@ -485,7 +547,7 @@ class WordSpider
                 throw :problem
             end
             
-            loop do
+            while not @die
                 begin
                     word_rec = Word.create( {
                         :word => @word,
@@ -498,10 +560,13 @@ class WordSpider
                 rescue ActiveRecord::StatementInvalid => e
                     case e.message
                         when /no connection to the server/
-                            $stderr.puts "Pausing for StatementInvalid error (#{e.message})"
-                            sleep 60 * 5
+                            $stderr.puts "No DB connection?  Attempting reconnect..."
+                            sleep 5
+                            ensureConnectedToDB
+                            #$stderr.puts "Pausing for StatementInvalid error (#{e.message})"
+                            #sleep 60 * 5
                         when /duplicate key violates unique constraint "words_word_key"/
-                            $stderr.puts "Word already exists?"
+                            $stderr.puts "#{@word} already in DB?"
                             break
                         else
                             raise e

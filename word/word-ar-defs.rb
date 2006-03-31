@@ -1,7 +1,9 @@
 if __FILE__ =~ /word-ar-defs.rb/
     require 'rubygems'
     require_gem 'activerecord', '<= 1.13.2'
-    $reby.log "ActiveRecord <= 1.13.2"
+    if $reby != nil
+        $reby.log "ActiveRecord <= 1.13.2"
+    end
 else
     require 'active_record'
     if $reby != nil
