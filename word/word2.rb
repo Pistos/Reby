@@ -1034,7 +1034,7 @@ class WordX
             when '6'
                 buyClue( player, clue6, CLUE6_FRACTION )
             else
-                put "No such item for sale."
+                put "No such item for sale.", channel
         end
     end
     
