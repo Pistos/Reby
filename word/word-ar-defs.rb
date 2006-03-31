@@ -4,7 +4,9 @@ if __FILE__ =~ /word-ar-defs.rb/
     $reby.log "ActiveRecord <= 1.13.2"
 else
     require 'active_record'
-    $reby.log "ActiveRecord > 1.13.2"
+    if $reby != nil
+        $reby.log "ActiveRecord > 1.13.2"
+    end
 end
 
 class Word < ActiveRecord::Base
