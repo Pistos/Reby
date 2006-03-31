@@ -452,7 +452,7 @@ end
 class WordX
     attr_reader :battle
     
-    VERSION = '2.1.3'
+    VERSION = '2.1.4'
     LAST_MODIFIED = 'March 31, 2006'
     MIN_GAMES_PLAYED_TO_SHOW_SCORE = 0
     DEFAULT_INITIAL_POINT_VALUE = 100
@@ -710,10 +710,12 @@ class WordX
     end
     
     def bindPracticeCommand
+        $reby.unbind( "pub", "-", "!word", "noPracticeMessage", "$wordx" )
         $reby.bind( "pub", "-", "!word", "oneRound", "$wordx" )
     end
     def unbindPracticeCommand
         $reby.unbind( "pub", "-", "!word", "oneRound", "$wordx" )
+        $reby.bind( "pub", "-", "!word", "noPracticeMessage", "$wordx" )
     end
     def bindBuyCommand
         $reby.bind( "pub", "-", "!wordbuy", "buy", "$wordx" )
@@ -1195,6 +1197,14 @@ class WordX
             end
         else
             put "Only registered players may report things.", channel
+        end
+    end
+    
+    def noPracticeMessage( nick, userhost, handle, channel, args )
+        if @battle.nil?
+            put "People are playing in #{@game.channel.name} right now.", channel
+        else
+            put "A battle is ensuing in #{@battle.channel.name} right now!", channel
         end
     end
 end
