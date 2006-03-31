@@ -467,6 +467,7 @@ class WordX
     CLUE6_FRACTION = 0.15
     CONFIRMATION_TIMEOUT = 5 # seconds
     COST_CLASS_CHANGE = 5 # gold
+    MAX_WARMUP_POINTS = 2000
     
     OPS = Set.new [
         "Pistos",
@@ -794,6 +795,11 @@ class WordX
         if @battle.nil?
             winner.update_attribute( :warmup_points, winner.warmup_points + winner_award )
             @game.warmup_winner = winner.id
+            
+            if winner.warmup_points > MAX_WARMUP_POINTS
+                put "#{winner.nick} has exceeded #{MAX_WARMUP_POINTS} practice points!  Congratulations!  Practice scores have been reset."
+                Player.update_all "warmup_points = 0"
+            end
         else
             # Determine loser.
             
