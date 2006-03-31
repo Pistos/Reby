@@ -339,7 +339,7 @@ class WordSpider
     end
     
     def start
-        while not @next_words.empty? and @num_spidered < @num_to_spider
+        while not @next_words.empty? and @num_spidered < @num_to_spider and not @die
             begin
                 @word = @next_words.delete_at( rand( @next_words.length ) )
                 getWord
@@ -359,6 +359,16 @@ class WordSpider
         ActiveRecord::Base.remove_connection
     end
     
+    def queueWord( word )
+        if(
+            not @seen_words.include?( word ) and
+            not @next_words.include?( word ) and
+            Word.find_by_word( word ).nil?
+        )
+            @next_words.insert( rand( @next_words.length ), word )
+        end
+    end
+
     def gatherRelated
         other_words = Array.new
         open( "http://dictionary.reference.com/search?q=#{@word}" ) do |html|
@@ -375,13 +385,7 @@ class WordSpider
         
         other_words.uniq!
         other_words.each do |word|
-            if(
-                not @seen_words.include?( word ) and
-                not @next_words.include?( word ) and
-                Word.find_by_word( word ).nil?
-            )
-                @next_words.insert( rand( @next_words.length ), word )
-            end
+            queueWord( word )
         end
     end
     
@@ -404,9 +408,12 @@ class WordSpider
                         text = b.string
                         next if text.nil?
                         text.scan( /(?:^|\s)[a-z]+(?:#{SYLLABLE_SEPARATOR}[a-z]+)*(?:\s|$)/ ) do |subtext|
-                            if subtext.gsub( /#{SYLLABLE_SEPARATOR}/, '' ) == @word
+                            desyllabified_word = subtext.gsub( /#{SYLLABLE_SEPARATOR}/, '' )
+                            if desyllabified_word == @word
                                 syllabification = subtext.split( /#{SYLLABLE_SEPARATOR}/ )
                                 throw :found
+                            else
+                                queueWord( desyllabified_word )
                             end
                         end
                         break
@@ -576,7 +583,7 @@ class WordSpider
                         when /no connection to the server/
                             $stderr.puts "No DB connection?  Attempting reconnect... (#{@connection_attempts})"
                             sleep 5
-                            ActiveRecord::Base.clear_active_connections!
+                            ActiveRecord::Base.remove_connection
                             ensureConnectedToDB
                         when /duplicate key violates unique constraint "words_word_key"/
                             $stderr.puts "#{@word} already in DB?"
