@@ -57,21 +57,55 @@ class Player < ActiveRecord::Base
     has_many :participations
     belongs_to :title_set
     
-    def games_played
-        return Participation.count( "player_id = #{id}" )
+    def games_played( days = nil )
+        num_games = nil
+        days = days.to_i
+        if days < 1
+            days = 99999
+        end
+        p = Participation.find_by_sql [
+            " \
+                select count(*) as num_games \
+                from participations, games \
+                where participations.player_id = ? \
+                    AND participations.game_id = games.id \
+                    AND games.end_time > NOW() - '? days'::INTERVAL \
+            ",
+            id,
+            days
+        ]
+        if not p.empty?
+            num_games = p[ 0 ][ 'num_games' ].to_i
+        end
+        return num_games
     end
     
-    def rating
+    def rating( days = nil )
         points = BASE_RATING
-        
-        g = Participation.find_by_sql [
-            " \
-                select sum( points_awarded ) as rating \
-                from participations \
-                where player_id = ? \
-            ",
-            id
-        ]
+        days = days.to_i
+        g = nil
+        if days > 0
+            g = Participation.find_by_sql [
+                " \
+                    select sum( participations.points_awarded ) as rating \
+                    from participations, games \
+                    where player_id = ? \
+                        AND participations.game_id = games.id \
+                        AND games.end_time > NOW() - '? days'::INTERVAL \
+                ",
+                id,
+                days
+            ]
+        else
+            g = Participation.find_by_sql [
+                " \
+                    select sum( points_awarded ) as rating \
+                    from participations \
+                    where player_id = ? \
+                ",
+                id
+            ]
+        end
         if not g.nil? and not g.empty?
             points += g[ 0 ].rating.to_i
         end
@@ -133,12 +167,6 @@ class Player < ActiveRecord::Base
         #return( count >= MAX_WINS_PER_HOUR )
     end
     
-    #def save
-        #$reby.log "Saving: #{inspect}"
-        #$reby.log caller.join( "\n\t" )
-        #super
-    #end
-    
     # Returns true if the amount was successfully debited from the player's money.
     # Returns false if the player has insufficient funds.
     def debit( amount )
@@ -158,6 +186,42 @@ class Player < ActiveRecord::Base
         end
         
         return the_icon
+    end
+    
+    def time_of_last_battle
+        p = Game.find(
+            :first,
+            :include => [ :participations ],
+            :conditions => [
+                "participations.player_id = ? AND participations.game_id = games.id AND games.end_time IS NOT NULL",
+                id
+            ],
+            :order => 'games.end_time DESC'
+        )
+        if p != nil
+            return p.end_time
+        else
+            return nil
+        end
+    end
+    def time_of_last_victory
+        p = Game.find(
+            :first,
+            :include => [ :participations ],
+            :conditions => [
+                "participations.player_id = ? AND \
+                 participations.game_id = games.id AND \
+                 participations.points_awarded > 0 AND \
+                 games.end_time IS NOT NULL",
+                id
+            ],
+            :order => 'games.end_time DESC'
+        )
+        if p != nil
+            return p.end_time
+        else
+            return nil
+        end
     end
 end
 

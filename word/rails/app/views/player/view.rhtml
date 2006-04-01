@@ -33,7 +33,15 @@ class_name = @player.title_set.name
 </tr>
 <tr>
     <td class="leftlabel">Entered the realm:</td>
-    <td><%= ( ( Time.now - @player.creation_time ) / 86400 ).to_i %> days ago</td>
+    <td><%= time_ago @player.creation_time %></td>
+</tr>
+<tr>
+    <td class="leftlabel">Last battled:</td>
+    <td><%= time_ago @player.time_of_last_battle %></td>
+</tr>
+<tr>
+    <td class="leftlabel">Last victory:</td>
+    <td><%= time_ago @player.time_of_last_victory %></td>
 </tr>
 
 </table>

@@ -31,7 +31,7 @@ table.table {
 }
 
 table.table td {
-    padding: 0.15em 1em;
+    padding: 0.3em 1em;
 }
 
 .rowtype0 {
@@ -126,4 +126,10 @@ td.classicons table tr, td.classicons table td {
 }
 
 img.classicon {
+}
+
+.footer {
+    margin-top: 20px;
+    font-size: 8pt;
+    text-align: left;
 }

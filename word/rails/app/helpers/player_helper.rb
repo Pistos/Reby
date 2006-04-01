@@ -1,10 +1,12 @@
 module PlayerHelper
     def sort_link( label, column = label.downcase )
-        retval = "<a href=\"?sort=#{column}"
+        extra_params = { :sort => column }
         if params[ :sort ] == column and params[ :reverse ].nil?
-            retval << '&reverse=true'
+            extra_params[ :reverse ] = 'true'
+        else
+            extra_params[ :reverse ] = nil
         end
-        retval << "\">#{label}</a>"
+        link_to label, :overwrite_params => extra_params
     end
     
     def sorted_class( sortkey )
