@@ -917,6 +917,7 @@ class WordX
         @game.save
         @channel.save
         @word = nil
+        @game = nil
 
         if not nextRound
             bindPracticeCommand
@@ -1093,7 +1094,7 @@ class WordX
         cost = ( @initial_point_value * ( 1.0 - fraction ) ).to_i
         if player.debit( cost )
             sendNotice( clue, player.nick )
-            put "#{player.nick} has spent #{cost} #{CURRENCY}."
+            put "#{player.nick} spent #{cost} #{CURRENCY}."
         else
             put "#{player.nick}: You don't have the #{cost} #{CURRENCY} needed to buy that!"
         end
