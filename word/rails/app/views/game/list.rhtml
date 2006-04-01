@@ -1,0 +1,40 @@
+<% @page_title = 'Game Rounds' %>
+
+<h3>Recent Rounds</h3>
+
+<table>
+<thead>
+<tr>
+    <td>Start</td>
+    <td>End</td>
+    <td>Participants</td>
+    <td>Winner</td>
+    <td>Points</td>
+</tr>
+</thead>
+<%
+    @games.each_with_index do |game,index|
+        %>
+        <tr class="rowtype<%= index % 2 %>">
+            <td><%= game.start_time.strftime( datetime_format ) %></td>
+            <td><%= game.end_time.strftime( datetime_format ) %></td>
+            <td><%=
+                winner_link = nil
+                award = nil
+                game.participations.collect { |part|
+                    player = Player.find( part.player_id )
+                    link = link_to( player.nick, :controller => 'player', :action => 'view', :id => part.player_id )
+                    if part.points_awarded != nil and part.points_awarded > 0
+                        winner_link = link
+                        award = part.points_awarded
+                    end
+                    link
+                }.join( ', ' )
+            %></td>
+            <td><%= winner_link %></td>
+            <td><%= award %></td>
+        </tr>
+        <%
+    end
+%>
+</table>
