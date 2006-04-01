@@ -4,6 +4,14 @@ body {
     font-size: 10pt;
 }
 
+h1 {
+    background-color: #d0eeff;
+    padding: 0.5em;
+    margin-top: 0px;
+    border-collapse: collapse;
+    border: 0px;
+}
+
 a {
     color: #3399ff;
 }
@@ -15,6 +23,14 @@ a:visited {
 td {
     font-family: Verdana, sans-serif;
     font-size: 10pt;
+}
+
+table.table {
+    border: 0px;
+    border-collapse: collapse;
+}
+
+table.table td {
     padding: 0.15em 1em;
 }
 
@@ -49,7 +65,7 @@ thead a:visited {
 }
 
 .playerstats {
-    background-color: #ddffff;
+    background-color: #d0eeff;
     padding: 1em;
 }
 
@@ -62,12 +78,17 @@ p {
     margin: 0.5em 0px;
 }
 
+table.main td {
+    padding-left: 1em;
+}
+
 .menu {
-    padding-top: 5em;
+    padding: 5em 1em 1em 1em;
     width: 10%;
     min-width: 8em;
     font-size: 10pt;
     vertical-align: top;
+    background-color: #d0eeff;
 }
 
 .menu ul {
@@ -76,9 +97,11 @@ p {
 }
 .menu li {
     list-style-type: none;
+    margin: 1em 0px;
 }
 
 .content {
+    padding-top: 0px;
 }
 
 .playericon {
