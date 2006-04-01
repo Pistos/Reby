@@ -452,8 +452,8 @@ end
 class WordX
     attr_reader :battle
     
-    VERSION = '2.1.4'
-    LAST_MODIFIED = 'March 31, 2006'
+    VERSION = '2.1.5'
+    LAST_MODIFIED = 'April 1, 2006'
     MIN_GAMES_PLAYED_TO_SHOW_SCORE = 0
     DEFAULT_INITIAL_POINT_VALUE = 100
     MAX_SCORES_TO_SHOW = 10
@@ -469,6 +469,7 @@ class WordX
     COST_CLASS_CHANGE = 5 # gold
     MAX_WARMUP_POINTS = 2000
     MAX_MEMOS_PER_PLAYER = 3
+    WORD_CACHE_SIZE = 2 # number of words
     
     OPS = Set.new [
         "Pistos",
@@ -491,8 +492,20 @@ class WordX
         @registered_players = Hash.new
         @registration_check_pending = Hash.new
         @memo_counts = Hash.new( 0 )
+        @word_caches = {
+            Word::PRACTICE => [],
+            Word::NOT_PRACTICE => [],
+        }
+        @cache_threads = Hash.new
+        @cache_mutexes = {
+            Word::PRACTICE => Mutex.new,
+            Word::NOT_PRACTICE => Mutex.new,
+        }
         
         connect_to_db
+        
+        fillWordCache( Word::PRACTICE )
+        fillWordCache( Word::NOT_PRACTICE )
     end
 
     def connect_to_db
@@ -505,9 +518,44 @@ class WordX
         )
     end
     
+    def fillWordCache( type )
+        t = @cache_threads[ type ]
+        if t != nil and t.alive?
+            # We're already working on it!
+            return
+        end
+        @cache_threads[ type ] = Thread.new do
+            while @word_caches[ type ].size < WORD_CACHE_SIZE
+                word = Word.random( type )
+                @cache_mutexes[ type ].synchronize do
+                    @word_caches[ type ] << word
+                end
+            end
+        end
+        $reby.registerThread @cache_threads[ type ]
+    end
+
+    def next_word( is_practice )
+        word = nil
+        @cache_mutexes[ is_practice ].synchronize do
+            word = @word_caches[ is_practice ].shift
+        end
+        while word.nil?
+            sleep 1
+            @cache_mutexes[ type ].synchronize do
+                word = @word_caches[ is_practice ].shift
+            end
+            fillWordCache( is_practice )
+        end
+        return word
+    end
+    
     # Sends a line to the game channel.
     def put( text, destination = @channel.name )
         $reby.putserv "PRIVMSG #{destination} :#{@battle.nil? ? '' : '[b] '}#{text}"
+    end
+    def putquick( text, destination = @channel.name )
+        $reby.putquick "PRIVMSG #{destination} :#{@battle.nil? ? '' : '[b] '}#{text}"
     end
 
     def sendNotice( text, destination = @channel.name )
@@ -527,7 +575,7 @@ class WordX
         unbindPracticeCommand        
 
         @channel = Channel.find_or_create_by_name( channel )
-        @word = Word.random( @battle.nil? )
+        @word = next_word( @battle.nil? )
         @game = Game.create( { :word_id => @word.id, :start_time => Time.now } )
         @initial_point_value = DEFAULT_INITIAL_POINT_VALUE
         @given_away_by = nil
@@ -583,6 +631,14 @@ class WordX
 
         $reby.bind( "pub", "-", @word.word, "correctGuess", "$wordx" )
         
+        # Announce word
+        
+        round_str = ""
+        if @battle != nil
+            round_str = "(round #{@battle.current_round} of #{@battle.num_rounds})"
+        end
+        putquick "Unscramble ... #{mixed_word}         #{round_str}"
+        
         # Set the timers to reveal the clues
 
         $reby.utimer( 100, "nobodyGotIt", "$wordx" )
@@ -593,13 +649,7 @@ class WordX
         $reby.utimer( 55, "showClue5", "$wordx" )
         $reby.utimer( 70, "showClue6", "$wordx" )
         
-        bindBuyCommand
-        
-        round_str = ""
-        if @battle != nil
-            round_str = "(round #{@battle.current_round} of #{@battle.num_rounds})"
-        end
-        put "Unscramble ... #{mixed_word}         #{round_str}"
+        fillWordCache( @battle.nil? )
     end
 
     def printScore( nick, userhost, handle, channel, text )
@@ -717,13 +767,6 @@ class WordX
         $reby.unbind( "pub", "-", "!word", "oneRound", "$wordx" )
         $reby.bind( "pub", "-", "!word", "noPracticeMessage", "$wordx" )
     end
-    def bindBuyCommand
-        $reby.bind( "pub", "-", "!wordbuy", "buy", "$wordx" )
-    end
-    def unbindBuyCommand
-        $reby.unbind( "pub", "-", "!wordbuy", "buy", "$wordx" )
-    end
-
     def calculatedLoss( winner, loser )
         return ( @point_value * ( loser.rating.to_f / winner.rating.to_f ) ).to_i
     end
@@ -839,9 +882,9 @@ class WordX
 
         put "... for #{winner_award} points."
         
-        if not @def_shown
-            showDefinition
-        end
+        #if not @def_shown
+            #showDefinition
+        #end
 
         # Record score.
         
@@ -876,7 +919,6 @@ class WordX
         @word = nil
 
         if not nextRound
-            bindBuyCommand
             bindPracticeCommand
             @channel = nil
         end
@@ -1027,14 +1069,23 @@ class WordX
         player = Player.find_by_nick( nick )
         
         case arg
-            when '4'
-                buyClue( player, clue4, CLUE4_FRACTION )
-            when '5'
-                buyClue( player, clue5, CLUE5_FRACTION )
-            when '6'
-                buyClue( player, clue6, CLUE6_FRACTION )
+            when 'aoeu'
+                x = 1
             else
-                put "No such item for sale.", channel
+                if @game != nil
+                    case arg
+                        when '4'
+                            buyClue( player, clue4, CLUE4_FRACTION )
+                        when '5'
+                            buyClue( player, clue5, CLUE5_FRACTION )
+                        when '6'
+                            buyClue( player, clue6, CLUE6_FRACTION )
+                        else
+                            put "No such item for sale.", channel
+                    end
+                else
+                    put "No such item for sale.", channel
+                end
         end
     end
     
@@ -1224,3 +1275,4 @@ $reby.bind( "raw", "-", "318", "registrationCheck", "$wordx" )
 $reby.bind( "pub", "-", "!wordop", "opCommand", "$wordx" )
 $reby.bind( "pubm", "-", "#mathetes *", "listen", "$wordx" )
 $reby.bind( "pub", "-", "!wordreport", "reportProblem", "$wordx" )
+$reby.bind( "pub", "-", "!wordbuy", "buy", "$wordx" )
