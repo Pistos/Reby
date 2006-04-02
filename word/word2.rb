@@ -469,7 +469,6 @@ class WordX
     COST_CLASS_CHANGE = 5 # gold
     MAX_WARMUP_POINTS = 2000
     MAX_MEMOS_PER_PLAYER = 3
-    WORD_CACHE_SIZE = 2 # number of words
     
     OPS = Set.new [
         "Pistos",
@@ -492,20 +491,8 @@ class WordX
         @registered_players = Hash.new
         @registration_check_pending = Hash.new
         @memo_counts = Hash.new( 0 )
-        @word_caches = {
-            Word::PRACTICE => [],
-            Word::NOT_PRACTICE => [],
-        }
-        @cache_threads = Hash.new
-        @cache_mutexes = {
-            Word::PRACTICE => Mutex.new,
-            Word::NOT_PRACTICE => Mutex.new,
-        }
         
         connect_to_db
-        
-        fillWordCache( Word::PRACTICE )
-        fillWordCache( Word::NOT_PRACTICE )
     end
 
     def connect_to_db
@@ -518,38 +505,6 @@ class WordX
         )
     end
     
-    def fillWordCache( type )
-        t = @cache_threads[ type ]
-        if t != nil and t.alive?
-            # We're already working on it!
-            return
-        end
-        @cache_threads[ type ] = Thread.new do
-            while @word_caches[ type ].size < WORD_CACHE_SIZE
-                word = Word.random( type )
-                @cache_mutexes[ type ].synchronize do
-                    @word_caches[ type ] << word
-                end
-            end
-        end
-        $reby.registerThread @cache_threads[ type ]
-    end
-
-    def next_word( is_practice )
-        word = nil
-        @cache_mutexes[ is_practice ].synchronize do
-            word = @word_caches[ is_practice ].shift
-        end
-        while word.nil?
-            sleep 1
-            @cache_mutexes[ type ].synchronize do
-                word = @word_caches[ is_practice ].shift
-            end
-            fillWordCache( is_practice )
-        end
-        return word
-    end
-    
     # Sends a line to the game channel.
     def put( text, destination = @channel.name )
         $reby.putserv "PRIVMSG #{destination} :#{@battle.nil? ? '' : '[b] '}#{text}"
@@ -557,7 +512,7 @@ class WordX
     def putquick( text, destination = @channel.name )
         $reby.putquick "PRIVMSG #{destination} :#{@battle.nil? ? '' : '[b] '}#{text}"
     end
-
+    
     def sendNotice( text, destination = @channel.name )
         $reby.putserv "NOTICE #{destination} :#{text}"
     end
@@ -575,7 +530,7 @@ class WordX
         unbindPracticeCommand        
 
         @channel = Channel.find_or_create_by_name( channel )
-        @word = next_word( @battle.nil? )
+        @word = Word.random( @battle.nil? )
         @game = Game.create( { :word_id => @word.id, :start_time => Time.now } )
         @initial_point_value = DEFAULT_INITIAL_POINT_VALUE
         @given_away_by = nil
@@ -631,14 +586,6 @@ class WordX
 
         $reby.bind( "pub", "-", @word.word, "correctGuess", "$wordx" )
         
-        # Announce word
-        
-        round_str = ""
-        if @battle != nil
-            round_str = "(round #{@battle.current_round} of #{@battle.num_rounds})"
-        end
-        putquick "Unscramble ... #{mixed_word}         #{round_str}"
-        
         # Set the timers to reveal the clues
 
         $reby.utimer( 100, "nobodyGotIt", "$wordx" )
@@ -649,7 +596,13 @@ class WordX
         $reby.utimer( 55, "showClue5", "$wordx" )
         $reby.utimer( 70, "showClue6", "$wordx" )
         
-        fillWordCache( @battle.nil? )
+        bindBuyCommand
+        
+        round_str = ""
+        if @battle != nil
+            round_str = "(round #{@battle.current_round} of #{@battle.num_rounds})"
+        end
+        putquick "Unscramble ... #{mixed_word}         #{round_str}"
     end
 
     def printScore( nick, userhost, handle, channel, text )
@@ -1070,7 +1023,7 @@ class WordX
         player = Player.find_by_nick( nick )
         
         case arg
-            when 'aoeu'
+            when 'aoeuaoeu'
                 x = 1
             else
                 if @game != nil
