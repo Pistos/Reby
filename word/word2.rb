@@ -495,6 +495,8 @@ class WordX
         @memo_counts = Hash.new( 0 )
         
         connect_to_db
+        
+        @item_glass_shield = Item.find_by_code( 'glass-shield' )
     end
 
     def connect_to_db
@@ -653,7 +655,6 @@ class WordX
     
     # Returns an array of [Player,rating] subarrays.
     def ranking( include_players_with_no_games = false )
-        @active_channel = channel
         ratings = Hash.new
         Player.find( :all ).each do |player|
             if player.games_played > 0 or include_players_with_no_games
@@ -809,12 +810,14 @@ class WordX
         else
             # Determine loser.
             
+            loser = nil
             case @battle.mode
                 when :rounds
                     @game.participations.each do |participation|
                         player = Player.find( participation.player_id )
                         next if player == winner
                         
+                        loser = player
                         loss = calculatedLoss( winner, player )
                         participation.points_awarded = -loss
                         losing_participation = participation
@@ -822,19 +825,38 @@ class WordX
                     end
                 when :koth
                     if winner != @king
+                        loser = @king
                         losing_participation = @king_participation
                         winner_award = calculatedLoss( winner, @king )
                     else
                         losing_participation, winner_award = highest_loser( winner )
+                        loser = losing_participation.player
                     end
                     @king = winner
                 when :lms
                     @battle.addWin( winner )
                     losing_participation, winner_award = highest_loser( winner )
-                    p = losing_participation.player
-                    @battle.eliminate( p )
-                    put "#{winner.nick} strikes #{p.nick}"
+                    loser = losing_participation.player
+                    put "#{winner.nick} strikes #{loser.nick}!"
+                    @battle.eliminate( loser )
             end
+            
+            # Is the loser using a shield?
+            
+            shield = loser.equipment.find(
+                :first,
+                :conditions => [
+                    "item_id = ? AND equipped",
+                    @item_glass_shield.id
+                ]
+            )
+            if shield
+                put "#{loser.nick}'s shield absorbs the blow, reducing the point value!  But the shield shatters into innumerable fragments."
+                winner_award = 0
+                Equipment.delete( shield.id )
+            end
+            
+            # Dole out the awards...
             
             losing_participation.points_awarded = -winner_award
         end
@@ -1173,12 +1195,17 @@ class WordX
             when /^i/
                 # Inventory listing
                 
-                sendNotice(
-                    player.equipment.collect { |eq|
-                        eq.item.name
-                    }.join( ', ' ),
-                    player.nick
-                )
+                inventory = player.equipment.collect { |eq|
+                    eq.item.name + (
+                        eq.equipped ? ' (equipped)' : ''
+                    )
+                }.join( ', ' )
+                
+                if inventory.empty?
+                    sendNotice( "You have no items.", player.nick )
+                else
+                    sendNotice( inventory, player.nick )
+                end
                 
             when /^(?:uneq|r)\S*\s+(.+)$/
                 # Unequip an item
