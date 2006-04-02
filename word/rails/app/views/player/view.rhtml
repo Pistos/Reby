@@ -43,6 +43,17 @@ class_name = @player.title_set.name
     <td class="leftlabel">Last victory:</td>
     <td><%= time_ago @player.time_of_last_victory %></td>
 </tr>
+<tr>
+    <td class="leftlabel">Equipment:</td>
+    <td><ul><%
+        @player.equipment.each do |eq|
+            %><li>
+            <%= eq.item.name %>
+            (<%= eq.equipped ? 'equipped' : 'not equipped' %>)
+            </li><%
+        end
+    %></ul></td>
+</tr>
 
 </table>
 
