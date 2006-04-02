@@ -4,6 +4,8 @@
 # (http://purepistos.net/eggdrop/reby).
 
 # The classic word unscramble game, but enhanced.
+# http://word.purepistos.net
+# http://purepistos.net/wiki/doku.php?id=Reby:Scripts:word2.rb
 
 # By Pistos
 # irc.freenode.net#mathetes
@@ -506,18 +508,19 @@ class WordX
     end
     
     # Sends a line to the game channel.
-    def put( text, destination = @channel.name )
+    def put( text, destination = @active_channel || @channel.name )
         $reby.putserv "PRIVMSG #{destination} :#{@battle.nil? ? '' : '[b] '}#{text}"
     end
-    def putquick( text, destination = @channel.name )
+    def putquick( text, destination = @active_channel || @channel.name )
         $reby.putquick "PRIVMSG #{destination} :#{@battle.nil? ? '' : '[b] '}#{text}"
     end
     
-    def sendNotice( text, destination = @channel.name )
+    def sendNotice( text, destination = @active_channel || @channel.name )
         $reby.putserv "NOTICE #{destination} :#{text}"
     end
 
     def oneRound( nick, userhost, handle, channel, text )
+        @active_channel = channel
         if nick != nil
             # Practice game.
             player = Player.find_by_nick( nick )
@@ -604,6 +607,7 @@ class WordX
     end
 
     def printScore( nick, userhost, handle, channel, text )
+        @active_channel = channel
         num_to_show, start_rank, end_rank = printing_parameters( text )
         
         num_shown = 0
@@ -613,7 +617,7 @@ class WordX
             index += 1
             next if index < start_rank
             
-            put( "%2d. %-20s %5d" % [ index, player.nick, player.warmup_points ], channel )
+            put "%2d. %-20s %5d" % [ index, player.nick, player.warmup_points ]
             
             num_shown += 1
             break if num_shown >= num_to_show
@@ -621,10 +625,11 @@ class WordX
     end
     
     def printRating( nick, userhost, handle, channel, text )
+        @active_channel = channel
         if not text.empty?
             player = Player.find_by_nick( text )
             if player.nil?
-                put "'#{text}' is not a player.", channel
+                put "'#{text}' is not a player."
                 return
             end
         else
@@ -639,15 +644,16 @@ class WordX
                     break
                 end
             end
-            put "http://word.purepistos.net/player/view?id=#{player.id}", channel
-            put "\002#{player.nick}\002, \002#{player.title}\002 (L\002#{player.level}\002) - Battle rating: \002#{player.rating}\002 (Rank: \002##{rank}\002) (#{player.money} #{CURRENCY}) (#{player.games_played} rounds) High/Low Rating: #{player.highest_rating}/#{player.lowest_rating}", channel
+            put "http://word.purepistos.net/player/view?id=#{player.id}"
+            put "\002#{player.nick}\002, \002#{player.title}\002 (L\002#{player.level}\002) - Battle rating: \002#{player.rating}\002 (Rank: \002##{rank}\002) (#{player.money} #{CURRENCY}) (#{player.games_played} rounds) High/Low Rating: #{player.highest_rating}/#{player.lowest_rating}"
         else
-            put "#{nick}: You're not a !word warrior!  Play a !wordbattle.", channel
+            put "#{nick}: You're not a !word warrior!  Play a !wordbattle."
         end
     end
     
     # Returns an array of [Player,rating] subarrays.
     def ranking( include_players_with_no_games = false )
+        @active_channel = channel
         ratings = Hash.new
         Player.find( :all ).each do |player|
             if player.games_played > 0 or include_players_with_no_games
@@ -677,12 +683,13 @@ class WordX
     end
     
     def printRanking( nick, userhost, handle, channel, text )
+        @active_channel = channel
         if text =~ /^[^\d -]+$/
             printRating( nick, userhost, handle, channel, text )
             return
         end
         
-        put "http://word.purepistos.net", channel
+        put "http://word.purepistos.net"
         
         num_to_show, start_rank, end_rank = printing_parameters( text )
         
@@ -693,12 +700,12 @@ class WordX
             index += 1
             next if index < start_rank
             
-            put( "%2d. %-32s %-5s %5d" % [ index, "#{player.nick}, #{player.title}", "(L#{player.level})", rating ], channel )
+            put( "%2d. %-32s %-5s %5d" % [ index, "#{player.nick}, #{player.title}", "(L#{player.level})", rating ] )
             num_shown += 1
             break if num_shown >= num_to_show
         end
         
-        put "(#{num_shown} of #{r.size} players shown)" , channel
+        put "(#{num_shown} of #{r.size} players shown)"
     end
     
     def killTimers
@@ -754,6 +761,7 @@ class WordX
     end
     
     def correctGuess( nick, userhost, handle, channel, text )
+        @active_channel = channel
         # Validity checks:
         
         return if @already_guessed
@@ -970,6 +978,7 @@ class WordX
     end
 
     def setupGame( nick, userhost, handle, channel, text )
+        @active_channel = channel
         return if battle_going?( channel )
         
         unbindPracticeCommand
@@ -983,32 +992,34 @@ class WordX
     end
     
     def listCharacterClasses( nick, userhost, handle, channel, text )
+        @active_channel = channel
         classes = []
         TitleSet.find( :all, :order => 'name' ).each do |ts|
             classes << ts.name
         end
-        put "http://word.purepistos.net/title/list", channel
-        put "Character Classes: #{classes.join( ', ' )}", channel
+        put "http://word.purepistos.net/title/list"
+        put "Character Classes: #{classes.join( ', ' )}"
     end
     
     def setCharacterClass( nick, userhost, handle, channel, text )
+        @active_channel = channel
         cl = text.strip.split.collect { |w| w.capitalize }.join( ' ' )
         ts = TitleSet.find_by_name( cl )
         if ts.nil?
-            put "'#{cl}' is not a class.", channel
+            put "'#{cl}' is not a class."
             listCharacterClasses( nil, nil, nil, channel, nil )
         else
             player = Player.find_by_nick( nick )
             if player.nil?
-                put "#{nick}: You are not a player.  Join a !wordbattle first.", channel
+                put "#{nick}: You are not a player.  Join a !wordbattle first."
             else
                 cost = COST_CLASS_CHANGE
                 if player.debit( cost )
                     player.title_set_id = ts.id
                     player.save
-                    put "#{player.nick} is now a#{ts.name =~ /^[aoeuiAOEUI]/ ? 'n' : ''} #{ts.name}.", channel
+                    put "#{player.nick} is now a#{ts.name =~ /^[aoeuiAOEUI]/ ? 'n' : ''} #{ts.name}."
                 else
-                    put "#{player.nick}: You don't have the #{cost} #{CURRENCY} needed to change classes.", channel
+                    put "#{player.nick}: You don't have the #{cost} #{CURRENCY} needed to change classes."
                 end
                 
             end
@@ -1016,28 +1027,45 @@ class WordX
     end
     
     def buy( nick, userhost, handle, channel, text )
+        @active_channel = channel
         arg = text.strip
         
         player = Player.find_by_nick( nick )
         
-        case arg
-            when 'aoeuaoeu'
-                x = 1
+        item = Item.find_by_code( arg )
+        if item != nil
+            if player.under_limit?( item )
+                sellItem( player, item )
             else
-                if @game != nil
-                    case arg
-                        when '4'
-                            buyClue( player, clue4, CLUE4_FRACTION )
-                        when '5'
-                            buyClue( player, clue5, CLUE5_FRACTION )
-                        when '6'
-                            buyClue( player, clue6, CLUE6_FRACTION )
-                        else
-                            put "No such item for sale.", channel
-                    end
+                put "#{nick}: You may not have more than #{item.ownership_limit} #{item.ownership_limit > 1 ? item.name.pluralize : item.name}"
+            end
+        elsif @game != nil
+            case arg
+                when '4'
+                    buyClue( player, clue4, CLUE4_FRACTION )
+                when '5'
+                    buyClue( player, clue5, CLUE5_FRACTION )
+                when '6'
+                    buyClue( player, clue6, CLUE6_FRACTION )
                 else
-                    put "No such item for sale.", channel
-                end
+                    put "No such item or clue for sale."
+            end
+        else
+            put(
+                "No such item '#{arg}' for sale.  Items: " + (
+                    Item.find( :all ).collect { |item| item.code }.join( ', ' )
+                )
+            )
+        end
+    end
+    
+    def sellItem( player, item )
+        cost = item.price
+        if player.debit( cost )
+            player.equipment.create( :item_id => item.id )
+            put "#{player.nick} spent #{cost} #{CURRENCY}."
+        else
+            put "#{player.nick}: #{item.name.pluralize} cost #{cost} #{CURRENCY}, you haven't got that much!"
         end
     end
     
@@ -1110,8 +1138,9 @@ class WordX
     end
     
     def opCommand( nick, userhost, handle, channel, text )
+        @active_channel = channel
         if not op?( nick )
-            put "#{nick}: You are not a !word operator who has identified with the network.", channel
+            put "#{nick}: You are not a !word operator who has identified with the network."
             return
         end
         
@@ -1122,9 +1151,9 @@ class WordX
                 victim = Player.find_by_nick( nick )
                 if victim != nil
                     @memo_counts[ victim.nick ] = 0
-                    put "Reset memo count for #{victim.nick}.", channel
+                    put "Reset memo count for #{victim.nick}."
                 else
-                    put "No such player, '#{nick}'", channel
+                    put "No such player, '#{nick}'"
                 end                
             when /^del\S*\s+(\S+)/
                 nick = $1
@@ -1153,9 +1182,9 @@ class WordX
                         Game.delete( game.id )
                     end
                     victim.destroy
-                    put "Deleted #{nick} and #{num_games} rounds.", channel
+                    put "Deleted #{nick} and #{num_games} rounds."
                 else
-                    put "No such player: '#{nick}'", channel
+                    put "No such player: '#{nick}'"
                 end
             when /^msg\s+(.+)$/
                 sendMemo nick, $1
@@ -1192,24 +1221,26 @@ class WordX
     end
     
     def reportProblem( nick, userhost, handle, channel, args )
+        @active_channel = channel
         if confirmRegistration( nick )
             if @memo_counts[ nick ] >= MAX_MEMOS_PER_PLAYER
-                put "#{nick}: You have sent too many memos already.", channel
+                put "#{nick}: You have sent too many memos already."
             elsif args.to_s.strip.empty?
-                put "#{nick}: !wordreport <suggested new word | problem word | bug report>", channel
+                put "#{nick}: !wordreport <suggested new word | problem word | bug report>"
             else
                 sendMemo( nick, args.to_s.strip )
             end
         else
-            put "Only registered players may report things.", channel
+            put "Only registered players may report things."
         end
     end
     
     def noPracticeMessage( nick, userhost, handle, channel, args )
+        @active_channel = channel
         if @battle.nil?
-            put "People are playing in #{@game.channel.name} right now.", channel
+            put "People are playing in #{@game.channel.name} right now."
         else
-            put "A battle is ensuing in #{@battle.channel.name} right now!", channel
+            put "A battle is ensuing in #{@battle.channel.name} right now!"
         end
     end
 end

@@ -56,6 +56,7 @@ class Player < ActiveRecord::Base
     
     has_many :participations
     belongs_to :title_set
+    has_many :equipment
     
     def games_played( days = nil )
         num_games = nil
@@ -223,6 +224,15 @@ class Player < ActiveRecord::Base
             return nil
         end
     end
+    
+    def under_limit?( item )
+        num_owned = Equipment.count( [
+            "item_id = ? AND player_id = ?",
+            item.id,
+            id
+        ] )
+        return( num_owned < item.ownership_limit )
+    end
 end
 
 class Participation < ActiveRecord::Base
@@ -255,3 +265,11 @@ end
 class TitleLevel < ActiveRecord::Base
     has_many :titles
 end
+
+class Item < ActiveRecord::Base
+end
+
+class Equipment < ActiveRecord::Base
+    belongs_to :player
+end
+

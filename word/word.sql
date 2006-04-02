@@ -1,3 +1,5 @@
+DROP TABLE equipment;
+DROP TABLE items;
 DROP TABLE titles;
 DROP TABLE title_levels;
 DROP TABLE title_sets;
@@ -67,6 +69,22 @@ CREATE TABLE titles (
     title_level_id INTEGER NOT NULL REFERENCES title_levels( id ),
     text VARCHAR( 128 ) NOT NULL,
     UNIQUE( title_set_id, text )
+);
+
+CREATE TABLE items (
+    id SERIAL PRIMARY KEY,
+    code VARCHAR( 32 ) NOT NULL UNIQUE,
+    name VARCHAR( 64 ) NOT NULL UNIQUE,
+    price INTEGER NOT NULL,
+    ownership_limit INTEGER NOT NULL DEFAULT 1
+);
+INSERT INTO items (code, name, price) VALUES ( 'glass-shield', 'Glass Shield', 300 );
+
+CREATE TABLE equipment (
+    id SERIAL PRIMARY KEY,
+    player_id INTEGER NOT NULL REFERENCES players( id ),
+    item_id INTEGER NOT NULL REFERENCES items( id ),
+    equipped BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 CREATE VIEW word_frequency AS
