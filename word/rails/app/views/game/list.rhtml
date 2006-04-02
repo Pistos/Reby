@@ -21,6 +21,10 @@
             <td><%=
                 winner_link = nil
                 award = nil
+                if game.warmup_winner != nil
+                    player = Player.find( game.warmup_winner )
+                    winner_link = link_to( player.nick, :controller => 'player', :action => 'view', :id => player.id )
+                end                
                 game.participations.collect { |part|
                     player = Player.find( part.player_id )
                     link = link_to( player.nick, :controller => 'player', :action => 'view', :id => part.player_id )

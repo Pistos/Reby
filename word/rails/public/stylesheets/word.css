@@ -32,6 +32,7 @@ table.table {
 
 table.table td {
     padding: 0.3em 1em;
+    border-right: solid 2px #ffffff;
 }
 
 .rowtype0 {
