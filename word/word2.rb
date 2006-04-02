@@ -596,8 +596,6 @@ class WordX
         $reby.utimer( 55, "showClue5", "$wordx" )
         $reby.utimer( 70, "showClue6", "$wordx" )
         
-        bindBuyCommand
-        
         round_str = ""
         if @battle != nil
             round_str = "(round #{@battle.current_round} of #{@battle.num_rounds})"
@@ -1140,7 +1138,9 @@ class WordX
                                 FROM participations \
                                 WHERE participations.game_id = games.id \
                                     AND player_id = ? \
-                            )",
+                            ) OR \
+                            games.warmup_winner = ?",
+                            victim.id,
                             victim.id
                         ]
                     )
