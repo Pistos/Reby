@@ -454,8 +454,8 @@ end
 class WordX
     attr_reader :battle
     
-    VERSION = '2.1.5'
-    LAST_MODIFIED = 'April 1, 2006'
+    VERSION = '2.2.0'
+    LAST_MODIFIED = 'April 2, 2006'
     MIN_GAMES_PLAYED_TO_SHOW_SCORE = 0
     DEFAULT_INITIAL_POINT_VALUE = 100
     MAX_SCORES_TO_SHOW = 10
@@ -1133,6 +1133,75 @@ class WordX
         return retval
     end
     
+    def command( nick, userhost, handle, channel, text )
+        @active_channel = channel
+        
+        player = Player.find_by_nick( nick )
+        if player.nil?
+            put "#{nick}: You are not a player.  Fight in a !wordbattle first."
+            return
+        end
+        
+        command = text.strip
+        case command
+            when /^eq\S*\s+(.+)$/
+                # Equip an item
+                
+                item_code = $1.strip
+                item = Item.find_by_code( item_code )
+                if item.nil?
+                    put "No such item '#{item_code}'."
+                else
+                    owned_item = player.equipment.find( :first, :conditions => [ "item_id = ?",  item.id ] )
+                    if owned_item
+                        owned_item.update_attribute( :equipped, true )
+                        put "#{nick} equips #{item.name}."
+                    else
+                        put "#{nick}: You don't have any #{item.name}."
+                    end
+                end
+                
+            when /^h/
+                # Help
+                
+                sendNotice "Commands:", player.nick
+                sendNotice "eq[uip] <item code>", player.nick
+                sendNotice "uneq[uip] <item code>", player.nick
+                sendNotice "r[emove] <item code>", player.nick
+                sendNotice "i[nventory]", player.nick
+                
+            when /^i/
+                # Inventory listing
+                
+                sendNotice(
+                    player.equipment.collect { |eq|
+                        eq.item.name
+                    }.join( ', ' ),
+                    player.nick
+                )
+                
+            when /^(?:uneq|r)\S*\s+(.+)$/
+                # Unequip an item
+                
+                item_code = $1.strip
+                item = Item.find_by_code( item_code )
+                if item.nil?
+                    put "No such item '#{item_code}'."
+                else
+                    owned_item = player.equipment.find( :first, :conditions => [ "item_id = ?",  item.id ] )
+                    if owned_item
+                        owned_item.update_attribute( :equipped, false )
+                        put "#{nick} unequips #{item.name}."
+                    else
+                        put "#{nick}: You don't have any #{item.name}."
+                    end
+                end
+                
+            else
+                put "Unknown command '#{command}'.  Try '!w help' for help."
+        end
+    end
+    
     def op?( nick )
         retval = OPS.include?( nick ) && confirmRegistration( nick )
     end
@@ -1261,3 +1330,4 @@ $reby.bind( "pub", "-", "!wordop", "opCommand", "$wordx" )
 $reby.bind( "pubm", "-", "#mathetes *", "listen", "$wordx" )
 $reby.bind( "pub", "-", "!wordreport", "reportProblem", "$wordx" )
 $reby.bind( "pub", "-", "!wordbuy", "buy", "$wordx" )
+$reby.bind( "pub", "-", "!w", "command", "$wordx" )
