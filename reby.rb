@@ -77,8 +77,8 @@ class Reby
         @LOOP_CHECK_MILESTONE = 10
         @REBY_PREFIX = "^\\[\\d+:\\d+\\] REBY"
 
-        @VERSION = "0.7.2"
-        @LAST_MODIFIED = "March 30, 2006"
+        @VERSION = "0.7.3"
+        @LAST_MODIFIED = "April 3, 2006"
         @GOD_IS_GOOD = true
 
         @registered_methods = Array.new
@@ -923,7 +923,7 @@ class String
         return gsub( /\001/, "\\{" ).gsub( /\002/, "\\}" )
     end
     def unescapeBackslashed
-        return gsub( /\\(.)/, "\\1" )
+        return gsub( /\\([^ ])/, "\\1" )
     end
     def toReby
         return "'" + restoreBraces.replaceQuotes + "'"
