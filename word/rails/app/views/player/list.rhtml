@@ -28,11 +28,11 @@
 <tr>
     <td>Rank</td>
     <td <%= sorted_class( 'nick' ) %>><%= sort_link 'Nick' %></td>
-    <td>Title (Level)</td>
+    <td>Title (Level, Class)</td>
     <td <%= sorted_class( 'rating' ) %>><%= sort_link 'Rating' %></td>
     <td <%= sorted_class( 'rounds' ) %>><%= sort_link 'Rounds' %></td>
     <td <%= sorted_class( 'money' ) %>><%= sort_link 'Gold', 'money' %></td>
-    <td>Class</td>
+    <td <%= sorted_class( 'words' ) %>><%= sort_link 'Words' %></td>
 </tr>
 </thead>
 <%
@@ -42,11 +42,11 @@
         <tr class="rowtype<%= index % 2 %>">
             <td class="numeric"><%= index + 1 %></td>
             <td><a href="view?id=<%= player.id %>"><%= player.nick %></a></td>
-            <td><%= player.title %> (L<%= player.level %>)</td>
+            <td><%= player.title %> (L<%= player.level %> <a href="/title/list#<%= class_name.downcase %>"><%= class_name %></a>)</td>
             <td class="numeric"><%= player.rating params[ 'days' ] %></td>
             <td class="numeric"><%= player.games_played params[ 'days' ] %></td>
             <td class="numeric"><%= player.money %></td>
-            <td><a href="/title/list#<%= class_name.downcase %>"><%= class_name %></a></td>
+            <td class="numeric"><%= player.num_words_contributed %></td>
         </tr>
         <%
     end

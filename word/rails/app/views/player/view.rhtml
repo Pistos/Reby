@@ -44,6 +44,10 @@ class_name = @player.title_set.name
     <td><%= time_ago @player.time_of_last_victory %></td>
 </tr>
 <tr>
+    <td class="leftlabel">Contribution:</td>
+    <td><%= @player.num_words_contributed %> words</td>
+</tr>
+<tr>
     <td class="leftlabel">Equipment:</td>
     <td><ul><%
         @player.equipment.each do |eq|
@@ -54,6 +58,7 @@ class_name = @player.title_set.name
         end
     %></ul></td>
 </tr>
+
 
 </table>
 

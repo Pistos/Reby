@@ -233,6 +233,10 @@ class Player < ActiveRecord::Base
         ] )
         return( num_owned < item.ownership_limit )
     end
+    
+    def num_words_contributed
+        return Word.count( [ "suggester = ?", id ] )
+    end
 end
 
 class Participation < ActiveRecord::Base
