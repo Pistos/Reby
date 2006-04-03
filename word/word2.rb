@@ -1293,6 +1293,7 @@ class WordX
     
     def sendMemo( sender, message, recipient = "Pistos" )
         $reby.putserv "PRIVMSG MemoServ :send #{recipient} <#{sender}> #{message}"
+        put "Message sent to #{recipient}."
     end
     
     def listen( nick, userhost, handle, channel, args )
