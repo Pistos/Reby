@@ -851,13 +851,13 @@ class WordX
                 ]
             )
             if shield
-                put "(shield effects temporarily disabled)"
-                #put "#{loser.nick}'s shield absorbs the blow, reducing the point value!  But the shield shatters into innumerable fragments."
-                #winner_award -= 100
-                #if winner_award < 0
-                    #winner_award = 0
-                #end
-                #Equipment.delete( shield.id )
+                #put "(shield effects temporarily disabled)"
+                put "#{loser.nick}'s shield absorbs the blow, reducing the point value!  But the shield shatters into innumerable fragments."
+                winner_award -= 100
+                if winner_award < 0
+                    winner_award = 0
+                end
+                Equipment.delete( shield.id )
             end
             
             # Dole out the awards...
@@ -1339,7 +1339,7 @@ class WordX
     def noPracticeMessage( nick, userhost, handle, channel, args )
         @active_channel = channel
         if @battle.nil?
-            put "People are playing in #{@game.channel.name} right now."
+            put "People are playing in #{@channel.name} right now."
         else
             put "A battle is ensuing in #{@battle.channel.name} right now!"
         end

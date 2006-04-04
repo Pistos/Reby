@@ -5,6 +5,7 @@
 require 'open-uri'
 require 'rubyful_soup'
 require 'cgi'
+require 'stored-array'
 require 'word-ar-defs'
 
 class String
@@ -110,8 +111,12 @@ class Tag
 end
 
 class WordSpider
+    attr_reader :die
+    
     MIN_WORD_LENGTH = 4
     HIGH_QUEUE_LEVEL = 500
+    NUM_CONNECTION_ATTEMPTS = 1
+    MAX_AWARD = 1000 # gold
     SYLLABLE_SEPARATOR = "(?:&#183;|%middot|" + sprintf( "%c" % [ 183 ] ) + ")"
     
     ETYM_LANGS = {
@@ -299,9 +304,13 @@ class WordSpider
         'West Saxon' => 'West Saxon',
     }
     
-    def initialize( seed_word, suggester = nil, num_to_spider = 500 )
+    def initialize( seed_word = nil, suggester = nil, num_to_spider = 500 )
         @seen_words = Array.new
-        @next_words = [ seed_word ]
+        @next_words = StoredArray.new( "spider-words.array" )
+        if seed_word != nil
+            @next_words << seed_word
+        end
+        puts "@next_words: #{@next_words.inspect}"
         @num_spidered = 0
         @num_to_spider = num_to_spider.to_i
         @etym_lang_regexp = ETYM_LANGS.keys.collect { |lang|
@@ -311,11 +320,14 @@ class WordSpider
         @connection_attempts = 0
         ensureConnectedToDB
         
-        @suggester = Player.find_by_nick( suggester )
-        if @suggester != nil
-            @suggester_id = @suggester.id
-        else
-            $stderr.puts "No such player: '#{suggester}'"
+        if suggester != nil and not suggester.empty?
+            @suggester = Player.find_by_nick( suggester )
+            if @suggester != nil
+                @suggester_id = @suggester.id
+                @award = 0
+            else
+                $stderr.puts "No such player: '#{suggester}'"
+            end
         end
     end
     
@@ -331,9 +343,9 @@ class WordSpider
                 :password => "word",
                 :database => "word"
             )
-            if ! ActiveRecord::Base.connected? && @connection_attempts > 20
+            if ! ActiveRecord::Base.connected? && @connection_attempts > NUM_CONNECTION_ATTEMPTS
                 $stderr.puts "Too many failed DB connection attempts."
-                @die = true
+                @die = 2
             end
         end
     end
@@ -341,7 +353,8 @@ class WordSpider
     def start
         while not @next_words.empty? and @num_spidered < @num_to_spider and not @die
             begin
-                @word = @next_words.delete_at( rand( @next_words.length ) )
+                #@word = @next_words.delete_at( rand( @next_words.length ) )
+                @word = @next_words.pop
                 getWord
                 if @next_words.size < HIGH_QUEUE_LEVEL
                     gatherRelated
@@ -349,7 +362,7 @@ class WordSpider
             rescue Exception => e
                 if e.class == Interrupt
                     $stderr.puts "Aborted."
-                    break
+                    @die = 3
                 else
                     $stderr.puts "! (#{e.class}) #{e.message}\n\t" + e.backtrace.join( "\n\t" )
                 end
@@ -357,6 +370,10 @@ class WordSpider
         end
         
         ActiveRecord::Base.remove_connection
+        
+        puts
+        puts "#{@num_spidered} words spidered."
+        puts "@next_words: #{@next_words.join(' ')}"
     end
     
     def queueWord( word )
@@ -565,6 +582,9 @@ class WordSpider
             
             while not @die
                 begin
+                    if @suggester_id != nil
+                        puts "Noting suggestion of #{@word} by #{@suggester.nick}..."
+                    end
                     word_rec = Word.create( {
                         :word => @word,
                         :num_syllables => syllabification.length,
@@ -573,18 +593,23 @@ class WordSpider
                         :definition => definition,
                         :suggester => @suggester_id
                     } )
-                    @suggester_id = nil
                     if @suggester != nil
                         @suggester.update_attribute( :money, @suggester.money + 10 )
+                        @award += 10
+                        if @award >= MAX_AWARD
+                            @suggester = nil
+                        end
                     end
+                    $stdout.print "."; $stdout.flush
                     break
                 rescue ActiveRecord::StatementInvalid => e
                     case e.message
                         when /no connection to the server/
-                            $stderr.puts "No DB connection?  Attempting reconnect... (#{@connection_attempts})"
-                            sleep 5
-                            ActiveRecord::Base.remove_connection
-                            ensureConnectedToDB
+                            #$stderr.puts "No DB connection?  Attempting reconnect... (#{@connection_attempts})"
+                            $stderr.puts "No DB connection?"
+                            #ActiveRecord::Base.remove_connection
+                            #ensureConnectedToDB
+                            @die = 2
                         when /duplicate key violates unique constraint "words_word_key"/
                             $stderr.puts "#{@word} already in DB?"
                             @suggester_id = nil
@@ -597,17 +622,20 @@ class WordSpider
             
             @num_spidered += 1
         end
+        @suggester_id = nil
     end
 end
 
 
 if $0 == __FILE__
-    if ARGV.length < 1
-        puts "#{$0} <seed word> [suggester] [number of words to get]"
-        exit 1
-    end
-
+    #puts "#{$0} [seed word] [suggester] [number of words to get]"
+    #exit 1
+        
     spider = WordSpider.new( ARGV[ 0 ], ARGV[ 1 ], ARGV[ 2 ] || 500 )
     spider.start
+    
+    if spider.die
+        exit spider.die
+    end
 end
 
