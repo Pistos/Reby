@@ -99,3 +99,14 @@ SELECT
 FROM words
 GROUP BY words.id
 ;
+
+CREATE VIEW num_participants AS
+SELECT
+    game_id,
+    count(*) AS num_participants
+FROM
+    participations
+GROUP BY
+    game_id
+ORDER BY
+    game_id;

@@ -234,6 +234,47 @@ class Player < ActiveRecord::Base
         return( num_owned < item.ownership_limit )
     end
     
+    def success_rate( opponent )
+        rate = nil
+        sql = <<-EOS
+            SELECT
+                (
+                    SELECT COUNT(*) from (
+                        select distinct game_id from participations where player_id = ? and points_awarded > 0
+                        intersect
+                        select distinct game_id from participations where player_id = ?
+                    ) AS bar
+                )::FLOAT
+                /
+                (
+                    SELECT COUNT(*) from (
+                        select distinct game_id from participations where player_id = ?
+                        intersect
+                        select distinct game_id from participations where player_id = ?
+                    )  AS foo
+                )::FLOAT
+                AS success_rate
+            ;
+        EOS
+        begin
+            result = Participation.find_by_sql( [ sql, id, opponent.id, id, opponent.id ] )[ 0 ]
+            if result
+                rate = result[ 'success_rate' ].to_f
+            end
+        rescue Exception => e
+            # ignore
+        end
+        return rate
+    end
+    
+    #def easiest_opponent
+        #Players.find( :all ).each do |player|
+            #next if player == self
+            
+            
+        #end
+    #end
+    
     def num_words_contributed
         return Word.count( [ "suggester = ?", id ] )
     end

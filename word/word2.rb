@@ -51,7 +51,7 @@ class Battle
     DEFAULT_NUM_ROUNDS = 3
     BATTLE_SETUP_TIMEOUT = 300 # seconds
     MAX_TEAM_NAME_LENGTH = 32
-    TOO_MANY_ROUNDS = 20
+    TOO_MANY_ROUNDS = 11
     TOO_MANY_LOSSES = 4
     DEFAULT_KO_LOSSES = 2
     GAME_BINDS = {
@@ -454,8 +454,8 @@ end
 class WordX
     attr_reader :battle
     
-    VERSION = '2.2.0'
-    LAST_MODIFIED = 'April 2, 2006'
+    VERSION = '2.2.1'
+    LAST_MODIFIED = 'April 4, 2006'
     MIN_GAMES_PLAYED_TO_SHOW_SCORE = 0
     DEFAULT_INITIAL_POINT_VALUE = 100
     MAX_SCORES_TO_SHOW = 10
@@ -1170,6 +1170,28 @@ class WordX
         
         command = text.strip
         case command
+            when /^c\S*\s+(\w+)(?:\s+(\w+))?$/
+                if $2.nil?
+                    nick1 = nick
+                    nick2 = $1
+                else
+                    nick1 = $1
+                    nick2 = $2
+                end
+                player1 = Player.find_by_nick( nick1 )
+                player2 = Player.find_by_nick( nick2 )
+                if player1.nil?
+                    put "#{nick1} is not a player."
+                elsif player2.nil?
+                    put "#{nick2} is not a player."
+                else
+                    success_rate = player1.success_rate( player2 )
+                    if success_rate
+                        put "#{nick1} wins %.1f%% of the time in battles involving #{nick2}." % [ success_rate * 100 ]
+                    else
+                        put "I don't think #{nick1} and #{nick2} have ever battled."
+                    end
+                end
             when /^eq\S*\s+(.+)$/
                 # Equip an item
                 
@@ -1337,11 +1359,10 @@ class WordX
     end
     
     def noPracticeMessage( nick, userhost, handle, channel, args )
-        @active_channel = channel
         if @battle.nil?
-            put "People are playing in #{@channel.name} right now."
+            put "People are playing in #{@channel.name} right now.", channel
         else
-            put "A battle is ensuing in #{@battle.channel.name} right now!"
+            put "A battle is ensuing in #{@battle.channel.name} right now!", channel
         end
     end
 end
