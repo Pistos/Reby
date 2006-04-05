@@ -305,7 +305,7 @@ class WordSpider
     }
     
     def initialize( seed_word = nil, suggester = nil, num_to_spider = 500 )
-        @seen_words = Array.new
+        @seen_words = StoredArray.new( "seen-words.array" )
         @next_words = StoredArray.new( "spider-words.array" )
         if seed_word != nil
             @next_words << seed_word
@@ -377,12 +377,25 @@ class WordSpider
     end
     
     def queueWord( word )
-        if(
-            not @seen_words.include?( word ) and
-            not @next_words.include?( word ) and
-            Word.find_by_word( word ).nil?
-        )
-            @next_words.insert( rand( @next_words.length ), word )
+        begin
+            if(
+                not @seen_words.include?( word ) and
+                not @next_words.include?( word ) and
+                Word.find_by_word( word ).nil?
+            )
+                @next_words.insert( rand( @next_words.length ), word )
+            end
+        rescue ActiveRecord::StatementInvalid => e
+            case e.message
+                when /no connection to the server/
+                    #$stderr.puts "No DB connection?  Attempting reconnect... (#{@connection_attempts})"
+                    $stderr.puts "No DB connection?"
+                    #ActiveRecord::Base.remove_connection
+                    #ensureConnectedToDB
+                    @die = 2
+                else
+                    raise e
+            end
         end
     end
 

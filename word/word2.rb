@@ -1268,6 +1268,13 @@ class WordX
         
         command = text.strip
         case command
+            when /^checkeconomy/
+                total_points = 0
+                players = Player.find( :all )
+                players.each do |player|
+                    total_points += player.rating
+                end
+                put "Average rating: %.2f" % [ total_points.to_f / players.length ]
             when /^clearmemo\s+(\S+)/
                 nick = $1
                 victim = Player.find_by_nick( nick )
