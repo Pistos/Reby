@@ -46,6 +46,33 @@ class Word < ActiveRecord::Base
     end
 end
 
+class BattleWord < ActiveRecord::Base
+    def BattleWord::random
+        retval = nil
+        
+        w = BattleWord.find( :first )
+        
+        if w != nil
+            retval = Word.find( w.word_id )
+        end
+        
+        return retval
+    end
+end
+class PracticeWord < ActiveRecord::Base
+    def PracticeWord::random
+        retval = nil
+        
+        w = PracticeWord.find( :first, :order => 'random()' )
+        
+        if w != nil
+            retval = Word.find( w.word_id )
+        end
+        
+        return retval
+    end
+end
+
 class Game < ActiveRecord::Base
     has_many :participations
 end

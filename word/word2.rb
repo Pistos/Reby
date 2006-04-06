@@ -455,7 +455,7 @@ class WordX
     attr_reader :battle
     
     VERSION = '2.2.2'
-    LAST_MODIFIED = 'April 5, 2006'
+    LAST_MODIFIED = 'April 6, 2006'
     MIN_GAMES_PLAYED_TO_SHOW_SCORE = 0
     DEFAULT_INITIAL_POINT_VALUE = 100
     MAX_SCORES_TO_SHOW = 10
@@ -532,10 +532,20 @@ class WordX
             end
         end
 
+        if @battle.nil?
+            @word = PracticeWord.random
+        else
+            @word = BattleWord.random
+        end
+        
+        if @word.nil?
+            put "Error: Failed to fetch word!"
+            return
+        end
+        
         unbindPracticeCommand        
 
         @channel = Channel.find_or_create_by_name( channel )
-        @word = Word.random( @battle.nil? )
         @game = Game.create( { :word_id => @word.id, :start_time => Time.now } )
         @initial_point_value = DEFAULT_INITIAL_POINT_VALUE
         @given_away_by = nil
@@ -1315,6 +1325,12 @@ class WordX
                 else
                     put "No such player: '#{nick}'"
                 end
+            when /^mix/
+                put "Rebuilding and randomizing word lists..."
+                ActiveRecord::Base.connection.select_one(
+                    "SELECT rebuild_battle_words()"
+                )
+                put "... finished word list rebuild."
             when /^msg\s+(.+)$/
                 sendMemo nick, $1
         end

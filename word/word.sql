@@ -123,7 +123,7 @@ CREATE OR REPLACE FUNCTION rebuild_battle_words()
     LANGUAGE 'plpgsql'
     AS '
 BEGIN
-    DELETE FROM battle_words;
+    TRUNCATE battle_words;
     
     RAISE NOTICE ''Filling battle_words...'';
     
@@ -136,7 +136,7 @@ BEGIN
 
     RAISE NOTICE ''Filling practice_words...'';
     
-    DELETE FROM practice_words;
+    TRUNCATE practice_words;
     
     INSERT INTO practice_words
         SELECT id AS word_id
