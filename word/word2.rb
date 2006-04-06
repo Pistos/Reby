@@ -353,6 +353,11 @@ class Battle
             return
         end
         
+        if @players.length < 2
+            put "At least two players need to be in the game."
+            return
+        end
+        
         all_players_registered = true
         @players.each do |p|
             all_players_registered &&= $wordx.registered?( p )
@@ -362,11 +367,6 @@ class Battle
             return
         end
 
-        if @players.length < 2
-            put "At least two players need to be in the game."
-            return
-        end
-        
         unbindSetupBinds
 
         @current_round = 1
@@ -775,7 +775,7 @@ class WordX
         @active_channel = channel
         # Validity checks:
         
-        return if @already_guessed
+        return if @already_guessed or ( @game != nil and @game.end_time != nil )
         
         winner = find_or_create_player( nick )
         return if winner.nil?
@@ -900,11 +900,9 @@ class WordX
     end
 
     def nobodyGotIt
+        @game.end_time = Time.now
         put "No one solved it in time.  The word was #{@word.word}."
         $reby.unbind( "pub", "-", @word.word, "correctGuess", "$wordx" )
-        
-        @game.end_time = Time.now
-        
         endRound
     end
     
