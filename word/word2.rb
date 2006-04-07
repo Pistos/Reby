@@ -481,7 +481,7 @@ class BattleManager
         win_counts = Hash.new( 0 )
         @battle.games.each do |game|
             game.participations.each do |par|
-                if par.points_awarded > 0
+                if par.points_awarded != nil and par.points_awarded > 0
                     win_counts[ par.player ] += 1
                     break
                 end
