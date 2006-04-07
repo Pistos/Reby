@@ -54,8 +54,8 @@ class Bet
     end
 end
 
-class Battle
-    attr_reader :state, :channel, :starter, :mode, :current_round, :players,
+class BattleManager
+    attr_reader :state, :channel, :current_round, :players,
         :player_teams, :king, :wins, :num_rounds
 
     DEFAULT_NUM_ROUNDS = 3
@@ -82,21 +82,25 @@ class Battle
     
     def initialize( channel, nick )
         @channel = Channel.find_or_create_by_name( channel )
-        player = Player.find_or_create_by_nick( nick )
-        @mode = :rounds
+        
+        starter = Player.find_or_create_by_nick( nick )
+        @battle = Battle.new(
+            :starter => starter.id,
+            :battle_mode => 'rounds'
+        )
         
         @num_rounds = DEFAULT_NUM_ROUNDS
         @current_round = 0
-        @starter = player
         @battlers = Array.new # All battlers in this battle
         @players = Array.new # Only those playing in this and subsequent rounds
         @initial_titles = Hash.new
         @initial_money = Hash.new
         @initial_odds = Hash.new
         @player_teams = Hash.new
-        @king = nil
         @lms_losses = Hash.new( 0 )
         @ko_losses = DEFAULT_KO_LOSSES
+        
+        @king = nil
         @wins = Hash.new( 0 )
         @bets = Array.new
         @results = Hash.new
@@ -120,6 +124,13 @@ class Battle
         $reby.putserv "NOTICE #{destination} :#{text}"
     end
     
+    def mode
+        @battle.battle_mode
+    end
+    def starter
+        Player.find( @battle.starter )
+    end
+    
     def unbindSetupBinds
         GAME_BINDS.each do |command, method|
             $reby.unbind( "pub", "-", command, method, "$wordx.battle" )
@@ -139,7 +150,7 @@ class Battle
     def setNumRounds( nick, userhost, handle, channel, text )
         return if channel != @channel.name
         
-        if @mode == :lms
+        if @battle.battle_mode == 'lms'
             put "Number of rounds cannot be altered when battle mode is Last Man Standing."
             return
         end
@@ -160,7 +171,7 @@ class Battle
     def setNumLosses( nick, userhost, handle, channel, text )
         return if channel != @channel.name
         
-        if @mode != :lms
+        if @battle.battle_mode != 'lms'
             put "Number of losses can only be set when battle mode is Last Man Standing."
             return
         end
@@ -201,25 +212,25 @@ class Battle
     
     def setMode( mode, arg = DEFAULT_NUM_ROUNDS )
         okay = true
-        if @mode != :lms
+        if @battle.battle_mode != 'lms'
             old_rounds = @num_rounds
         end
         case mode
-            when :koth
+            when 'koth'
                 @num_rounds = old_rounds || arg.to_i
                 put "Battle mode: King of the Hill (#{@num_rounds} rounds)"
-            when :lms
+            when 'lms'
                 @num_rounds = 99
                 put "Battle mode: Last Man Standing"
-            when :rounds
+            when 'rounds'
                 @num_rounds = old_rounds || arg.to_i
                 put "Battle mode: Rounds (#{@num_rounds})"
             else
-                put "Invalid game mode (#{mode.to_s})"
+                put "Invalid game mode (#{mode})"
                 okay = false
         end
         if okay
-            @mode = mode
+            @battle.battle_mode = mode
         end
     end
     def changeMode( nick, userhost, handle, channel, text )
@@ -229,13 +240,13 @@ class Battle
                 if @battlers.size < 3
                     put "At least 3 players are needed for Last Man Standing."
                 else
-                    setMode( :lms )
+                    setMode( mode )
                 end
             when 'koth'
                 if @battlers.size < 3
                     put "At least 3 players are needed for King of the Hill."
                 else
-                    setMode( :koth )
+                    setMode( mode )
                 end
             else
                 put "Valid modes: lms, koth"
@@ -249,7 +260,7 @@ class Battle
     def joinTeam( nick, userhost, handle, channel, text )
         return if channel != @channel.name
         
-        if @mode == :koth
+        if @battle.battle_mode == 'koth'
             put "There are no teams in King of the Hill."
             return
         end
@@ -275,7 +286,7 @@ class Battle
             unbet( player.nick, nil, nil, nil, nil )
             @battlers << player
             @players << player
-            if @players.size > 2 and @mode == :rounds
+            if @players.size > 2 and @battle.battle_mode == :rounds
                 setMode( :koth )
             end
             @player_teams[ player ] = player.nick
@@ -298,7 +309,7 @@ class Battle
         return if channel != @channel.name
         
         player = find_or_create_player( nick )
-        if player == @starter
+        if player == starter
             if $wordx.registered?( player )
                 put "#{player.nick}: You can't leave the game, you started it.  Try the abort command."
             else
@@ -317,8 +328,7 @@ class Battle
     def listPlayers( nick, userhost, handle, channel, text )
         str = "Players: "
         str << ( @players.collect { |p|
-            odds = 2.0 - p.success_rate( p ).to_f
-            ( "%s (1:%.4f odds)" % [ p.nick, odds ] ) +
+            ( "%s (1:%.4f odds)" % [ p.nick, p.odds || 0.0 ] ) +
             (
                 @player_teams[ p ] != p.nick ?
                 " (#{@player_teams[ p ]})" :
@@ -337,11 +347,11 @@ class Battle
     end
     
     def timeoutGame
-        r = @starter.rating
+        r = starter.rating
         if r > Player::BASE_RATING
-            put "Looks like you've got everyone running scared, #{@starter.nick}..."
+            put "Looks like you've got everyone running scared, #{starter.nick}..."
         else
-            put "It must be hard for a lesser fighter to break into the big leagues, huh, #{@starter.nick}?"
+            put "It must be hard for a lesser fighter to break into the big leagues, huh, #{starter.nick}?"
         end
         doAbort
     end
@@ -349,8 +359,8 @@ class Battle
     def abort( nick, userhost, handle, channel, text )
         return if channel != @channel.name
         if (
-            find_or_create_player( nick ) != @starter and
-            $reby.onchan( @starter.nick )
+            find_or_create_player( nick ) != starter and
+            $reby.onchan( starter.nick )
         )
             put "Only the person who invoked the battle can abort it."
             return
@@ -375,8 +385,9 @@ class Battle
     def start( nick, userhost, handle, channel, text )
         return if channel != @channel.name
         
-        if find_or_create_player( nick ) != @starter
+        if find_or_create_player( nick ) != starter
             put "Only the person who invoked the battle can start it."
+            $reby.log starter.inspect
             return
         end
         
@@ -393,6 +404,14 @@ class Battle
             put "Please wait until all players are determined to be registered..."
             return
         end
+        
+        # Good to go!
+        
+        begin
+            @battle.save!
+        rescue RecordNotSaved => e
+            put "Eep!  Couldn't save battle record!"
+        end
 
         unbindSetupBinds
 
@@ -401,7 +420,7 @@ class Battle
         @players.each do |player|
             @initial_titles[ player ] = player.title
             @initial_money[ player ] = player.money
-            @initial_odds[ player ] = 2.0 - player.success_rate( player ).to_f
+            @initial_odds[ player ] = player.odds
         end
         
         $wordx.oneRound( nil, nil, nil, @channel.name, nil )
@@ -418,9 +437,14 @@ class Battle
     def addWin( player )
         @wins[ player ] += 1
     end
+    def << ( game )
+        @battle.games << game
+        @battle.save
+    end
     
     def finalise
         calculateResults
+        @battle.save
         settleBets
         report
     end
@@ -438,9 +462,6 @@ class Battle
             @results[ :winning_team ] = @player_teams[ @players[ 0 ] ]
         end
         
-        @winning_player = players[ 0 ]
-        @results[ @winning_player ] = Hash.new
-        
         players.each do |player|
             @results[ player ] = Hash.new
             
@@ -453,31 +474,65 @@ class Battle
             @results[ player ][ :final_score ] ||= Player::BASE_RATING
             @results[ player ][ :final_title ] = @final_titles[ player ]
             @results[ player ][ :final_money ] = @final_money[ player ] || 0
+        end
+        
+        # Determine battle victor
+        
+        win_counts = Hash.new( 0 )
+        @battle.games.each do |game|
+            game.participations.each do |par|
+                if par.points_awarded > 0
+                    win_counts[ par.player ] += 1
+                    break
+                end
+            end
+        end
+        winningest_players = Array.new
+        high_wins = 0
+        win_counts.each do |player, wins|
+            if wins > high_wins
+                high_wins = wins
+                winningest_players = [ player ]
+            elsif wins == high_wins
+                winningest_players << player
+            end
+        end
+        
+        @battle_victor = winningest_players[ 0 ]
+        if winningest_players.size > 1
+            # We must resolve the tie.
             
-            if @winning_player != player
+            winningest_players[ 1..-1 ].each do |player|
                 r = @results[ player ]
-                w = @results[ @winning_player ]
+                w = @results[ @battle_victor ]
+                
                 score_delta = r[ :final_score ] - r[ :initial_score ]
                 w_score_delta = w[ :final_score ] - w[ :initial_score ]
+                
                 if score_delta > w_score_delta
-                    @winning_player = player
+                    # Tie broken by point gain.
+                    @battle_victor = player
                 elsif score_delta == w_score_delta
                     if r[ :final_score ] > w[ :final_score ]
-                        @winning_player = player
+                        # Tie broken by final score.
+                        @battle_victor = player
                     elsif r[ :final_score ] == w[ :final_score ]
                         if r[ :initial_score ] > w[ :initial_score ]
-                            @winning_player = player
+                            # Tie broken by initial score.
+                            @battle_victor = player
                         else
-                            put "? Tie between #{player.nick} and #{@winning_player.nick}?"
+                            # Tie broken by random chance?
+                            put "? Tie between #{player.nick} and #{@battle_victor.nick}?"
                         end
                     end
                 end
             end
         end
+
     end
         
     def report
-        report_text = "Battle over.  #{@winning_player.nick} is the battle victor!"
+        report_text = "Battle over.  #{@battle_victor.nick} is the battle victor!"
         
         if @results[ :winning_team ]
             report_text << "  Team #{@results[ :winning_team ]} won!"
@@ -563,6 +618,9 @@ class Battle
         if bettee.nil?
             put "There is no battler by the name of '#{bettee_nick}'."
             return
+        elsif bettee.odds.nil?
+            put "You cannot bet on new players."
+            return
         end
         
         if not bettor.debit( amount )
@@ -604,8 +662,8 @@ class Battle
         @winnings = []
         @losings = []
         @bets.each do |bet|
-            if bet.bettee == @winning_player
-                amount_won = ( bet.amount * @initial_odds[ @winning_player ] ).to_i
+            if bet.bettee == @battle_victor
+                amount_won = ( bet.amount * @initial_odds[ @battle_victor ] ).to_i
                 @winnings << { :bet => bet, :amount => amount_won }
                 bet.bettor.credit( amount_won )
             else
@@ -695,15 +753,9 @@ class WordX
 
     def oneRound( nick, userhost, handle, channel, text )
         @active_channel = channel
-        if nick != nil
-            # Practice game.
-            player = Player.find_by_nick( nick )
-            if player != nil and player.winning_too_much?
-                put "#{nick}: You have already demonstrated your great skill in the game.  It is time for you to graduate to !wordbattle.  If you insist, you may practice again in about an hour.", channel
-                return
-            end
-        end
-
+        
+        unbindPracticeCommand        
+        
         if @battle.nil?
             @word = PracticeWord.random
         else
@@ -712,13 +764,13 @@ class WordX
         
         if @word.nil?
             put "Error: Failed to fetch word!"
+            bindPracticeCommand        
             return
         end
-        
-        unbindPracticeCommand        
 
         @channel = Channel.find_or_create_by_name( channel )
         @game = Game.create( { :word_id => @word.id, :start_time => Time.now } )
+        @battle << @game
         @initial_point_value = DEFAULT_INITIAL_POINT_VALUE
         @given_away_by = nil
         @word_regexp = Regexp.new( @word.word.split( // ).join( ".*" ) )
@@ -735,7 +787,7 @@ class WordX
                 )
                 @game.participations << partic
                 
-                if @battle.mode == :koth
+                if @battle.mode == 'koth'
                     if @king.nil?
                         r = player.rating
                         if r > highest_rating
@@ -994,7 +1046,7 @@ class WordX
             
             loser = nil
             case @battle.mode
-                when :rounds
+                when 'rounds'
                     @game.participations.each do |participation|
                         player = Player.find( participation.player_id )
                         next if player == winner
@@ -1005,7 +1057,7 @@ class WordX
                         losing_participation = participation
                         winner_award = loss
                     end
-                when :koth
+                when 'koth'
                     if winner != @king
                         loser = @king
                         losing_participation = @king_participation
@@ -1015,7 +1067,7 @@ class WordX
                         loser = losing_participation.player
                     end
                     @king = winner
-                when :lms
+                when 'lms'
                     @battle.addWin( winner )
                     losing_participation, winner_award = highest_loser( winner )
                     loser = losing_participation.player
@@ -1188,7 +1240,7 @@ class WordX
         return if battle_going?( channel )
         
         unbindPracticeCommand
-        @battle = Battle.new( channel, nick )
+        @battle = BattleManager.new( channel, nick )
         @king = nil
     end
     

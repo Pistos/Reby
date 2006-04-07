@@ -1,3 +1,5 @@
+DROP TABLE battle_words;
+DROP TABLE practice_words;
 DROP TABLE equipment;
 DROP TABLE items;
 DROP TABLE titles;
@@ -36,7 +38,8 @@ CREATE TABLE games (
     word_id INTEGER NOT NULL REFERENCES words( id ),
     start_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     end_time TIMESTAMP,
-    warmup_winner INTEGER REFERENCES players( id )
+    warmup_winner INTEGER REFERENCES players( id ),
+    battle_id INTEGER REFERENCES battles( id )
 );
 
 CREATE TABLE participations (
@@ -45,6 +48,12 @@ CREATE TABLE participations (
     player_id INTEGER NOT NULL REFERENCES players( id ),
     points_awarded INTEGER,
     team VARCHAR( 32 ) NOT NULL
+);
+
+CREATE TABLE battles (
+    id SERIAL PRIMARY KEY,
+    starter INTEGER NOT NULL REFERENCES players( id ),
+    battle_mode VARCHAR( 16 ) NOT NULL
 );
 
 CREATE TABLE channels (
@@ -94,7 +103,7 @@ CREATE TABLE battle_words (
     word_id INTEGER NOT NULL REFERENCES words( id )
 );
 
-CREATE VIEW word_frequency AS
+CREATE OR REPLACE VIEW word_frequency AS
 SELECT
     words.id,
     (
@@ -107,7 +116,7 @@ FROM words
 GROUP BY words.id
 ;
 
-CREATE VIEW num_participants AS
+CREATE OR REPLACE VIEW num_participants AS
 SELECT
     game_id,
     count(*) AS num_participants

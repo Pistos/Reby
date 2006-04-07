@@ -73,8 +73,12 @@ class PracticeWord < ActiveRecord::Base
     end
 end
 
+class Battle < ActiveRecord::Base
+    has_many :games
+end
 class Game < ActiveRecord::Base
     has_many :participations
+    belongs_to :battle
 end
 
 class Player < ActiveRecord::Base
@@ -265,7 +269,7 @@ class Player < ActiveRecord::Base
         return( num_owned < item.ownership_limit )
     end
     
-    def success_rate( opponent )
+    def success_rate( opponent = self )
         rate = nil
         sql = <<-EOS
             SELECT
@@ -309,6 +313,15 @@ class Player < ActiveRecord::Base
     def num_words_contributed
         return Word.count( [ "suggester = ?", id ] )
     end
+    
+    def odds
+        r = success_rate
+        if success_rate != nil
+            return 2.0 - r.to_f
+        else
+            return nil
+        end
+    end
 end
 
 class Participation < ActiveRecord::Base
@@ -349,4 +362,3 @@ class Equipment < ActiveRecord::Base
     belongs_to :player
     belongs_to :item
 end
-
