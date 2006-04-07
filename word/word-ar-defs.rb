@@ -206,6 +206,10 @@ class Player < ActiveRecord::Base
         return debitted
     end
     
+    def credit( amount )
+        update_attribute( :money, money + amount )
+    end
+    
     def icon
         if rating <= BASE_RATING
             the_icon = title_set.icons[ 0 ]

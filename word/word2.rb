@@ -44,6 +44,16 @@ class Array
     end
 end
 
+class Bet
+    attr_reader :bettor, :bettee, :amount
+    
+    def initialize( bettor, bettee, amount )
+        @bettor = bettor
+        @bettee = bettee
+        @amount = amount
+    end
+end
+
 class Battle
     attr_reader :state, :channel, :starter, :mode, :current_round, :players,
         :player_teams, :king, :wins, :num_rounds
@@ -54,6 +64,7 @@ class Battle
     TOO_MANY_ROUNDS = 11
     TOO_MANY_LOSSES = 4
     DEFAULT_KO_LOSSES = 2
+    MINIMUM_BET = 5
     GAME_BINDS = {
         "rounds" => "setNumRounds",
         "join" => "addPlayer",
@@ -64,6 +75,9 @@ class Battle
         "team" => 'joinTeam',
         'mode' => 'changeMode',
         'losses' => 'setNumLosses',
+        'bet' => 'bet',
+        'unbet' => 'unbet',
+        'bets' => 'listBets',
     }
     
     def initialize( channel, nick )
@@ -78,11 +92,14 @@ class Battle
         @players = Array.new # Only those playing in this and subsequent rounds
         @initial_titles = Hash.new
         @initial_money = Hash.new
+        @initial_odds = Hash.new
         @player_teams = Hash.new
         @king = nil
         @lms_losses = Hash.new( 0 )
         @ko_losses = DEFAULT_KO_LOSSES
         @wins = Hash.new( 0 )
+        @bets = Array.new
+        @results = Hash.new
         
         GAME_BINDS.each do |command, method|
             $reby.bind( "pub", "-", command, method, "$wordx.battle" )
@@ -254,13 +271,14 @@ class Battle
     def includePlayer( player )
         included = false
         if not @players.include? player
+            put "#{player.nick} has joined the game.", @channel.name
+            unbet( player.nick, nil, nil, nil, nil )
             @battlers << player
             @players << player
             if @players.size > 2 and @mode == :rounds
                 setMode( :koth )
             end
             @player_teams[ player ] = player.nick
-            put "#{player.nick} has joined the game.", @channel.name
             included = true
             $wordx.initiateRegistrationCheck( player )
         end
@@ -299,7 +317,9 @@ class Battle
     def listPlayers( nick, userhost, handle, channel, text )
         str = "Players: "
         str << ( @players.collect { |p|
-            p.nick + (
+            odds = 2.0 - p.success_rate( p ).to_f
+            ( "%s (1:%.4f odds)" % [ p.nick, odds ] ) +
+            (
                 @player_teams[ p ] != p.nick ?
                 " (#{@player_teams[ p ]})" :
                 ''
@@ -341,6 +361,13 @@ class Battle
     
     def doAbort
         unbindSetupBinds
+        bettors = Set.new
+        @bets.each do |bet|
+            bettors << bet.bettor
+        end
+        bettors.each do |bettor|
+            unbet( bettor.nick, nil, nil, nil, nil )
+        end
         put "Game aborted."
         $wordx.abortBattle
     end
@@ -374,6 +401,7 @@ class Battle
         @players.each do |player|
             @initial_titles[ player ] = player.title
             @initial_money[ player ] = player.money
+            @initial_odds[ player ] = 2.0 - player.success_rate( player ).to_f
         end
         
         $wordx.oneRound( nil, nil, nil, @channel.name, nil )
@@ -391,8 +419,13 @@ class Battle
         @wins[ player ] += 1
     end
     
-    def report
-        report_text = ''
+    def finalise
+        calculateResults
+        settleBets
+        report
+    end
+    
+    def calculateResults
         @final_ranking = $wordx.ranking
         @final_titles = Hash.new
         @final_money = Hash.new
@@ -402,52 +435,191 @@ class Battle
             @final_money[ player ] = player.money
         end
         if @players.size > 1 and teams.size < @players.size
-            report_text << "  Team #{@player_teams[ @players[ 0 ] ]} won!"
+            @results[ :winning_team ] = @player_teams[ @players[ 0 ] ]
         end
+        
+        @winning_player = players[ 0 ]
+        @results[ @winning_player ] = Hash.new
+        
         players.each do |player|
-            initial_rank, initial_score = @initial_ranking.rank_and_score( player )
-            initial_score ||= Player::BASE_RATING
-            initial_title = @initial_titles[ player ]
-            initial_money = @initial_money[ player ] || 0
+            @results[ player ] = Hash.new
             
-            final_rank, final_score = @final_ranking.rank_and_score( player )
-            final_score ||= Player::BASE_RATING
-            final_title = @final_titles[ player ]
-            final_money = @final_money[ player ] || 0
+            @results[ player ][ :initial_rank ], @results[ player ][ :initial_score ] = @initial_ranking.rank_and_score( player )
+            @results[ player ][ :initial_score ] ||= Player::BASE_RATING
+            @results[ player ][ :initial_title ] = @initial_titles[ player ]
+            @results[ player ][ :initial_money ] = @initial_money[ player ] || 0
             
+            @results[ player ][ :final_rank ], @results[ player ][ :final_score ] = @final_ranking.rank_and_score( player )
+            @results[ player ][ :final_score ] ||= Player::BASE_RATING
+            @results[ player ][ :final_title ] = @final_titles[ player ]
+            @results[ player ][ :final_money ] = @final_money[ player ] || 0
+            
+            if @winning_player != player
+                r = @results[ player ]
+                w = @results[ @winning_player ]
+                score_delta = r[ :final_score ] - r[ :initial_score ]
+                w_score_delta = w[ :final_score ] - w[ :initial_score ]
+                if score_delta > w_score_delta
+                    @winning_player = player
+                elsif score_delta == w_score_delta
+                    if r[ :final_score ] > w[ :final_score ]
+                        @winning_player = player
+                    elsif r[ :final_score ] == w[ :final_score ]
+                        if r[ :initial_score ] > w[ :initial_score ]
+                            @winning_player = player
+                        else
+                            put "? Tie between #{player.nick} and #{@winning_player.nick}?"
+                        end
+                    end
+                end
+            end
+        end
+    end
+        
+    def report
+        report_text = "Battle over.  #{@winning_player.nick} is the battle victor!"
+        
+        if @results[ :winning_team ]
+            report_text << "  Team #{@results[ :winning_team ]} won!"
+        end
+        
+        battlers.each do |player|
             terminal_punctuation = '.'
             sentence = [ ]
             
-            if final_score > initial_score
-                sentence << "gained #{final_score - initial_score} points"
-                if initial_title != final_title
-                    sentence << "advanced from #{initial_title} to #{final_title}"
+            r = @results[ player ]
+            score_delta = r[ :final_score ] - r[ :initial_score ]
+            
+            if score_delta > 0
+                sentence << "gained #{score_delta} points"
+                if r[ :initial_title ] != r[ :final_title ]
+                    sentence << "advanced from #{r[ :initial_title ]} to #{r[ :final_title ]}"
                     terminal_punctuation = '!'
                 end
-                if initial_rank != nil and final_rank < initial_rank
-                    sentence << "rose from ##{initial_rank} to ##{final_rank}"
+                if r[ :initial_rank ] != nil and r[ :final_rank ] < r[ :initial_rank ]
+                    sentence << "rose from ##{r[ :initial_rank ]} to ##{r[ :final_rank ]}"
                     terminal_punctuation = '!'
                 end
-            elsif final_score < initial_score
-                sentence << "lost #{initial_score - final_score} points"
-                if initial_title != final_title
-                    sentence << "got demoted from #{initial_title} to #{final_title}"
+            elsif score_delta < 0
+                sentence << "lost #{-score_delta} points"
+                if r[ :initial_title ] != r[ :final_title ]
+                    sentence << "get demoted from #{r[ :initial_title ]} to #{r[ :final_title ]}"
                     terminal_punctuation = '!'
                 end
-                if initial_rank != nil and final_rank > initial_rank
-                    sentence << "fell from ##{initial_rank} to ##{final_rank}"
+                if r[ :initial_rank ] != nil and r[ :final_rank ] > r[ :initial_rank ]
+                    sentence << "fell from ##{r[ :initial_rank ]} to ##{r[ :final_rank ]}"
                     terminal_punctuation = '!'
                 end
             end
-            if final_money > initial_money
-                sentence << "gained #{final_money - initial_money} #{WordX::CURRENCY}"
-            elsif final_money < initial_money
-                sentence << "incurred a net loss of #{initial_money - final_money} #{WordX::CURRENCY}"
+            money_delta = r[ :final_money ] - r[ :initial_money ]
+            if money_delta > 0
+                sentence << "gained #{money_delta} #{WordX::CURRENCY}"
+            elsif money_delta < 0
+                sentence << "incurred a net loss of #{-money_delta} #{WordX::CURRENCY}"
             end
             report_text << "  #{player.nick} " << sentence.join( ' and ' ) << terminal_punctuation
         end
         
-        put "Battle over.#{report_text}"
+        put report_text
+        
+        report_text = ''
+        @winnings.each do |w|
+            report_text << "#{w[ :bet ].bettor.nick} won #{w[ :amount ]} #{WordX::CURRENCY} for betting on #{w[ :bet ].bettee.nick}.  "
+        end
+        @losings.each do |l|
+            report_text << "#{l.bettor.nick} lost #{l.amount} #{WordX::CURRENCY} for betting on #{l.bettee.nick}.  "
+        end
+        if not report_text.empty?
+            put report_text
+        end
+    end
+    
+    def bet( nick, userhost, handle, channel, text )
+        bettor = Player.find_by_nick( nick )
+        if bettor.nil?
+            put "#{nick}: You don't have any money to bet!"
+            return
+        end
+        if battlers.include?( bettor )
+            put "#{nick}: You can't wager if you're in the battle!"
+            return
+        end
+        
+        if text !~ /^\s*(\d+)\s+(?:on\s+)?(\S+)\s*$/
+            put "Syntax: bet <amount> [on] <player>"
+            return
+        end
+        
+        amount = $1.to_i
+        bettee_nick = $2
+        
+        if amount < MINIMUM_BET
+            put "The minimum bet is #{MINIMUM_BET} #{WordX::CURRENCY}."
+            return
+        end
+        
+        bettee = @battlers.find { |b| b.nick == bettee_nick }
+        
+        if bettee.nil?
+            put "There is no battler by the name of '#{bettee_nick}'."
+            return
+        end
+        
+        if not bettor.debit( amount )
+            put "#{nick}: You don't have that kind of money!"
+            return
+        end
+        
+        @bets << Bet.new( bettor, bettee, amount )
+        
+        put "#{bettor.nick} has bet #{amount} #{WordX::CURRENCY} on #{bettee.nick}."
+    end
+    
+    def unbet( nick, userhost, handle, channel, text )
+        bettor = Player.find_by_nick( nick )
+        if bettor.nil?
+            put "#{nick}: You're not even a character in the realm!"
+            return
+        end
+        
+        credit_amount = 0
+        to_delete = []
+        @bets.each do |bet|
+            if bet.bettor == bettor
+                bettor.credit bet.amount
+                credit_amount += bet.amount
+                to_delete << bet
+            end
+        end
+        @bets.delete_if { |bet|
+            to_delete.include? bet
+        }
+        
+        if credit_amount > 0
+            put "#{bettor.nick} has withdrawn all bets.  (#{credit_amount} #{WordX::CURRENCY} total)"
+        end
+    end
+    
+    def settleBets
+        @winnings = []
+        @losings = []
+        @bets.each do |bet|
+            if bet.bettee == @winning_player
+                amount_won = ( bet.amount * @initial_odds[ @winning_player ] ).to_i
+                @winnings << { :bet => bet, :amount => amount_won }
+                bet.bettor.credit( amount_won )
+            else
+                @losings << bet
+            end
+        end
+    end
+    
+    def listBets( nick, userhost, handle, channel, text )
+        bets = []
+        @bets.each do |bet|
+            bets << "#{bet.bettor.nick} #{bet.amount} on #{bet.bettee.nick}"
+        end
+        put bets.join( '; ' )
     end
 end
 
@@ -455,7 +627,7 @@ class WordX
     attr_reader :battle
     
     VERSION = '2.2.2'
-    LAST_MODIFIED = 'April 6, 2006'
+    LAST_MODIFIED = 'April 7, 2006'
     MIN_GAMES_PLAYED_TO_SHOW_SCORE = 0
     DEFAULT_INITIAL_POINT_VALUE = 100
     MAX_SCORES_TO_SHOW = 10
@@ -933,7 +1105,7 @@ class WordX
                     player.save_rating_records
                 end
                 
-                @battle.report
+                @battle.finalise
                 @battle = nil
             end
         end
