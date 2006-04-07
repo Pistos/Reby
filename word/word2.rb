@@ -770,12 +770,12 @@ class WordX
 
         @channel = Channel.find_or_create_by_name( channel )
         @game = Game.create( { :word_id => @word.id, :start_time => Time.now } )
-        @battle << @game
         @initial_point_value = DEFAULT_INITIAL_POINT_VALUE
         @given_away_by = nil
         @word_regexp = Regexp.new( @word.word.split( // ).join( ".*" ) )
         
         if @battle != nil
+            @battle << @game
             highest_rating = 0
             _king = nil
             _king_participation = nil
@@ -1402,7 +1402,7 @@ class WordX
         
         command = text.strip
         case command
-            when /^c\S*\s+(\w+)(?:\s+(\w+))?$/
+            when /^c\S*\s+(\S+)(?:\s+(\S+))?$/
                 if $2.nil?
                     nick1 = nick
                     nick2 = $1
