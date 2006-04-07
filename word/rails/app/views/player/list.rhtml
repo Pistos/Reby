@@ -40,7 +40,7 @@
         %>
         <tr class="rowtype<%= index % 2 %>">
             <td class="numeric"><%= index + 1 %></td>
-            <td><a href="view?id=<%= player.id %>"><%= player.nick %></a></td>
+            <td><%= player_link player %></td>
             <td><%= player.title %> (L<%= player.level %> <a href="/title/list#<%= class_name.downcase %>"><%= class_name %></a>)</td>
             <td class="numeric"><%= player.rating params[ 'days' ] %></td>
             <td class="numeric"><%= player.games_played params[ 'days' ] %></td>

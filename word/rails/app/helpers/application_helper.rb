@@ -21,6 +21,10 @@ module ApplicationHelper
         end
         return s
     end
+    
+    def player_link( player )
+        link_to player.nick, :action => :view, :id => player.id
+    end
 end
 
 class Fixnum

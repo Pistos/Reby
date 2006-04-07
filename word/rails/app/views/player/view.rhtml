@@ -1,6 +1,7 @@
 <%
 @page_title = "#{@player.nick}, #{@player.title}"
 class_name = @player.title_set.name
+notables = @player.notable_opponents
 %>
 <img class="playericon" src="<%= image_path @player.icon %>" />
 
@@ -28,6 +29,14 @@ class_name = @player.title_set.name
     <td><%= @player.games_played %></td>
 </tr>
 <tr>
+    <td class="leftlabel">Win Percentage:</td>
+    <td><%= "%.1f" % [ @player.success_rate * 100 ] %>%</td>
+</tr>
+<tr>
+    <td class="leftlabel">Odds:</td>
+    <td>1 : <%= "%.4f" % [ @player.odds ] %></td>
+</tr>
+<tr>
     <td class="leftlabel">Practice Score:</td>
     <td><%= @player.warmup_points %> points</td>
 </tr>
@@ -44,13 +53,47 @@ class_name = @player.title_set.name
     <td><%= time_ago @player.time_of_last_victory %></td>
 </tr>
 <tr>
+    <td class="leftlabel">Easiest Opponent:</td>
+    <td><%
+        if notables[ :easiest ]
+            %><%= player_link notables[ :easiest ] %> (<%= "%.1f" % [ notables[ :easiest_rate ] * 100 ] %>% win rate)<%
+        else
+            %>Nobody<%
+        end
+    %></td>
+</tr>
+<tr>
+    <td class="leftlabel">Toughest Opponent:</td>
+    <td><%
+        if notables[ :toughest ]
+            %><%= player_link notables[ :toughest ] %> (<%= "%.1f" % [ notables[ :toughest_rate ] * 100 ] %>% win rate)<%
+        else
+            %>Nobody<%
+        end
+    %></td>
+</tr>
+<tr>
+    <td class="leftlabel">Evenly matched with:</td>
+    <td><%
+        if notables[ :equal ]
+           %><%= player_link notables[ :equal ] %> (50% &plusmn;<%= "%.1f" % [ notables[ :equal_margin ] * 100 ] %>% win rate)<%
+        else
+            %>Nobody<%
+        end
+    %></td>
+</tr>
+<tr>
     <td class="leftlabel">Equipment:</td>
     <td><ul><%
-        @player.equipment.each do |eq|
-            %><li>
-            <%= eq.item.name %>
-            (<%= eq.equipped ? 'equipped' : 'not equipped' %>)
-            </li><%
+        if @player.equipment.size > 0
+            @player.equipment.each do |eq|
+                %><li>
+                <%= eq.item.name %>
+                (<%= eq.equipped ? 'equipped' : 'not equipped' %>)
+                </li><%
+            end
+        else
+            %><li>(nothing)</li><%
         end
     %></ul></td>
 </tr>

@@ -84,6 +84,7 @@ end
 class Player < ActiveRecord::Base
     BASE_RATING = 2000
     MAX_WINS_PER_HOUR = 3
+    EQUALITY_MARGIN = 0.1  # +/- around 0.5 success rate
     
     has_many :participations
     belongs_to :title_set
@@ -302,13 +303,45 @@ class Player < ActiveRecord::Base
         return rate
     end
     
-    #def easiest_opponent
-        #Players.find( :all ).each do |player|
-            #next if player == self
+    def notable_opponents
+        easiest = nil
+        easiest_rate = -1.0
+        toughest = nil
+        toughest_rate = 1.1
+        equal = nil
+        equal_margin = 1.0
+        
+        Player.find( :all ).each do |player|
+            next if player == self
             
+            r = success_rate( player )
             
-        #end
-    #end
+            if r != nil
+                if r > easiest_rate
+                    easiest = player
+                    easiest_rate = r
+                end
+                if r < toughest_rate
+                    toughest = player
+                    toughest_rate = r
+                end
+                margin = ( r - 0.5 ).abs
+                if ( margin <= EQUALITY_MARGIN ) and ( margin < equal_margin )
+                    equal = player
+                    equal_margin = margin
+                end
+            end
+        end
+        
+        return {
+            :easiest => easiest,
+            :easiest_rate => easiest_rate,
+            :equal => equal,
+            :equal_margin => equal_margin,
+            :toughest => toughest,
+            :toughest_rate => toughest_rate,
+        }
+    end
     
     def num_words_contributed
         return Word.count( [ "suggester = ?", id ] )
@@ -322,6 +355,7 @@ class Player < ActiveRecord::Base
             return nil
         end
     end
+    
 end
 
 class Participation < ActiveRecord::Base
