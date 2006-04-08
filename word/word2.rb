@@ -286,8 +286,8 @@ class BattleManager
             unbet( player.nick, nil, nil, nil, nil )
             @battlers << player
             @players << player
-            if @players.size > 2 and @battle.battle_mode == :rounds
-                setMode( :koth )
+            if @players.size > 2 and @battle.battle_mode == 'rounds'
+                setMode( 'koth' )
             end
             @player_teams[ player ] = player.nick
             included = true
@@ -318,7 +318,7 @@ class BattleManager
         elsif @players.delete( player )
             put "#{nick} has withdrawn from the game."
             if @players.size < 3
-                setMode( :rounds, DEFAULT_NUM_ROUNDS )
+                setMode( 'rounds', DEFAULT_NUM_ROUNDS )
             end
         else
             put "#{nick}: You cannot leave what you have not joined."
