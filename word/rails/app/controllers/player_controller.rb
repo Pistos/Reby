@@ -18,6 +18,8 @@ class PlayerController < ApplicationController
                 @players.sort! { |p1,p2| p1.nick.downcase <=> p2.nick.downcase }
             when 'rating'
                 @players.sort! { |p1,p2| p2.rating( days ) <=> p1.rating( days ) }
+            when 'winp'
+                @players.sort! { |p1,p2| p2.success_rate <=> p1.success_rate }
             when 'words'
                 @players.sort! { |p1,p2| p2.num_words_contributed <=> p1.num_words_contributed }
             else

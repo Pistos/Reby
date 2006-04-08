@@ -356,6 +356,18 @@ class Player < ActiveRecord::Base
         end
     end
     
+    def odds_string
+        first_left = left = 1
+        first_right = right = odds
+        i = 2
+        while left < 100 and ( right - right.to_i ).abs > 0.1
+            left = first_left * i
+            right = first_right * i
+            i += 1
+        end
+        return "#{left} : #{right.to_i}"
+    end
+    
 end
 
 class Participation < ActiveRecord::Base

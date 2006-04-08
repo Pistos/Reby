@@ -32,6 +32,7 @@
     <td <%= sorted_class( 'rating' ) %>><%= sort_link 'Rating' %></td>
     <td <%= sorted_class( 'rounds' ) %>><%= sort_link 'Rounds' %></td>
     <td <%= sorted_class( 'money' ) %>><%= sort_link 'Gold', 'money' %></td>
+    <td <%= sorted_class( 'winp' ) %>><%= sort_link 'Win %', 'winp' %></td>
 </tr>
 </thead>
 <%
@@ -45,6 +46,7 @@
             <td class="numeric"><%= player.rating params[ 'days' ] %></td>
             <td class="numeric"><%= player.games_played params[ 'days' ] %></td>
             <td class="numeric"><%= player.money %></td>
+            <td><%= "%.1f" % [ player.success_rate * 100 ] %>%</td>
         </tr>
         <%
     end
