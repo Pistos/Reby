@@ -684,7 +684,7 @@ end
 class WordX
     attr_reader :battle
     
-    VERSION = '2.2.2'
+    VERSION = '2.2.3'
     LAST_MODIFIED = 'April 7, 2006'
     MIN_GAMES_PLAYED_TO_SHOW_SCORE = 0
     DEFAULT_INITIAL_POINT_VALUE = 100
@@ -881,7 +881,7 @@ class WordX
                 end
             end
             put "http://word.purepistos.net/player/view?id=#{player.id}"
-            put "\002#{player.nick}\002, \002#{player.title}\002 (L\002#{player.level}\002) - Battle rating: \002#{player.rating}\002 (Rank: \002##{rank}\002) (#{player.money} #{CURRENCY}) (#{player.games_played} rounds) High/Low Rating: #{player.highest_rating}/#{player.lowest_rating}"
+            put "\002#{player.nick}\002, \002#{player.title}\002 (L\002#{player.level}\002) - Battle rating: \002#{player.rating}\002 (Rank: \002##{rank}\002) #{player.money} #{CURRENCY}, #{player.games_played} rounds;  odds: #{player.odds_string('')} (1:%.4f)" % [ player.odds ]
         else
             put "#{nick}: You're not a !word warrior!  Play a !wordbattle."
         end

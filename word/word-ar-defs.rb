@@ -356,7 +356,7 @@ class Player < ActiveRecord::Base
         end
     end
     
-    def odds_string
+    def odds_string( space = ' ' )
         first_left = left = 1
         first_right = right = odds
         i = 2
@@ -365,7 +365,7 @@ class Player < ActiveRecord::Base
             right = first_right * i
             i += 1
         end
-        return "#{left} : #{right.to_i}"
+        return "#{left}#{space}:#{space}#{right.to_i}"
     end
     
 end
