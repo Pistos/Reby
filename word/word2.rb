@@ -684,7 +684,7 @@ end
 class WordX
     attr_reader :battle
     
-    VERSION = '2.2.3'
+    VERSION = '2.2.4'
     LAST_MODIFIED = 'April 7, 2006'
     MIN_GAMES_PLAYED_TO_SHOW_SCORE = 0
     DEFAULT_INITIAL_POINT_VALUE = 100
@@ -726,7 +726,7 @@ class WordX
         
         connect_to_db
         
-        @item_glass_shield = Item.find_by_code( 'glass-shield' )
+        @item_glass_shield = Item.find_by_code( 'gs' )
     end
 
     def connect_to_db
@@ -973,6 +973,7 @@ class WordX
         
         @battle.players.each do |player|
             next if player == winner
+            
             if @battle.wins[ player ] < low_wins
                 low_wins = @battle.wins[ player ]
             end
@@ -1058,13 +1059,13 @@ class WordX
                         winner_award = loss
                     end
                 when 'koth'
-                    if winner != @king
+                    if winner == @king
+                        losing_participation, winner_award = highest_loser( winner )
+                        loser = losing_participation.player
+                    else
                         loser = @king
                         losing_participation = @king_participation
                         winner_award = calculatedLoss( winner, @king )
-                    else
-                        losing_participation, winner_award = highest_loser( winner )
-                        loser = losing_participation.player
                     end
                     @king = winner
                 when 'lms'
@@ -1077,16 +1078,9 @@ class WordX
             
             # Is the loser using a shield?
             
-            shield = loser.equipment.find(
-                :first,
-                :conditions => [
-                    "item_id = ? AND equipped",
-                    @item_glass_shield.id
-                ]
-            )
+            shield = loser.equipped_item( @item_glass_shield )
             if shield
-                #put "(shield effects temporarily disabled)"
-                put "#{loser.nick}'s shield absorbs the blow, reducing the point value!  But the shield shatters into innumerable fragments."
+                put "#{loser.nick}'s #{shield.name} absorbs the blow, reducing the point value!  However, the shield shatters into innumerable fragments."
                 winner_award -= 100
                 if winner_award < 0
                     winner_award = 0
@@ -1285,36 +1279,7 @@ class WordX
     end
     
     def buy( nick, userhost, handle, channel, text )
-        @active_channel = channel
-        arg = text.strip
-        
-        player = Player.find_by_nick( nick )
-        
-        item = Item.find_by_code( arg )
-        if item != nil
-            if player.under_limit?( item )
-                sellItem( player, item )
-            else
-                put "#{nick}: You may not have more than #{item.ownership_limit} #{item.ownership_limit > 1 ? item.name.pluralize : item.name}"
-            end
-        elsif @game != nil
-            case arg
-                when '4'
-                    buyClue( player, clue4, CLUE4_FRACTION )
-                when '5'
-                    buyClue( player, clue5, CLUE5_FRACTION )
-                when '6'
-                    buyClue( player, clue6, CLUE6_FRACTION )
-                else
-                    put "No such item or clue for sale."
-            end
-        else
-            put(
-                "No such item '#{arg}' for sale.  Items: " + (
-                    Item.find( :all ).collect { |item| item.code }.join( ', ' )
-                )
-            )
-        end
+        command( nick, userhost, handle, channel, 'b ' + text )
     end
     
     def sellItem( player, item )
@@ -1402,6 +1367,35 @@ class WordX
         
         command = text.strip
         case command
+            when /^b\S*\s+(.+)$/
+                arg = $1
+                
+                item = Item.find_by_code( arg )
+                if item != nil
+                    if player.under_limit?( item )
+                        sellItem( player, item )
+                    else
+                        put "#{nick}: You may not have more than #{item.ownership_limit} #{item.ownership_limit > 1 ? item.name.pluralize : item.name}"
+                    end
+                elsif @game != nil
+                    case arg
+                        when '4'
+                            buyClue( player, clue4, CLUE4_FRACTION )
+                        when '5'
+                            buyClue( player, clue5, CLUE5_FRACTION )
+                        when '6'
+                            buyClue( player, clue6, CLUE6_FRACTION )
+                        else
+                            put "No such item or clue for sale."
+                    end
+                else
+                    put(
+                        "No such item '#{arg}' for sale.  Items: " + (
+                            Item.find( :all ).collect { |item| item.code }.join( ', ' )
+                        )
+                    )
+                end
+                
             when /^c\S*\s+(\S+)(?:\s+(\S+))?$/
                 if $2.nil?
                     nick1 = nick

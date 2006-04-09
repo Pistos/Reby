@@ -368,6 +368,15 @@ class Player < ActiveRecord::Base
         return "#{left}#{space}:#{space}#{right.to_i}"
     end
     
+    def equipped_item( item )
+        return equipment.find(
+            :first,
+            :conditions => [
+                "item_id = ? AND equipped",
+                item.id
+            ]
+        )
+    end
 end
 
 class Participation < ActiveRecord::Base
