@@ -881,7 +881,7 @@ class WordX
                 end
             end
             put "http://word.purepistos.net/player/view?id=#{player.id}"
-            put "\002#{player.nick}\002, \002#{player.title}\002 (L\002#{player.level}\002) - Battle rating: \002#{player.rating}\002 (Rank: \002##{rank}\002) #{player.money} #{CURRENCY}, #{player.games_played} rounds;  odds: #{player.odds_string('')} (1:%.4f)" % [ player.odds ]
+            put "\002#{player.nick}\002, \002#{player.title}\002 (L\002#{player.level}\002) - Battle rating: \002#{player.rating}\002 (Rank: \002##{rank}\002) #{player.money} #{CURRENCY}, #{player.games_played} rounds;  odds: #{player.odds_string('')} (1:%.4f)" % [ player.odds || 0.0 ]
         else
             put "#{nick}: You're not a !word warrior!  Play a !wordbattle."
         end
