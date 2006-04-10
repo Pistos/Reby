@@ -357,6 +357,7 @@ class Player < ActiveRecord::Base
     end
     
     def odds_string( space = ' ' )
+        return nil if odds.nil?
         first_left = left = 1
         first_right = right = odds
         i = 2
