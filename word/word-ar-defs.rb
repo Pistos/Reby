@@ -271,7 +271,7 @@ class Player < ActiveRecord::Base
     end
     
     def success_rate( opponent = self )
-        rate = 0.0
+        rate = nil
         sql = <<-EOS
             SELECT
                 (
