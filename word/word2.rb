@@ -85,7 +85,7 @@ class BattleManager
         
         starter = Player.find_or_create_by_nick( nick )
         @battle = Battle.new(
-            :starter => starter.id,
+            :starter => starter,
             :battle_mode => 'rounds'
         )
         
@@ -128,7 +128,7 @@ class BattleManager
         @battle.battle_mode
     end
     def starter
-        Player.find( @battle.starter )
+        @battle.starter
     end
     
     def unbindSetupBinds
@@ -701,6 +701,7 @@ class WordX
     COST_CLASS_CHANGE = 5 # gold
     MAX_WARMUP_POINTS = 2000
     MAX_MEMOS_PER_PLAYER = 3
+    PLAYER_RATIO_FACTOR = 2.0
     
     OPS = Set.new [
         "Pistos",
@@ -961,7 +962,11 @@ class WordX
         $reby.bind( "pub", "-", "!word", "noPracticeMessage", "$wordx" )
     end
     def calculatedLoss( winner, loser )
-        return ( @point_value * ( loser.rating.to_f / winner.rating.to_f ) ).to_i
+        return (
+            @point_value * (
+                ( loser.rating.to_f / winner.rating.to_f ) ** PLAYER_RATIO_FACTOR
+            )
+        ).to_i
     end
     
     def highest_loser( winner )
