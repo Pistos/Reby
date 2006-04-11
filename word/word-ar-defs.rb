@@ -75,6 +75,7 @@ end
 
 class Battle < ActiveRecord::Base
     has_many :games
+    belongs_to :starter, :foreign_key => 'starter', :class_name => 'Player'
 end
 class Game < ActiveRecord::Base
     has_many :participations

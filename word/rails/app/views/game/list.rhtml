@@ -13,7 +13,27 @@
 </tr>
 </thead>
 <%
+    prev_battle_id = nil
     @games.each_with_index do |game,index|
+        battle = game.battle
+        if prev_battle_id != nil
+            if battle != nil and battle.id != prev_battle_id or battle.nil? and prev_battle_id != nil
+                %><tr class="battle_separator_stop"><td colspan="5">&nbsp;</td></tr><%
+            end
+        elsif battle != nil
+            %><tr class="practice_separator_stop"><td colspan="5">&nbsp;</td></tr><%
+        end
+        if battle != nil
+            if battle.id != prev_battle_id
+                %><tr class="battle_separator_start">
+                    <td>Battle #<%= battle.id %></td>
+                    <td colspan="4">Initiated by: <%= battle.starter.nick %> &nbsp; Mode: <%= battle.battle_mode %></td>
+                </tr><%
+            end
+            prev_battle_id = battle.id
+        else
+            prev_battle_id = nil
+        end
         %>
         <tr class="rowtype<%= index % 2 %>">
             <td><%= game.start_time.strftime( datetime_format ) %></td>

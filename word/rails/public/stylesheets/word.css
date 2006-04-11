@@ -134,3 +134,12 @@ img.classicon {
     font-size: 8pt;
     text-align: left;
 }
+
+tr.battle_separator_start td {
+    border-bottom: #ff99cc 3px solid;
+}
+tr.practice_separator_stop td {
+}
+tr.battle_separator_stop td {
+    border-top: #ff99cc 3px solid;
+}
