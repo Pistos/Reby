@@ -6,7 +6,7 @@
 <thead>
 <tr>
     <td>Starting Time</td>
-    <td>Duration</td>
+    <td>Duration<br />(seconds)</td>
     <td>Participants</td>
     <td>Winner</td>
     <td>Points</td>
@@ -37,7 +37,7 @@
         %>
         <tr class="rowtype<%= index % 2 %>">
             <td><%= game.start_time.strftime( datetime_format ) %></td>
-            <td><%= time_diff game.start_time, game.end_time %></td>
+            <td class="numeric"><%= time_diff game.start_time, game.end_time %> s</td>
             <td><%=
                 winner_link = nil
                 award = nil

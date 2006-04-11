@@ -8,16 +8,16 @@ module ApplicationHelper
         if to_time.nil? or from_time.nil?
             nil
         else
-            ( to_time - from_time ).seconds_to_interval_string
+            ( to_time - from_time ).to_i
         end
     end
     
     def time_ago( from_time, to_time = Time.now )
-        s = time_diff( from_time, to_time )
-        if s.nil?
+        d = time_diff( from_time, to_time )
+        if d.nil?
             s = "never"
         else
-            s << " ago"
+            s = d.to_interval_string << " ago"
         end
         return s
     end
@@ -28,7 +28,7 @@ module ApplicationHelper
 end
 
 class Fixnum
-    def seconds_to_interval_string
+    def to_interval_string
         seconds = self
         
         minutes = 0
@@ -67,7 +67,7 @@ class Fixnum
 end
 
 class Float
-    def seconds_to_interval_string
-        return self.to_i.seconds_to_interval_string
+    def to_interval_string
+        return self.to_i.to_interval_string
     end
 end
