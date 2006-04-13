@@ -62,7 +62,6 @@ class BattleManager
     BATTLE_SETUP_TIMEOUT = 300 # seconds
     MAX_TEAM_NAME_LENGTH = 32
     TOO_MANY_ROUNDS = 11
-    TOO_MANY_LOSSES = 4
     DEFAULT_KO_LOSSES = 2
     MINIMUM_BET = 5
     GAME_BINDS = {
@@ -73,8 +72,6 @@ class BattleManager
         "players" => "listPlayers",
         "leave" => "removePlayer",
         "team" => 'joinTeam',
-        'mode' => 'changeMode',
-        'losses' => 'setNumLosses',
         'bet' => 'bet',
         'unbet' => 'unbet',
         'bets' => 'listBets',
@@ -97,10 +94,7 @@ class BattleManager
         @initial_money = Hash.new
         @initial_odds = Hash.new
         @player_teams = Hash.new
-        @lms_losses = Hash.new( 0 )
-        @ko_losses = DEFAULT_KO_LOSSES
         
-        @king = nil
         @wins = Hash.new( 0 )
         @bets = Array.new
         @results = Hash.new
@@ -111,7 +105,7 @@ class BattleManager
         
         $reby.utimer( BATTLE_SETUP_TIMEOUT, "timeoutGame", "$wordx.battle" )
         
-        put "Defaults: Rounds: #{DEFAULT_NUM_ROUNDS} LMS Losses: #{DEFAULT_KO_LOSSES}"
+        put "Defaults: Rounds: #{DEFAULT_NUM_ROUNDS}"
         put "Commands: " + GAME_BINDS.keys.join( '; ' )
         
         addPlayer( nick, nil, nil, channel, nil )
@@ -150,11 +144,6 @@ class BattleManager
     def setNumRounds( nick, userhost, handle, channel, text )
         return if channel != @channel.name
         
-        if @battle.battle_mode == 'lms'
-            put "Number of rounds cannot be altered when battle mode is Last Man Standing."
-            return
-        end
-        
         num_rounds = text.to_i
         if num_rounds < 1
             put "Usage: rounds <positive integer>"
@@ -166,27 +155,6 @@ class BattleManager
         
         @num_rounds = num_rounds
         put "Number of rounds set to #{@num_rounds}."
-    end
-    
-    def setNumLosses( nick, userhost, handle, channel, text )
-        return if channel != @channel.name
-        
-        if @battle.battle_mode != 'lms'
-            put "Number of losses can only be set when battle mode is Last Man Standing."
-            return
-        end
-        
-        num_losses = text.to_i
-        if num_losses < 1
-            put "Usage: losses <positive integer>"
-            return
-        elsif num_losses >= TOO_MANY_LOSSES
-            put "Usage: losses <some reasonable positive integer>"
-            return
-        end
-        
-        @ko_losses = num_losses
-        put "Number of losses set to #{@num_losses}."
     end
     
     def teams
@@ -210,60 +178,12 @@ class BattleManager
         @current_round += 1
     end
     
-    def setMode( mode, arg = DEFAULT_NUM_ROUNDS )
-        okay = true
-        if @battle.battle_mode != 'lms'
-            old_rounds = @num_rounds
-        end
-        case mode
-            when 'koth'
-                @num_rounds = old_rounds || arg.to_i
-                put "Battle mode: King of the Hill (#{@num_rounds} rounds)"
-            when 'lms'
-                @num_rounds = 99
-                put "Battle mode: Last Man Standing"
-            when 'rounds'
-                @num_rounds = old_rounds || arg.to_i
-                put "Battle mode: Rounds (#{@num_rounds})"
-            else
-                put "Invalid game mode (#{mode})"
-                okay = false
-        end
-        if okay
-            @battle.battle_mode = mode
-        end
-    end
-    def changeMode( nick, userhost, handle, channel, text )
-        mode = text.strip
-        case mode
-            when 'lms'
-                if @battlers.size < 3
-                    put "At least 3 players are needed for Last Man Standing."
-                else
-                    setMode( mode )
-                end
-            when 'koth'
-                if @battlers.size < 3
-                    put "At least 3 players are needed for King of the Hill."
-                else
-                    setMode( mode )
-                end
-            else
-                put "Valid modes: lms, koth"
-        end
-    end
-
     def teammates?( player1, player2 )
         return( @player_teams[ player1 ] == @player_teams[ player2 ] )
     end
     
     def joinTeam( nick, userhost, handle, channel, text )
         return if channel != @channel.name
-        
-        if @battle.battle_mode == 'koth'
-            put "There are no teams in King of the Hill."
-            return
-        end
         
         team = text.strip[ 0...MAX_TEAM_NAME_LENGTH ]
         if team.empty?
@@ -286,9 +206,6 @@ class BattleManager
             unbet( player.nick, nil, nil, nil, nil )
             @battlers << player
             @players << player
-            if @players.size > 2 and @battle.battle_mode == 'rounds'
-                setMode( 'koth' )
-            end
             @player_teams[ player ] = player.nick
             included = true
             $wordx.initiateRegistrationCheck( player )
@@ -317,9 +234,6 @@ class BattleManager
             end
         elsif @players.delete( player )
             put "#{nick} has withdrawn from the game."
-            if @players.size < 3
-                setMode( 'rounds', DEFAULT_NUM_ROUNDS )
-            end
         else
             put "#{nick}: You cannot leave what you have not joined."
         end
@@ -347,12 +261,7 @@ class BattleManager
     end
     
     def timeoutGame
-        r = starter.rating
-        if r > Player::BASE_RATING
-            put "Looks like you've got everyone running scared, #{starter.nick}..."
-        else
-            put "It must be hard for a lesser fighter to break into the big leagues, huh, #{starter.nick}?"
-        end
+        put "Looks like no one wants to play!"
         doAbort
     end
     
@@ -426,14 +335,6 @@ class BattleManager
         $wordx.oneRound( nil, nil, nil, @channel.name, nil )
     end
     
-    def eliminate( player )
-        @lms_losses[ player ] += 1
-        if @lms_losses[ player ] >= @ko_losses
-            @players.delete( player )
-            put "#{player.nick} has been knocked out of contention!"
-        end
-    end
-    
     def addWin( player )
         @wins[ player ] += 1
     end
@@ -466,12 +367,12 @@ class BattleManager
             @results[ player ] = Hash.new
             
             @results[ player ][ :initial_rank ], @results[ player ][ :initial_score ] = @initial_ranking.rank_and_score( player )
-            @results[ player ][ :initial_score ] ||= Player::BASE_RATING
+            @results[ player ][ :initial_score ] ||= 0
             @results[ player ][ :initial_title ] = @initial_titles[ player ]
             @results[ player ][ :initial_money ] = @initial_money[ player ] || 0
             
             @results[ player ][ :final_rank ], @results[ player ][ :final_score ] = @final_ranking.rank_and_score( player )
-            @results[ player ][ :final_score ] ||= Player::BASE_RATING
+            @results[ player ][ :final_score ] ||= 0
             @results[ player ][ :final_title ] = @final_titles[ player ]
             @results[ player ][ :final_money ] = @final_money[ player ] || 0
         end
@@ -684,8 +585,8 @@ end
 class WordX
     attr_reader :battle
     
-    VERSION = '2.2.4'
-    LAST_MODIFIED = 'April 7, 2006'
+    VERSION = '2.3.0'
+    LAST_MODIFIED = 'April 12, 2006'
     MIN_GAMES_PLAYED_TO_SHOW_SCORE = 0
     DEFAULT_INITIAL_POINT_VALUE = 100
     MAX_SCORES_TO_SHOW = 10
@@ -693,7 +594,7 @@ class WordX
     CURRENCY = 'gold'
     MONETARY_AWARD_FRACTION = 0.25
     GIVE_AWAY_REDUCTION = 0.10
-    PARTICIPATION_AWARD = 5
+    PARTICIPATION_AWARD = 5 # gold
     CLUE4_FRACTION = 0.70
     CLUE5_FRACTION = 0.40
     CLUE6_FRACTION = 0.15
@@ -701,26 +602,16 @@ class WordX
     COST_CLASS_CHANGE = 5 # gold
     MAX_WARMUP_POINTS = 2000
     MAX_MEMOS_PER_PLAYER = 3
-    PLAYER_RATIO_FACTOR = 2.0
     
     OPS = Set.new [
         "Pistos",
     ]
     
     def initialize
-        # Change these as you please.
-        @say_answer = true
-        # End of configuration variables.
-
         @channel = nil
         @word = nil
         @game = nil
 
-        @num_syllables = Hash.new
-        @part_of_speech = Hash.new
-        @etymology = Hash.new
-        @definition = Hash.new
-        
         @registered_players = Hash.new
         @registration_check_pending = Hash.new
         @memo_counts = Hash.new( 0 )
@@ -777,9 +668,6 @@ class WordX
         
         if @battle != nil
             @battle << @game
-            highest_rating = 0
-            _king = nil
-            _king_participation = nil
             @battle.players.each do |player|
                 partic = Participation.new(
                     :player_id => player.id,
@@ -787,28 +675,7 @@ class WordX
                     :team => @battle.player_teams[ player ]
                 )
                 @game.participations << partic
-                
-                if @battle.mode == 'koth'
-                    if @king.nil?
-                        r = player.rating
-                        if r > highest_rating
-                            highest_rating = r
-                            _king = player
-                            _king_participation = partic
-                        end
-                    elsif player == @king
-                        @king_participation = partic
-                    end
-                end
             end
-            if @king.nil?
-                @king = _king
-                @king_participation = _king_participation
-            else
-                put "#{@king.nick} is the king."
-            end
-            
-            @initial_point_value += (@game.participations.size - 2) * 15
         end
 
         killTimers
@@ -882,22 +749,22 @@ class WordX
                 end
             end
             put "http://word.purepistos.net/player/view?id=#{player.id}"
-            put "\002#{player.nick}\002, \002#{player.title}\002 (L\002#{player.level}\002) - Battle rating: \002#{player.rating}\002 (Rank: \002##{rank}\002) #{player.money} #{CURRENCY}, #{player.games_played} rounds;  odds: #{player.odds_string('')} (1:%.4f)" % [ player.odds || 0.0 ]
+            put "\002#{player.nick}\002, \002#{player.title}\002 (L\002#{player.level}\002) - Battle points: \002#{player.bp}\002 (Rank: \002##{rank}\002) #{player.money} #{CURRENCY}, #{player.games_played} rounds;  odds: #{player.odds_string('')} (1:%.4f)" % [ player.odds || 0.0 ]
         else
             put "#{nick}: You're not a !word warrior!  Play a !wordbattle."
         end
     end
     
-    # Returns an array of [Player,rating] subarrays.
+    # Returns an array of [Player,bp] subarrays.
     def ranking( include_players_with_no_games = false )
-        ratings = Hash.new
+        bps = Hash.new
         Player.find( :all ).each do |player|
             if player.games_played > 0 or include_players_with_no_games
-                ratings[ player ] = player.rating
+                bps[ player ] = player.bp
             end
         end
         
-        return ratings.sort { |a,b| b[ 1 ] <=> a[ 1 ] }
+        return bps.sort { |a,b| b[ 1 ] <=> a[ 1 ] }
     end
     
     def printing_parameters( text )
@@ -932,11 +799,11 @@ class WordX
         num_shown = 0
         index = 0
         r = ranking
-        r.each do |player, rating|
+        r.each do |player, bp|
             index += 1
             next if index < start_rank
             
-            put( "%2d. %-32s %-5s %5d" % [ index, "#{player.nick}, #{player.title}", "(L#{player.level})", rating ] )
+            put( "%2d. %-32s %-5s %5d" % [ index, "#{player.nick}, #{player.title}", "(L#{player.level})", bp ] )
             num_shown += 1
             break if num_shown >= num_to_show
         end
@@ -961,48 +828,10 @@ class WordX
         $reby.unbind( "pub", "-", "!word", "oneRound", "$wordx" )
         $reby.bind( "pub", "-", "!word", "noPracticeMessage", "$wordx" )
     end
-    def calculatedLoss( winner, loser )
-        return (
-            @point_value * (
-                ( loser.rating.to_f / winner.rating.to_f ) ** PLAYER_RATIO_FACTOR
-            )
-        ).to_i
-    end
-    
-    def highest_loser( winner )
-        winner_award = 0
-        winner_rating = winner.rating.to_f
-        highest_opponent_rating = 0
-        losing_participation = nil
-        low_wins = 999
-        
-        @battle.players.each do |player|
-            next if player == winner
-            
-            if @battle.wins[ player ] < low_wins
-                low_wins = @battle.wins[ player ]
-            end
-        end
-        
-        @game.participations.each do |participation|
-            player = Player.find( participation.player_id )
-            next if player == winner
-            next if @battle.wins[ player ] > low_wins
-            
-            loss = calculatedLoss( winner, player )
-            player_rating = player.rating
-            if player_rating > highest_opponent_rating
-                highest_opponent_rating = player_rating
-                losing_participation = participation
-                winner_award = loss
-            end
-        end
-        
-        return losing_participation, winner_award
-    end
     
     def correctGuess( nick, userhost, handle, channel, text )
         @active_channel = channel
+        
         # Validity checks:
         
         return if @already_guessed or ( @game != nil and @game.end_time != nil )
@@ -1010,12 +839,7 @@ class WordX
         winner = find_or_create_player( nick )
         return if winner.nil?
         
-        if @battle.nil?
-            if winner.winning_too_much?
-                put "#{nick}: You have already demonstrated your great skill in the game.  It is time for you to graduate to !wordbattle.  If you insist, you may practice again in about an hour.", nick
-                return
-            end
-        elsif not @game.participations.find_by_player_id( winner.id )
+        if @battle != nil and not @game.participations.find_by_player_id( winner.id )
             sendNotice( "Since you are not a surviving battler, your guesses are not counted.", winner.nick )
             @given_away_by = nick
             return
@@ -1038,7 +862,6 @@ class WordX
         end
         
         winner_award = @point_value
-        losing_participation = nil
         if @battle.nil?
             winner.update_attribute( :warmup_points, winner.warmup_points + winner_award )
             @game.warmup_winner = winner.id
@@ -1048,62 +871,11 @@ class WordX
                 Player.update_all "warmup_points = 0"
             end
         else
-            # Determine loser.
-            
-            loser = nil
-            case @battle.mode
-                when 'rounds'
-                    @game.participations.each do |participation|
-                        player = Player.find( participation.player_id )
-                        next if player == winner
-                        
-                        loser = player
-                        loss = calculatedLoss( winner, player )
-                        participation.points_awarded = -loss
-                        losing_participation = participation
-                        winner_award = loss
-                    end
-                when 'koth'
-                    if winner == @king
-                        losing_participation, winner_award = highest_loser( winner )
-                        loser = losing_participation.player
-                    else
-                        loser = @king
-                        losing_participation = @king_participation
-                        winner_award = calculatedLoss( winner, @king )
-                    end
-                    @king = winner
-                when 'lms'
-                    @battle.addWin( winner )
-                    losing_participation, winner_award = highest_loser( winner )
-                    loser = losing_participation.player
-                    put "#{winner.nick} strikes #{loser.nick}!"
-                    @battle.eliminate( loser )
-            end
-            
-            # Is the loser using a shield?
-            
-            shield = loser.equipped_item( @item_glass_shield )
-            if shield
-                put "#{loser.nick}'s #{shield.name} absorbs the blow, reducing the point value!  However, the shield shatters into innumerable fragments."
-                winner_award -= 100
-                if winner_award < 0
-                    winner_award = 0
-                end
-                Equipment.delete( shield.id )
-            end
-            
-            # Dole out the awards...
-            
-            losing_participation.points_awarded = -winner_award
+            winner_award = ( @point_value * winner.point_adjustment( @battle.battlers ) ).to_i
         end
 
         put "... for #{winner_award} points."
         
-        #if not @def_shown
-            #showDefinition
-        #end
-
         # Record score.
         
         @game.participations.each do |p|
@@ -1151,10 +923,6 @@ class WordX
                 retval = true
             else
                 # No more rounds in the game.  GAME OVER.
-                
-                @battle.battlers.each do |player|
-                    player.save_rating_records
-                end
                 
                 @battle.finalise
                 @battle = nil
@@ -1240,7 +1008,6 @@ class WordX
         
         unbindPracticeCommand
         @battle = BattleManager.new( channel, nick )
-        @king = nil
     end
     
     def abortBattle
@@ -1499,13 +1266,6 @@ class WordX
         
         command = text.strip
         case command
-            when /^checkeconomy/
-                total_points = 0
-                players = Player.find( :all )
-                players.each do |player|
-                    total_points += player.rating
-                end
-                put "Average rating: %.2f" % [ total_points.to_f / players.length ]
             when /^clearmemo\s+(\S+)/
                 nick = $1
                 victim = Player.find_by_nick( nick )
@@ -1564,8 +1324,6 @@ class WordX
     
     def listen( nick, userhost, handle, channel, args )
         return if @word.nil?
-        
-        $reby.log "listen_args: #{args.inspect}"
         
         text = nil
         case args
