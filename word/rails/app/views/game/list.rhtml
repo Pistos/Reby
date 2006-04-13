@@ -27,7 +27,7 @@
             if battle.id != prev_battle_id
                 %><tr class="battle_separator_start">
                     <td>Battle #<%= battle.id %></td>
-                    <td colspan="4">Initiated by: <%= battle.starter.nick %> &nbsp; Mode: <%= battle.battle_mode %></td>
+                    <td colspan="4">Initiated by: <%= battle.starter.nick %></td>
                 </tr><%
             end
             prev_battle_id = battle.id
