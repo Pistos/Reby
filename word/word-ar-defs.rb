@@ -274,7 +274,7 @@ class Player < ActiveRecord::Base
             SELECT
                 (
                     SELECT COUNT(*) from (
-                        select distinct game_id from participations where player_id = ? and points_awarded > 0
+                        select distinct game_id from participations where player_id = ? and points_awarded IS NOT NULL
                         intersect
                         select distinct game_id from participations where player_id IN ( #{opponent_value_string} )
                     ) AS bar
@@ -288,18 +288,20 @@ class Player < ActiveRecord::Base
                     )  AS foo
                 )::FLOAT
                 AS success_rate
-            ;
         EOS
+        args = [ sql, id ]
+        oids = opponents.collect { |o| o.id }
+        args.concat( oids )
+        args << id
+        args.concat( oids )
         begin
-            args = [ sql, id ]
-            args.concat( *( opponents.collect { |o| o.id } ) )
-            args << id
-            args.concat( *( opponents.collect { |o| o.id } ) )
-            result = Participation.find_by_sql( *args )[ 0 ]
+            result = Participation.find_by_sql( args )[ 0 ]
             if result
                 rate = result[ 'success_rate' ].to_f
             end
         rescue Exception => e
+            $stderr.puts e.message
+            $stderr.puts e.backtrace.join( "\t\n" )
             # ignore
         end
         return rate

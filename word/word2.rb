@@ -585,8 +585,8 @@ end
 class WordX
     attr_reader :battle
     
-    VERSION = '2.3.0'
-    LAST_MODIFIED = 'April 12, 2006'
+    VERSION = '2.3.1'
+    LAST_MODIFIED = 'April 13, 2006'
     MIN_GAMES_PLAYED_TO_SHOW_SCORE = 0
     DEFAULT_INITIAL_POINT_VALUE = 100
     MAX_SCORES_TO_SHOW = 10
