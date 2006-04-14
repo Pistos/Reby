@@ -259,6 +259,15 @@ class Player < ActiveRecord::Base
     end
     
     def success_rate( opponents = [ self ] )
+        if not (
+            opponents.respond_to? :length and
+            opponents.respond_to? :collect
+        ) 
+            opponents = [ opponents ]
+        end
+        if opponents.nil? or opponents.empty?
+            return nil
+        end
         rate = nil
         opponent_value_string = Array.new( opponents.length, '?' ).join( ', ' )
         sql = <<-EOS
