@@ -46,7 +46,7 @@
             <td class="numeric"><%= player.bp params[ 'days' ] %></td>
             <td class="numeric"><%= player.games_played params[ 'days' ] %></td>
             <td class="numeric"><%= player.money %></td>
-            <td class="numeric"><%= "%+.1f" % [ ( player.awpd( params[ 'days' ] ) * 100 ) || 0.0 ] %></td>
+            <td class="numeric"><%= "%+.1f" % [ ( player.awpd( params[ 'days' ] ) || 0.0 ) * 100 ] %></td>
         </tr>
         <%
     end

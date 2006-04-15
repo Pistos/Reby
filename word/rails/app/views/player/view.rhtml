@@ -26,7 +26,7 @@ notables = @player.notable_opponents
 </tr>
 <tr>
     <td class="leftlabel">Skill:</td>
-    <td><%= "%+.1f" % [ ( @player.awpd * 100 ) || 0.0 ] %></td>
+    <td><%= "%+.1f" % [ ( @player.awpd || 0.0 ) * 100 ] %></td>
 </tr>
 <tr>
     <td class="leftlabel">Odds:</td>
