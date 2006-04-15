@@ -258,46 +258,92 @@ class Player < ActiveRecord::Base
         return( num_owned < item.ownership_limit )
     end
     
-    def success_rate( opponents = [ self ] )
+    def success_rate( opponents = [] )
         if not (
             opponents.respond_to? :length and
             opponents.respond_to? :collect
         ) 
             opponents = [ opponents ]
         end
-        if opponents.nil? or opponents.empty?
+        if opponents.nil?
             return nil
+        end
+        if opponents.empty?
+            begin
+                sql = " \
+                        SELECT ( ( \
+                            SELECT COUNT(game_id) FROM participations WHERE player_id = ? AND points_awarded IS NOT NULL \
+                        )::FLOAT / ( \
+                            SELECT COUNT(game_id) FROM participations WHERE player_id = ? \
+                        )::FLOAT ) AS success_rate \
+                    "
+                rows = Participation.find_by_sql [ sql, id, id ]
+                if rows and rows[ 0 ]
+                    return rows[ 0 ][ 'success_rate' ].to_f
+                end
+            rescue PGError => e
+                # ignore
+                $stderr.puts e.message
+                $stderr.puts e.backtrace.join( "\t\n" )
+            end
+        end
+        if not opponents.include?( self )
+            opponents << self
         end
         rate = nil
         opponent_value_string = Array.new( opponents.length, '?' ).join( ', ' )
-        sql = <<-EOS
-            SELECT
-                (
-                    SELECT COUNT(*) from (
-                        select distinct game_id from participations where player_id = ? and points_awarded IS NOT NULL
-                        intersect
-                        select distinct game_id from participations where player_id IN ( #{opponent_value_string} )
-                    ) AS bar
-                )::FLOAT
-                /
-                (
-                    SELECT COUNT(*) from (
-                        select distinct game_id from participations where player_id = ?
-                        intersect
-                        select distinct game_id from participations where player_id IN ( #{opponent_value_string} )
-                    )  AS foo
-                )::FLOAT
-                AS success_rate
-        EOS
-        args = [ sql, id ]
         oids = opponents.collect { |o| o.id }
-        args.concat( oids )
-        args << id
-        args.concat( oids )
+        sql = <<-EOS
+            select count(*) AS num_battles from (
+                select
+                    p.game_id,
+                    bool_and( p.player_id in (#{opponents.collect { |o| o.id }.join( ', ' )}) ) 
+                        AS includes_all_players
+                from
+                    num_participants n,
+                    participations p
+                where
+                    p.game_id = n.game_id
+                    and n.num_participants = #{opponents.length}
+                group by
+                p.game_id
+            ) AS x where includes_all_players = true
+        EOS
+        sql2 = <<-EOS
+            select count(*) AS won_battles from (
+                select game_id from (
+                    select
+                        p.game_id,
+                        bool_and( p.player_id in (#{opponents.collect { |o| o.id }.join( ', ' )}) ) 
+                        AS includes_all_players
+                    from
+                        num_participants n,
+                        participations p
+                    where
+                        p.game_id = n.game_id
+                        and n.num_participants = #{opponents.length}
+                    group by
+                        p.game_id
+                ) AS x where includes_all_players = true
+                INTERSECT
+                select game_id
+                from participations
+                where player_id = #{id}
+                    and points_awarded is not null
+            ) AS y
+        EOS
+        
         begin
-            result = Participation.find_by_sql( args )[ 0 ]
-            if result
-                rate = result[ 'success_rate' ].to_f
+            result = Participation.find_by_sql( sql )[ 0 ]
+            result2 = Participation.find_by_sql( sql2 )[ 0 ]
+            if result and result2
+                total_battles = result[ 'num_battles' ].to_i
+                won_battles = result2[ 'won_battles' ].to_i
+                if total_battles > 0
+                    rate = won_battles.to_f / total_battles.to_f
+                else
+                    rate = 0.0
+                end
             end
         rescue Exception => e
             $stderr.puts e.message

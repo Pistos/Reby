@@ -896,7 +896,8 @@ class WordX
 
     def nobodyGotIt
         @game.end_time = Time.now
-        put "No one solved it in time.  The word was #{@word.word}."
+        #put "No one solved it in time.  The word was #{@word.word}."
+        put "No one solved it in time.  The word descends back into the depths of the dark word ocean..."
         $reby.unbind( "pub", "-", @word.word, "correctGuess", "$wordx" )
         endRound
     end
