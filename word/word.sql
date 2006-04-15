@@ -123,6 +123,21 @@ GROUP BY
 ORDER BY
     game_id;
     
+CREATE OR REPLACE VIEW game_size_frequencies AS
+SELECT
+    p.player_id,
+    n.num_participants,
+    count(*) AS num_games
+FROM
+    participations p,
+    num_participants n
+WHERE
+    p.game_id = n.game_id
+GROUP BY
+    p.player_id,
+    n.num_participants
+;
+    
 CREATE OR REPLACE FUNCTION rebuild_battle_words()
     RETURNS VOID
     LANGUAGE 'plpgsql'

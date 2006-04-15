@@ -25,8 +25,8 @@ notables = @player.notable_opponents
     <td><%= @player.games_played %></td>
 </tr>
 <tr>
-    <td class="leftlabel">Win Percentage:</td>
-    <td><%= "%.1f" % [ ( @player.success_rate() || 0.0 ) * 100 ] %>%</td>
+    <td class="leftlabel">Skill:</td>
+    <td><%= "%+.1f" % [ ( @player.awpd * 100 ) || 0.0 ] %></td>
 </tr>
 <tr>
     <td class="leftlabel">Odds:</td>

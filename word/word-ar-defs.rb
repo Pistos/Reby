@@ -257,8 +257,11 @@ class Player < ActiveRecord::Base
         ] )
         return( num_owned < item.ownership_limit )
     end
-    
-    def success_rate( opponents = [] )
+
+    # If opponents == []
+    # then num_opponents is used to provide a success rate against specifically that number of opponents
+    # (if nil, then all battles are taken into account)
+    def success_rate( opponents = [], num_opponents = nil )
         if not (
             opponents.respond_to? :length and
             opponents.respond_to? :collect
@@ -269,22 +272,49 @@ class Player < ActiveRecord::Base
             return nil
         end
         if opponents.empty?
+            sql = nil
             begin
-                sql = " \
+                extra_clause = ""
+                if num_opponents
+                    sql = <<-EOS
+                        SELECT (
+                            ( 
+                                SELECT COUNT(participations.game_id) 
+                                FROM participations, num_participants
+                                WHERE
+                                    player_id = ?
+                                    AND points_awarded IS NOT NULL 
+                                    AND participations.game_id = num_participants.game_id
+                                    AND num_participants = ?
+                            )::FLOAT / ( 
+                                SELECT COUNT(participations.game_id) 
+                                FROM participations, num_participants
+                                WHERE
+                                    player_id = ?
+                                    AND participations.game_id = num_participants.game_id
+                                    AND num_participants = ?
+                            )::FLOAT
+                        ) AS success_rate 
+                    EOS
+                    rows = Participation.find_by_sql [ sql, id, num_opponents + 1, id, num_opponents + 1 ]
+                else
+                    sql = " \
                         SELECT ( ( \
                             SELECT COUNT(game_id) FROM participations WHERE player_id = ? AND points_awarded IS NOT NULL \
                         )::FLOAT / ( \
                             SELECT COUNT(game_id) FROM participations WHERE player_id = ? \
                         )::FLOAT ) AS success_rate \
                     "
-                rows = Participation.find_by_sql [ sql, id, id ]
+                    rows = Participation.find_by_sql [ sql, id, id ]
+                end
                 if rows and rows[ 0 ]
                     return rows[ 0 ][ 'success_rate' ].to_f
                 end
-            rescue PGError => e
-                # ignore
+            rescue ActiveRecord::StatementInvalid => e
+                $stderr.puts "sql: #{sql}"
                 $stderr.puts e.message
                 $stderr.puts e.backtrace.join( "\t\n" )
+                return nil
             end
         end
         if not opponents.include?( self )
@@ -371,6 +401,41 @@ class Player < ActiveRecord::Base
         end
         
         return factor
+    end
+    
+    # Average Win % Delta
+    def awpd( days = nil )
+        days = days.to_i
+        
+        game_sizes = GameSizeFrequency.find(
+            :all,
+            :conditions => [
+                "player_id = ?",
+                id
+            ]
+        )
+        if game_sizes.nil? or game_sizes.empty?
+            return nil
+        end
+        
+        deltas = Hash.new
+        weights = Hash.new
+        num_games = games_played( days )
+        game_sizes.each do |gs|
+            np = gs[ 'num_participants' ]
+            sr = success_rate( [], np - 1 )
+            expected_sr = 1.0 / np
+            delta = sr - expected_sr
+            deltas[ np ] = delta / expected_sr
+            weights[ np ] = gs[ 'num_games' ].to_f / num_games.to_f
+        end
+        
+        retval = 0.0
+        deltas.each do |np,delta|
+            retval += delta * weights[ np ]
+        end
+        
+        return retval
     end
     
     def notable_opponents
@@ -491,4 +556,7 @@ class Equipment < ActiveRecord::Base
     def name
         item.name
     end
+end
+
+class GameSizeFrequency < ActiveRecord::Base
 end

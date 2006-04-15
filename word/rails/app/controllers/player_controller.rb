@@ -20,6 +20,8 @@ class PlayerController < ApplicationController
                 @players.sort! { |p1,p2| p2.bp( days ) <=> p1.bp( days ) }
             when 'winp'
                 @players.sort! { |p1,p2| p2.success_rate <=> p1.success_rate }
+            when 'awpd'
+                @players.sort! { |p1,p2| p2.awpd <=> p1.awpd }
             when 'words'
                 @players.sort! { |p1,p2| p2.num_words_contributed <=> p1.num_words_contributed }
             else
