@@ -342,7 +342,7 @@ class Player < ActiveRecord::Base
                 if total_battles > 0
                     rate = won_battles.to_f / total_battles.to_f
                 else
-                    rate = 0.0
+                    rate = nil
                 end
             end
         rescue Exception => e
