@@ -8,7 +8,10 @@ class PlayerController < ApplicationController
     def list
         days = params[ 'days' ].to_i
         @players = Player.find( :all )
-        @players.delete_if { |p| p.games_played( days ) < 1 }
+        @players.delete_if { |p|
+            p.games_played( days ) < 1 ||
+            p.success_rate == 0.0
+        }
         case params[ :sort ]
             when 'rounds'
                 @players.sort! { |p1,p2| p2.games_played( days ) <=> p1.games_played( days ) }
@@ -21,7 +24,7 @@ class PlayerController < ApplicationController
             when 'winp'
                 @players.sort! { |p1,p2| p2.success_rate <=> p1.success_rate }
             when 'awpd'
-                @players.sort! { |p1,p2| p2.awpd <=> p1.awpd }
+                @players.sort! { |p1,p2| p2.awpd( days ) <=> p1.awpd( days ) }
             when 'words'
                 @players.sort! { |p1,p2| p2.num_words_contributed <=> p1.num_words_contributed }
             else
