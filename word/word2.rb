@@ -879,7 +879,7 @@ class WordX
         # Record score.
         
         @game.participations.each do |p|
-            monetary_award = PARTICIPATION_AWARD
+            monetary_award = 0
             if p.player_id == winner.id
                 p.update_attribute( :points_awarded, winner_award )
                 monetary_award += ( winner_award * MONETARY_AWARD_FRACTION ).to_i
@@ -903,6 +903,12 @@ class WordX
     end
     
     def endRound
+        @game.participations.each do |p|
+            player = p.player
+            player.money += PARTICIPATION_AWARD
+            player.save
+        end
+        
         @game.save
         @channel.save
         @word = nil
@@ -1169,26 +1175,32 @@ class WordX
                     )
                 end
                 
-            when /^c\S*\s+(\S+)(?:\s+(\S+))?$/
-                if $2.nil?
-                    nick1 = nick
-                    nick2 = $1
-                else
-                    nick1 = $1
-                    nick2 = $2
+            when /^c\S*(?:\s+(\S+))+$/
+                nicks = Array.new
+                command.scan( /\s+(\S+)/ ) do |s|
+                    nicks << s[ 0 ]
                 end
-                player1 = Player.find_by_nick( nick1 )
-                player2 = Player.find_by_nick( nick2 )
-                if player1.nil?
-                    put "#{nick1} is not a player."
-                elsif player2.nil?
-                    put "#{nick2} is not a player."
-                else
-                    success_rate = player1.success_rate( player2 )
-                    if success_rate
-                        put "#{nick1} wins %.1f%% of the time in battles involving #{nick2}." % [ success_rate * 100 ]
+                if nicks.length == 1
+                    nicks.unshift nick
+                end
+                players = Array.new
+                nicks.each do |n|
+                    player = Player.find_by_nick( n )
+                    if player.nil?
+                        put "'#{n}' is not a player."
                     else
-                        put "I don't think #{nick1} and #{nick2} have ever battled."
+                        players << player
+                    end
+                end
+                if not players.empty?
+                    $stderr.puts players.inspect
+                    success_rate = players[ 0 ].success_rate( players )
+                    if success_rate
+                        player_list = players[ 1..-1 ].collect { |p| p.nick }.join( ', ' )
+                        put "#{players[ 0 ].nick} wins %.1f%% of the time in battles against #{player_list}." % [ success_rate * 100 ]
+                    else
+                        player_list = players.collect { |p| p.nick }.join( ', ' )
+                        put "I don't think #{player_list} have ever battled."
                     end
                 end
             when /^eq\S*\s+(.+)$/
