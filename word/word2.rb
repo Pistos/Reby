@@ -62,8 +62,8 @@ class BattleManager
     BATTLE_SETUP_TIMEOUT = 300 # seconds
     MAX_TEAM_NAME_LENGTH = 32
     TOO_MANY_ROUNDS = 11
-    DEFAULT_KO_LOSSES = 2
-    MINIMUM_BET = 5
+    MINIMUM_BET = 5 # gold
+    BATTLE_AWARD_PER_ROUND = 10 # gold
     GAME_BINDS = {
         "rounds" => "setNumRounds",
         "join" => "addPlayer",
@@ -351,13 +351,13 @@ class BattleManager
     end
     
     def calculateResults
-        @final_ranking = $wordx.ranking
-        @final_titles = Hash.new
-        @final_money = Hash.new
+        final_ranking = $wordx.ranking
+        final_titles = Hash.new
+        final_money = Hash.new
         players = battlers
         players.each do |player|
-            @final_titles[ player ] = player.title
-            @final_money[ player ] = player.money
+            final_titles[ player ] = player.title
+            final_money[ player ] = player.money
         end
         if @players.size > 1 and teams.size < @players.size
             @results[ :winning_team ] = @player_teams[ @players[ 0 ] ]
@@ -371,10 +371,10 @@ class BattleManager
             @results[ player ][ :initial_title ] = @initial_titles[ player ]
             @results[ player ][ :initial_money ] = @initial_money[ player ] || 0
             
-            @results[ player ][ :final_rank ], @results[ player ][ :final_score ] = @final_ranking.rank_and_score( player )
+            @results[ player ][ :final_rank ], @results[ player ][ :final_score ] = final_ranking.rank_and_score( player )
             @results[ player ][ :final_score ] ||= 0
-            @results[ player ][ :final_title ] = @final_titles[ player ]
-            @results[ player ][ :final_money ] = @final_money[ player ] || 0
+            @results[ player ][ :final_title ] = final_titles[ player ]
+            @results[ player ][ :final_money ] = final_money[ player ] || 0
         end
         
         # Determine battle victor
@@ -430,6 +430,12 @@ class BattleManager
             end
         end
 
+        # Reward battle victor.
+        
+        award = BATTLE_AWARD_PER_ROUND * @battle.games.length
+        @battle_victor.money += award
+        @battle_victor.save
+        @results[ @battle_victor ][ :final_money ] += award
     end
         
     def report
