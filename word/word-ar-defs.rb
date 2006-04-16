@@ -317,6 +317,7 @@ class Player < ActiveRecord::Base
                 return nil
             end
         end
+        
         if not opponents.include?( self )
             opponents << self
         end
@@ -324,7 +325,7 @@ class Player < ActiveRecord::Base
         opponent_value_string = Array.new( opponents.length, '?' ).join( ', ' )
         oids = opponents.collect { |o| o.id }
         sql = <<-EOS
-            select count(*) AS num_battles from (
+            select count(*) AS num_games from (
                 select
                     p.game_id,
                     bool_and( p.player_id in (#{opponents.collect { |o| o.id }.join( ', ' )}) ) 
@@ -340,7 +341,7 @@ class Player < ActiveRecord::Base
             ) AS x where includes_all_players = true
         EOS
         sql2 = <<-EOS
-            select count(*) AS won_battles from (
+            select count(*) AS won_games from (
                 select game_id from (
                     select
                         p.game_id,
@@ -367,10 +368,10 @@ class Player < ActiveRecord::Base
             result = Participation.find_by_sql( sql )[ 0 ]
             result2 = Participation.find_by_sql( sql2 )[ 0 ]
             if result and result2
-                total_battles = result[ 'num_battles' ].to_i
-                won_battles = result2[ 'won_battles' ].to_i
-                if total_battles > 0
-                    rate = won_battles.to_f / total_battles.to_f
+                total_games = result[ 'num_games' ].to_i
+                won_games = result2[ 'won_games' ].to_i
+                if total_games > 0
+                    rate = won_games.to_f / total_games.to_f
                 else
                     rate = nil
                 end

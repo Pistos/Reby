@@ -591,8 +591,8 @@ end
 class WordX
     attr_reader :battle
     
-    VERSION = '2.3.1'
-    LAST_MODIFIED = 'April 13, 2006'
+    VERSION = '2.3.2'
+    LAST_MODIFIED = 'April 15, 2006'
     MIN_GAMES_PLAYED_TO_SHOW_SCORE = 0
     DEFAULT_INITIAL_POINT_VALUE = 100
     MAX_SCORES_TO_SHOW = 10
@@ -674,6 +674,7 @@ class WordX
         
         if @battle != nil
             @battle << @game
+            @adjustment = Hash.new
             @battle.players.each do |player|
                 partic = Participation.new(
                     :player_id => player.id,
@@ -681,6 +682,7 @@ class WordX
                     :team => @battle.player_teams[ player ]
                 )
                 @game.participations << partic
+                @adjustment[ player ] = player.point_adjustment( @battle.battlers )
             end
         end
 
@@ -877,7 +879,7 @@ class WordX
                 Player.update_all "warmup_points = 0"
             end
         else
-            winner_award = ( @point_value * winner.point_adjustment( @battle.battlers ) ).to_i
+            winner_award = ( @point_value * @adjustment[ winner ] ).to_i
         end
 
         put "... for #{winner_award} points."
@@ -1333,6 +1335,15 @@ class WordX
                 put "... finished word list rebuild."
             when /^msg\s+(.+)$/
                 sendMemo nick, $1
+            when /^test(\s+\S+)+/
+                opponents = Array.new
+                command.scan( /\s+(\S+)/ ) do |s|
+                    player = Player.find_by_nick s
+                    if player
+                        opponents << player
+                    end
+                end
+                put Player.find_by_nick( nick ).point_adjustment( opponents )
         end
     end
     
