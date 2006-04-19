@@ -455,7 +455,7 @@ class BattleManager
             if score_delta > 0
                 sentence << "gained #{score_delta} points"
                 if r[ :initial_title ] != r[ :final_title ]
-                    sentence << "advanced from #{r[ :initial_title ]} to #{r[ :final_title ]}"
+                    sentence << "\002GAINED A LEVEL, advancing from #{r[ :initial_title ]} to #{r[ :final_title ]}\002"
                     terminal_punctuation = '!'
                 end
                 if r[ :initial_rank ] != nil and r[ :final_rank ] < r[ :initial_rank ]
