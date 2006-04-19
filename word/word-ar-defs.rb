@@ -85,6 +85,8 @@ end
 class Player < ActiveRecord::Base
     EQUALITY_MARGIN = 0.1  # +/- around 0.5 success rate
     MAX_POINT_ADJUSTMENT = 2.0
+    MIN_POINT_ADJUSTMENT = 0.1
+    MIN_SUCCESS_RATE_HISTORY = 4 # games
     
     has_many :participations
     belongs_to :title_set
@@ -370,7 +372,7 @@ class Player < ActiveRecord::Base
             if result and result2
                 total_games = result[ 'num_games' ].to_i
                 won_games = result2[ 'won_games' ].to_i
-                if total_games > 0
+                if total_games >= MIN_SUCCESS_RATE_HISTORY
                     rate = won_games.to_f / total_games.to_f
                 else
                     rate = nil
@@ -396,6 +398,9 @@ class Player < ActiveRecord::Base
         if sr > even_rate
             rate_gap = ( 1.0 - even_rate )
             factor = ( rate_gap - delta ) / rate_gap
+            if factor < MIN_POINT_ADJUSTMENT
+                factor = MIN_POINT_ADJUSTMENT
+            end
         else
             rate_gap = even_rate
             factor = MAX_POINT_ADJUSTMENT - ( rate_gap - delta ) * ( MAX_POINT_ADJUSTMENT - 1.0 ) / rate_gap
