@@ -48,7 +48,7 @@
                 game.participations.collect { |part|
                     player = Player.find( part.player_id )
                     link = link_to( player.nick, :controller => 'player', :action => 'view', :id => part.player_id )
-                    if part.points_awarded != nil and part.points_awarded > 0
+                    if part.points_awarded != nil
                         winner_link = link
                         award = part.points_awarded
                     end
