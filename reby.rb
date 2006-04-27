@@ -4,7 +4,7 @@
 #
 # Ruby-Eggdrop Bridge Yes-this-letter-has-no-meaning-in-the-acronym
 # :title: Reby
-# Version:: 0.7.2 (March 30, 2006)
+# Version:: 0.7.4 (April 27, 2006)
 #
 # Author:: Pistos (irc.freenode.net)
 # http://purepistos.net/eggdrop/reby
@@ -77,8 +77,8 @@ class Reby
         @LOOP_CHECK_MILESTONE = 10
         @REBY_PREFIX = "^\\[\\d+:\\d+\\] REBY"
 
-        @VERSION = "0.7.3"
-        @LAST_MODIFIED = "April 3, 2006"
+        @VERSION = "0.7.4"
+        @LAST_MODIFIED = "April 27, 2006"
         @GOD_IS_GOOD = true
 
         @registered_methods = Array.new
@@ -795,7 +795,7 @@ class Reby
         else
             nicks = nicklist.toTclString
         end
-        sendTcl "#{channel} #{nicks} #{reason}"
+        sendTcl "putkick #{channel} #{nicks} #{reason}"
     end
     def putlog( text )
         sendTcl "putlog #{ text }"
