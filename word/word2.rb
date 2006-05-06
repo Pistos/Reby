@@ -591,8 +591,8 @@ end
 class WordX
     attr_reader :battle
     
-    VERSION = '2.3.2'
-    LAST_MODIFIED = 'April 15, 2006'
+    VERSION = '2.3.3'
+    LAST_MODIFIED = 'May 6, 2006'
     MIN_GAMES_PLAYED_TO_SHOW_SCORE = 0
     DEFAULT_INITIAL_POINT_VALUE = 100
     MAX_SCORES_TO_SHOW = 10
@@ -608,6 +608,8 @@ class WordX
     COST_CLASS_CHANGE = 5 # gold
     MAX_WARMUP_POINTS = 2000
     MAX_MEMOS_PER_PLAYER = 3
+    
+    USE_NICKSERV = true
     
     OPS = Set.new [
         "Pistos",
@@ -1118,8 +1120,13 @@ class WordX
     end
 
     def initiateRegistrationCheck( player )
-        @registered_players[ player ] = false
-        $reby.putserv "WHOIS #{player.nick}"
+        if USE_NICKSERV
+            @registered_players[ player ] = false
+            $reby.putserv "WHOIS #{player.nick}"
+        else
+            @registered_players[ player ] = true
+            @registration_check_pending[ player ] = false
+        end
     end
     
     def confirmRegistration( nick )
