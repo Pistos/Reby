@@ -615,6 +615,8 @@ class WordX
         "Pistos",
     ]
     
+    STATS_SITE = "http://word.purepistos.net"
+    
     def initialize
         @channel = nil
         @word = nil
@@ -758,7 +760,7 @@ class WordX
                     break
                 end
             end
-            put "http://word.purepistos.net/player/view?id=#{player.id}"
+            put "#{STATS_SITE}/player/view?id=#{player.id}"
             put "\002#{player.nick}\002, \002#{player.title}\002 (L\002#{player.level}\002) - Battle points: \002#{player.bp}\002 (Rank: \002##{rank}\002) Skill: %+.1f  #{player.money} #{CURRENCY}, #{player.games_played} rounds;  odds: #{player.odds_string('')} (1:%.4f)" % [ ( player.awpd || 0.0 ) * 100, player.odds || 0.0 ]
         else
             put "#{nick}: You're not a !word warrior!  Play a !wordbattle."
@@ -802,7 +804,7 @@ class WordX
             return
         end
         
-        put "http://word.purepistos.net"
+        put STATS_SITE
         
         num_to_show, start_rank, end_rank = printing_parameters( text )
         
@@ -1038,7 +1040,7 @@ class WordX
         TitleSet.find( :all, :order => 'name' ).each do |ts|
             classes << ts.name
         end
-        put "http://word.purepistos.net/title/list"
+        put "#{STATS_SITE}/title/list"
         put "Character Classes: #{classes.join( ', ' )}"
     end
     
