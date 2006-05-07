@@ -80,7 +80,7 @@ class BattleManager
     def initialize( channel, nick )
         @channel = Channel.find_or_create_by_name( channel )
         
-        starter = Player.find_or_create_by_nick( nick )
+        starter = find_or_create_player( nick )
         @battle = Battle.new(
             :starter => starter,
             :battle_mode => 'rounds'
@@ -191,7 +191,7 @@ class BattleManager
             return
         end
         
-        player = Player.find_or_create_by_nick( nick )
+        player = find_or_create_player( nick )
         includePlayer( player )
         @player_teams[ player ] = team
         if team != player.nick
@@ -1130,6 +1130,8 @@ class WordX
     end
     
     def confirmRegistration( nick )
+        return true if not USE_NICKSERV
+        
         retval = false
         player = Player.find_by_nick( nick )
         if player != nil

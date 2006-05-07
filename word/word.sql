@@ -11,6 +11,20 @@ DROP TABLE games;
 DROP TABLE players;
 DROP TABLE words;
 
+CREATE TABLE title_sets (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR( 64 ) NOT NULL UNIQUE
+);
+
+CREATE TABLE players (
+    id SERIAL PRIMARY KEY,
+    nick VARCHAR( 64 ) NOT NULL UNIQUE,
+    creation_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    title_set_id INTEGER NOT NULL DEFAULT 0 REFERENCES title_sets( id ),
+    warmup_points INTEGER DEFAULT 0,
+    money INTEGER DEFAULT 0
+);
+
 CREATE TABLE words (
     id SERIAL PRIMARY KEY,
     word VARCHAR( 64 ) NOT NULL UNIQUE,
@@ -21,13 +35,10 @@ CREATE TABLE words (
     suggester INTEGER REFERENCES players( id )
 );
 
-CREATE TABLE players (
+CREATE TABLE battles (
     id SERIAL PRIMARY KEY,
-    nick VARCHAR( 64 ) NOT NULL UNIQUE,
-    creation_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    title_set_id INTEGER NOT NULL DEFAULT 0 REFERENCES title_sets( id ),
-    warmup_points INTEGER DEFAULT 0,
-    money INTEGER DEFAULT 0
+    starter INTEGER NOT NULL REFERENCES players( id ),
+    battle_mode VARCHAR( 16 ) NOT NULL
 );
 
 CREATE TABLE games (
@@ -47,20 +58,9 @@ CREATE TABLE participations (
     team VARCHAR( 32 ) NOT NULL
 );
 
-CREATE TABLE battles (
-    id SERIAL PRIMARY KEY,
-    starter INTEGER NOT NULL REFERENCES players( id ),
-    battle_mode VARCHAR( 16 ) NOT NULL
-);
-
 CREATE TABLE channels (
     id SERIAL PRIMARY KEY,
     name VARCHAR( 64 ) NOT NULL
-);
-
-CREATE TABLE title_sets (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR( 64 ) NOT NULL UNIQUE
 );
 
 CREATE TABLE title_levels (
