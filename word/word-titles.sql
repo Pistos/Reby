@@ -161,24 +161,3 @@ INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 6, 19, 'Hatamot
 INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 6, 20, 'Daimyo' );
 INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 6, 21, 'Shogun' );
 
-INSERT INTO title_sets (name) VALUES ( 'Some Class Name' );
-INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 6, 1, '' );
-INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 4, 2, '' );
-INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 4, 3, '' );
-INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 4, 4, '' );
-INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 4, 5, '' );
-INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 4, 6, '' );
-INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 4, 7, '' );
-INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 4, 8, '' );
-INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 4, 9, '' );
-INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 4, 10, '' );
-INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 4, 11, '' );
-INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 4, 12, '' );
-INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 4, 13, '' );
-INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 4, 14, '' );
-INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 4, 15, '' );
-INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 4, 16, '' );
-INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 4, 17, '' );
-INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 4, 18, '' );
-INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 4, 19, '' );
-INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 4, 20, '' );
