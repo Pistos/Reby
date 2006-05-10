@@ -3,6 +3,7 @@
 # This script spiders the web for new words to add to the word.rb game.
 
 require 'open-uri'
+require 'rubygems'
 require 'rubyful_soup'
 require 'cgi'
 require 'stored-array'

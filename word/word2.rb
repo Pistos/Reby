@@ -591,6 +591,15 @@ end
 class WordX
     attr_reader :battle
     
+    USE_NICKSERV = false
+    OPS = Set.new [
+        "Pistos",
+        "nvidhive",
+    ]
+    STATS_SITE = "http://word.purepistos.net"
+    BANG_COMMAND = "!wordx"
+    SHORT_BANG_COMMAND = "!wx"
+    
     VERSION = '2.3.3'
     LAST_MODIFIED = 'May 6, 2006'
     MIN_GAMES_PLAYED_TO_SHOW_SCORE = 0
@@ -608,14 +617,6 @@ class WordX
     COST_CLASS_CHANGE = 5 # gold
     MAX_WARMUP_POINTS = 2000
     MAX_MEMOS_PER_PLAYER = 3
-    
-    USE_NICKSERV = true
-    
-    OPS = Set.new [
-        "Pistos",
-    ]
-    
-    STATS_SITE = "http://word.purepistos.net"
     
     def initialize
         @channel = nil
@@ -763,7 +764,7 @@ class WordX
             put "#{STATS_SITE}/player/view?id=#{player.id}"
             put "\002#{player.nick}\002, \002#{player.title}\002 (L\002#{player.level}\002) - Battle points: \002#{player.bp}\002 (Rank: \002##{rank}\002) Skill: %+.1f  #{player.money} #{CURRENCY}, #{player.games_played} rounds;  odds: #{player.odds_string('')} (1:%.4f)" % [ ( player.awpd || 0.0 ) * 100, player.odds || 0.0 ]
         else
-            put "#{nick}: You're not a !word warrior!  Play a !wordbattle."
+            put "#{nick}: You're not a #{BANG_COMMAND} warrior!  Play a #{BANG_COMMAND}battle."
         end
     end
     
@@ -833,12 +834,12 @@ class WordX
     end
     
     def bindPracticeCommand
-        $reby.unbind( "pub", "-", "!word", "noPracticeMessage", "$wordx" )
-        $reby.bind( "pub", "-", "!word", "oneRound", "$wordx" )
+        $reby.unbind( "pub", "-", "#{BANG_COMMAND}", "noPracticeMessage", "$wordx" )
+        $reby.bind( "pub", "-", "#{BANG_COMMAND}", "oneRound", "$wordx" )
     end
     def unbindPracticeCommand
-        $reby.unbind( "pub", "-", "!word", "oneRound", "$wordx" )
-        $reby.bind( "pub", "-", "!word", "noPracticeMessage", "$wordx" )
+        $reby.unbind( "pub", "-", "#{BANG_COMMAND}", "oneRound", "$wordx" )
+        $reby.bind( "pub", "-", "#{BANG_COMMAND}", "noPracticeMessage", "$wordx" )
     end
     
     def correctGuess( nick, userhost, handle, channel, text )
@@ -1054,7 +1055,7 @@ class WordX
         else
             player = Player.find_by_nick( nick )
             if player.nil?
-                put "#{nick}: You are not a player.  Join a !wordbattle first."
+                put "#{nick}: You are not a player.  Join a #{BANG_COMMAND}battle first."
             else
                 cost = COST_CLASS_CHANGE
                 if player.debit( cost )
@@ -1159,7 +1160,7 @@ class WordX
         
         player = Player.find_by_nick( nick )
         if player.nil?
-            put "#{nick}: You are not a player.  Fight in a !wordbattle first."
+            put "#{nick}: You are not a player.  Fight in a #{BANG_COMMAND}battle first."
             return
         end
         
@@ -1281,7 +1282,7 @@ class WordX
                 end
                 
             else
-                put "Unknown command '#{command}'.  Try '!w help' for help."
+                put "Unknown command '#{command}'.  Try '#{SHORT_BANG_COMMAND} help' for help."
         end
     end
     
@@ -1292,7 +1293,7 @@ class WordX
     def opCommand( nick, userhost, handle, channel, text )
         @active_channel = channel
         if not op?( nick )
-            put "#{nick}: You are not a !word operator who has identified with the network."
+            put "#{nick}: You are not a #{BANG_COMMAND} operator who has identified with the network."
             return
         end
         
@@ -1392,7 +1393,7 @@ class WordX
             if @memo_counts[ nick ] >= MAX_MEMOS_PER_PLAYER
                 put "#{nick}: You have sent too many memos already."
             elsif args.to_s.strip.empty?
-                put "#{nick}: !wordreport <suggested new word | problem word | bug report>"
+                put "#{nick}: #{BANG_COMMAND}report <suggested new word | problem word | bug report>"
             else
                 sendMemo( nick, args.to_s.strip )
             end
@@ -1413,17 +1414,17 @@ end
 $wordx = WordX.new
 
 $wordx.bindPracticeCommand
-$reby.bind( "pub", "-", "!wordbattle", "setupGame", "$wordx" )
-$reby.bind( "pub", "-", "!wordscore", "printScore", "$wordx" )
-$reby.bind( "pub", "-", "!wordrating", "printRating", "$wordx" )
-$reby.bind( "pub", "-", "!wordrank", "printRanking", "$wordx" )
-$reby.bind( "pub", "-", "!wordranking", "printRanking", "$wordx" )
-$reby.bind( "pub", "-", "!wordclass", "setCharacterClass", "$wordx" )
-$reby.bind( "pub", "-", "!wordclasses", "listCharacterClasses", "$wordx" )
+$reby.bind( "pub", "-", "#{WordX::BANG_COMMAND}battle", "setupGame", "$wordx" )
+$reby.bind( "pub", "-", "#{WordX::BANG_COMMAND}score", "printScore", "$wordx" )
+$reby.bind( "pub", "-", "#{WordX::BANG_COMMAND}rating", "printRating", "$wordx" )
+$reby.bind( "pub", "-", "#{WordX::BANG_COMMAND}rank", "printRanking", "$wordx" )
+$reby.bind( "pub", "-", "#{WordX::BANG_COMMAND}ranking", "printRanking", "$wordx" )
+$reby.bind( "pub", "-", "#{WordX::BANG_COMMAND}class", "setCharacterClass", "$wordx" )
+$reby.bind( "pub", "-", "#{WordX::BANG_COMMAND}classes", "listCharacterClasses", "$wordx" )
 $reby.bind( "raw", "-", "320", "registrationNotification", "$wordx" )
 $reby.bind( "raw", "-", "318", "registrationCheck", "$wordx" )
-$reby.bind( "pub", "-", "!wordop", "opCommand", "$wordx" )
-$reby.bind( "pubm", "-", "#mathetes *", "listen", "$wordx" )
-$reby.bind( "pub", "-", "!wordreport", "reportProblem", "$wordx" )
-$reby.bind( "pub", "-", "!wordbuy", "buy", "$wordx" )
-$reby.bind( "pub", "-", "!w", "command", "$wordx" )
+$reby.bind( "pub", "-", "#{WordX::BANG_COMMAND}op", "opCommand", "$wordx" )
+$reby.bind( "pubm", "-", "#hivebot *", "listen", "$wordx" )
+$reby.bind( "pub", "-", "#{WordX::BANG_COMMAND}report", "reportProblem", "$wordx" )
+$reby.bind( "pub", "-", "#{WordX::BANG_COMMAND}buy", "buy", "$wordx" )
+$reby.bind( "pub", "-", "#{WordX::SHORT_BANG_COMMAND}", "command", "$wordx" )
