@@ -594,14 +594,13 @@ class WordX
     USE_NICKSERV = false
     OPS = Set.new [
         "Pistos",
-        "nvidhive",
     ]
     STATS_SITE = "http://word.purepistos.net"
     BANG_COMMAND = "!wordx"
     SHORT_BANG_COMMAND = "!wx"
     
-    VERSION = '2.3.3'
-    LAST_MODIFIED = 'May 6, 2006'
+    VERSION = '2.4.0'
+    LAST_MODIFIED = 'May 10, 2006'
     MIN_GAMES_PLAYED_TO_SHOW_SCORE = 0
     DEFAULT_INITIAL_POINT_VALUE = 100
     MAX_SCORES_TO_SHOW = 10
@@ -1424,7 +1423,7 @@ $reby.bind( "pub", "-", "#{WordX::BANG_COMMAND}classes", "listCharacterClasses",
 $reby.bind( "raw", "-", "320", "registrationNotification", "$wordx" )
 $reby.bind( "raw", "-", "318", "registrationCheck", "$wordx" )
 $reby.bind( "pub", "-", "#{WordX::BANG_COMMAND}op", "opCommand", "$wordx" )
-$reby.bind( "pubm", "-", "#hivebot *", "listen", "$wordx" )
+$reby.bind( "pubm", "-", "#mathetes *", "listen", "$wordx" )
 $reby.bind( "pub", "-", "#{WordX::BANG_COMMAND}report", "reportProblem", "$wordx" )
 $reby.bind( "pub", "-", "#{WordX::BANG_COMMAND}buy", "buy", "$wordx" )
 $reby.bind( "pub", "-", "#{WordX::SHORT_BANG_COMMAND}", "command", "$wordx" )
