@@ -42,6 +42,7 @@ class WebSearch
         $reby.bind( "pub", "-", "!etym", "etymOnline", "$websearch" )
         $reby.bind( "pub", "-", "!syn", "synonym", "$websearch" )
         $reby.bind( "pub", "-", "!pun", "badPuns", "$websearch" )
+        $reby.bind( 'pub', '-', '!gloss', 'gloss', '$websearch' )
         
         $reby.bind( "pub", "-", "!docs", "searchGeoShellDocs", "$websearch" )
         $reby.bind( "pub", "-", "!rubybook", "searchPickAxe", "$websearch" )
@@ -103,6 +104,10 @@ class WebSearch
             channel,
             1
         )
+    end
+    
+    def gloss( nick, userhost, handle, channel, args )
+        search( nick, channel, args, :search_glossary )
     end
     
     def search( nick, channel, args, engine = ENGINE_GOOGLE )
@@ -242,6 +247,29 @@ class WebSearch
                         $reby.putserv "PRIVMSG #{channel} :[#{args}] No results."
                     end
                 end
+            when :search_glossary
+                index = num_results
+                open( "http://www.google.com/search?q=define%3A+#{arg}" ) do |html|
+                    text = html.read
+                    if text =~ /No definitions were found for/
+                        $reby.putserv "PRIVMSG #{channel} :No definitions found for #{arg}."
+                    else
+                        definition_text = text[ /<ul.*?>(.+)<\/ul>/m, 1 ]
+                        
+                        if definition_text != nil
+                            definitions = definition_text.scan( /li>\s*([^<>]+?)</ )
+                            counter = 1
+                            definitions.each do |defn|
+                                if index <= counter
+                                    $reby.putserv "PRIVMSG #{channel} :" + CGI.unescapeHTML( defn.to_s )
+                                    break
+                                end
+                                counter += 1
+                            end
+                        end
+                    end
+                end
+                
         end
 
     end
