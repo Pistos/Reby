@@ -568,7 +568,7 @@ class BattleManager
         @bets.each do |bet|
             if bet.bettee == @battle_victor
                 amount_won = ( bet.amount * @initial_odds[ @battle_victor ] ).to_i
-                @winnings << { :bet => bet, :amount => amount_won }
+                @winnings << { :bet => bet, :amount => amount_won - bet.amount }
                 bet.bettor.credit( amount_won )
             else
                 @losings << bet
