@@ -55,7 +55,7 @@ class Bet
 end
 
 class BattleManager
-    attr_reader :state, :channel, :current_round, :players,
+    attr_reader :state, :channel, :current_round,
         :player_teams, :king, :wins, :num_rounds
 
     DEFAULT_NUM_ROUNDS = 3
@@ -88,7 +88,6 @@ class BattleManager
         
         @num_rounds = DEFAULT_NUM_ROUNDS
         @current_round = 0
-        @battlers = Array.new # All battlers in this battle
         @players = Array.new # Only those playing in this and subsequent rounds
         @initial_titles = Hash.new
         @initial_money = Hash.new
@@ -137,8 +136,8 @@ class BattleManager
         end
     end
     
-    def battlers
-        return @battlers.collect! { |b| b.reload }
+    def players
+        return @players.collect! { |p| p.reload }
     end
     
     def setNumRounds( nick, userhost, handle, channel, text )
@@ -204,7 +203,6 @@ class BattleManager
         if not @players.include? player
             put "#{player.nick} has joined the game.", @channel.name
             unbet( player.nick, nil, nil, nil, nil )
-            @battlers << player
             @players << player
             @player_teams[ player ] = player.nick
             included = true
@@ -354,7 +352,6 @@ class BattleManager
         final_ranking = $wordx.ranking
         final_titles = Hash.new
         final_money = Hash.new
-        players = battlers
         players.each do |player|
             final_titles[ player ] = player.title
             final_money[ player ] = player.money
@@ -445,7 +442,7 @@ class BattleManager
             report_text << "  Team #{@results[ :winning_team ]} won!"
         end
         
-        battlers.each do |player|
+        players.each do |player|
             terminal_punctuation = '.'
             sentence = [ ]
             
@@ -502,7 +499,7 @@ class BattleManager
             put "#{nick}: You don't have any money to bet!"
             return
         end
-        if battlers.include?( bettor )
+        if players.include?( bettor )
             put "#{nick}: You can't wager if you're in the battle!"
             return
         end
@@ -520,10 +517,10 @@ class BattleManager
             return
         end
         
-        bettee = @battlers.find { |b| b.nick == bettee_nick }
+        bettee = @players.find { |b| b.nick == bettee_nick }
         
         if bettee.nil?
-            put "There is no battler by the name of '#{bettee_nick}'."
+            put "There is no player by the name of '#{bettee_nick}'."
             return
         elsif bettee.odds.nil?
             put "You cannot bet on new players."
@@ -591,16 +588,16 @@ end
 class WordX
     attr_reader :battle
     
-    USE_NICKSERV = false
+    USE_NICKSERV = true
     OPS = Set.new [
         "Pistos",
     ]
     STATS_SITE = "http://word.purepistos.net"
-    BANG_COMMAND = "!wordx"
-    SHORT_BANG_COMMAND = "!wx"
+    BANG_COMMAND = "!word"
+    SHORT_BANG_COMMAND = "!w"
     
-    VERSION = '2.4.0'
-    LAST_MODIFIED = 'May 10, 2006'
+    VERSION = '2.4.2'
+    LAST_MODIFIED = 'May 11, 2006'
     MIN_GAMES_PLAYED_TO_SHOW_SCORE = 0
     DEFAULT_INITIAL_POINT_VALUE = 100
     MAX_SCORES_TO_SHOW = 10
@@ -686,7 +683,7 @@ class WordX
                     :team => @battle.player_teams[ player ]
                 )
                 @game.participations << partic
-                @adjustment[ player ] = player.point_adjustment( @battle.battlers )
+                @adjustment[ player ] = player.point_adjustment( @battle.players )
             end
         end
 
@@ -852,7 +849,7 @@ class WordX
         return if winner.nil?
         
         if @battle != nil and not @game.participations.find_by_player_id( winner.id )
-            sendNotice( "Since you are not a surviving battler, your guesses are not counted.", winner.nick )
+            sendNotice( "Since you are not a surviving player, your guesses are not counted.", winner.nick )
             @given_away_by = nick
             return
         end
@@ -1009,7 +1006,7 @@ class WordX
             else
                 put(
                     "A battle is currently underway in #{@battle.channel.name} between " +
-                        @battle.battlers.collect { |p| p.nick }.join(', ') + ".",
+                        @battle.players.collect { |p| p.nick }.join(', ') + ".",
                     channel
                 )
             end
