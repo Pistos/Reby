@@ -14,6 +14,8 @@
 
 require "open-uri"
 require "cgi"
+require 'rubygems'
+require 'rubyful_soup'
 
 class WebSearch
     MAX_RESULTS = 5
@@ -43,6 +45,7 @@ class WebSearch
         $reby.bind( "pub", "-", "!syn", "synonym", "$websearch" )
         $reby.bind( "pub", "-", "!pun", "badPuns", "$websearch" )
         $reby.bind( 'pub', '-', '!gloss', 'gloss', '$websearch' )
+        $reby.bind( 'pub', '-', '!dict', 'wordsmyth', '$websearch' )
         
         $reby.bind( "pub", "-", "!docs", "searchGeoShellDocs", "$websearch" )
         $reby.bind( "pub", "-", "!rubybook", "searchPickAxe", "$websearch" )
@@ -108,6 +111,16 @@ class WebSearch
     
     def gloss( nick, userhost, handle, channel, args )
         search( nick, channel, args, :search_glossary )
+    end
+    
+    def wordsmyth( nick, userhost, handle, channel, args )
+        search( nick, channel, args, :search_wordsmyth )
+    end
+    
+    def splitput( channel, text )
+        text.scan( /.{1,400}/ ) do |text_part|
+            $reby.putserv "PRIVMSG #{channel} :#{text_part}"
+        end
     end
     
     def search( nick, channel, args, engine = ENGINE_GOOGLE )
@@ -269,9 +282,99 @@ class WebSearch
                         end
                     end
                 end
-                
+            when :search_wordsmyth
+                open( "http://www.wordsmyth.net/live/home.php?script=search&matchent=#{arg}&matchtype=exact" ) do |html|
+                    parse_wordsmyth( html.read, channel )
+                end
         end
 
+    end
+    
+    def parse_wordsmyth( text, channel )
+        soup = BeautifulSoup.new( text )
+        
+        not_found_p = soup.find( Proc.new { |el|
+            el.respond_to?( :name ) &&
+            el.name == 'p' &&
+            el.find_text( /Sorry, we could not find/ )
+        } )
+        if not_found_p
+            suggestions = []
+            not_found_p.find_all( 'a' ).each do |a|
+                suggestions << a.string
+            end
+            
+            output = '(no results)'
+            if not suggestions.empty?
+                output << " Close matches: #{suggestions.join( ', ' )}"
+            end
+            
+            splitput channel, output
+            
+            return
+        end
+        
+        maintable = soup.find( 'table', :attrs => { 'cellspacing'=>'0', 'border'=>"0", 'cellpadding'=>"2", 'width'=>"100%", 'bgcolor' => nil } )
+        
+        wordtag = maintable.find( 'div', { :attrs => { 'class' => 'headword' } } )
+        if wordtag
+            word = wordtag.contents[ 0 ]
+        end
+        
+        # Iterate through all <tr>s, find relevant bits.
+        output = ""
+        maintable.next_parsed_items do |tr|
+            next if not tr.respond_to?( :name ) or tr.name != 'tr'
+            
+            main_td = tr.find( 'td', :attrs => { 'width' => '70%' } )
+            middle_td = tr.find( 'td', :attrs => { 'width' => '5%', 'valign' => 'baseline' } )
+            
+            # Part of Speech
+            
+            if tr[ 'bgcolor' ] == '#DDDDFF'
+                pos = main_td.span.string
+                if not output.empty?
+                    splitput channel, output
+                end
+                output = "#{word} - [#{pos}]"
+            end
+            
+            if tr[ 'bgcolor' ] == '#FFFFFF'
+                # Pronunciation
+                
+                prontag = tr.find( 'div', :attrs => { 'class' => 'pron' } )
+                if prontag
+                    syllabification = []
+                    prontag.each do |syllable|
+                        if syllable.respond_to? :string
+                            stress_level = syllable[ 'class' ][ /(\d)/, 1 ].to_i
+                            case stress_level
+                                when 1
+                                    stress = "'"
+                                when 2
+                                    stress = '"'
+                                else
+                                    stress = ''
+                            end
+                            syllabification << stress + syllable.string
+                        end
+                    end
+                    output << " (" + syllabification.join( ' ' ) + ")"
+                end
+                
+                # Definition
+                
+                if main_td
+                    def_span = main_td.find( 'span', :attrs => { 'style' => 'font-weight: normal;' } )
+                    if def_span
+                        output << "  " + middle_td.span.string + " " + def_span.string
+                    end
+                end
+            end
+        end
+        if not output.empty?
+            splitput channel, output
+        end
     end
     
     def getResults( search_url, regexp, channel, max_results, search_term = "" )
