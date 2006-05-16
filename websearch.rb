@@ -15,7 +15,12 @@
 require "open-uri"
 require "cgi"
 require 'rubygems'
-require 'rubyful_soup'
+begin
+    require 'rubyful_soup'
+rescue Exception => e
+    require_gem 'rubyful_soup'
+end
+    
 
 class WebSearch
     MAX_RESULTS = 5
