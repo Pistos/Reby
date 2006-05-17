@@ -351,7 +351,7 @@ class WebSearch
                 if prontag
                     syllabification = []
                     prontag.each do |syllable|
-                        if syllable.respond_to? :string
+                        if syllable.respond_to? :string and syllable.string
                             syllable_class = syllable[ 'class' ]
                             if syllable_class
                                 stress_level = syllable_class[ /(\d)/, 1 ].to_i
