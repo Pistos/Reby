@@ -352,16 +352,21 @@ class WebSearch
                     syllabification = []
                     prontag.each do |syllable|
                         if syllable.respond_to? :string
-                            stress_level = syllable[ 'class' ][ /(\d)/, 1 ].to_i
-                            case stress_level
-                                when 1
-                                    stress = "'"
-                                when 2
-                                    stress = '"'
-                                else
-                                    stress = ''
+                            syllable_class = syllable[ 'class' ]
+                            if syllable_class
+                                stress_level = syllable_class[ /(\d)/, 1 ].to_i
+                                case stress_level
+                                    when 1
+                                        stress = "'"
+                                    when 2
+                                        stress = '"'
+                                    else
+                                        stress = ''
+                                end
+                                syllabification << stress + syllable.string
+                            else
+                                syllabification << syllable.string
                             end
-                            syllabification << stress + syllable.string
                         end
                     end
                     output << " (" + syllabification.join( ' ' ) + ")"
