@@ -64,8 +64,12 @@ class Spell
                 if result =~ /\*$/
                     retval = "#{word} is spelled correctly."
                 else
-                    words = list[ 1 ].strip.split( "," )
-                    retval = "'#{word}' is probably one of: #{words[ 0, NUM_SUGGESTIONS ].join( ', ' )}"
+                    if list[ 1 ]
+                        words = list[ 1 ].strip.split( "," )
+                        retval = "'#{word}' is probably one of: #{words[ 0, NUM_SUGGESTIONS ].join( ', ' )}"
+                    else
+                        retval = "No suggestions for unknown word."
+                    end
                 end
             end
             

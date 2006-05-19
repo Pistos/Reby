@@ -21,8 +21,10 @@ rescue Exception => e
     require_gem 'rubyful_soup'
 end
     
-
 class WebSearch
+    VERSION = '1.0.1'
+    LAST_MODIFIED = '2006-05-19'
+    
     MAX_RESULTS = 5
     ENGINE_GOOGLE = 0
     ENGINE_TEOMA = 1
@@ -50,6 +52,7 @@ class WebSearch
         $reby.bind( "pub", "-", "!syn", "synonym", "$websearch" )
         $reby.bind( "pub", "-", "!pun", "badPuns", "$websearch" )
         $reby.bind( 'pub', '-', '!gloss', 'gloss', '$websearch' )
+        $reby.bind( 'pub', '-', '!define', 'gloss', '$websearch' )
         $reby.bind( 'pub', '-', '!dict', 'wordsmyth', '$websearch' )
         
         $reby.bind( "pub", "-", "!docs", "searchGeoShellDocs", "$websearch" )
@@ -241,12 +244,28 @@ class WebSearch
                 #end
             when ENGINE_WIKIPEDIA
                 open( "http://en.wikipedia.org/w/wiki.phtml?search=#{ arg }" ) do |html|
-                    text = html.read
-                    title = text[ /href.+?title=(.+?)&/, 1 ]
-                    if title == "Main_Page"
-                        $reby.putserv "PRIVMSG #{channel} :No wikipedia entries found for '#{arg}'."
-                    else
-                        $reby.putserv "PRIVMSG #{channel} :[#{arg}] http://en.wikipedia.org/wiki/#{title}"
+                    soup = BeautifulSoup.new( html.read )
+                    
+                    heading_tag = soup.find( 'h1', :attrs => { 'class' => 'firstHeading' } )
+                    if heading_tag
+                        title = heading_tag.string
+                        case title
+                            when 'Main_Page'
+                                $reby.putserv "PRIVMSG #{channel} :No wikipedia entries found for '#{arg}'."
+                            when 'Search'
+                                count = -2
+                                soup.find_all( 'a', :attrs => { 'href' => %r{^/wiki/} } ).each do |a|
+                                    if count >= 0
+                                        $reby.putserv "PRIVMSG #{channel} :[#{arg}] http://en.wikipedia.org/#{a['href']}"
+                                    end
+                                    count += 1
+                                    if count >= num_results
+                                        break
+                                    end
+                                end
+                            else
+                                $reby.putserv "PRIVMSG #{channel} :[#{arg}] http://en.wikipedia.org/wiki/#{title}"
+                        end
                     end
                 end
             when ENGINE_GEOSHELL_WIKI
