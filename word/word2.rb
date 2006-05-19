@@ -588,21 +588,11 @@ end
 class WordX
     attr_reader :battle
     
-    USE_NICKSERV = true
-    OPS = Set.new [
-        "Pistos",
-    ]
-    STATS_SITE = "http://word.purepistos.net"
-    BANG_COMMAND = "!word"
-    SHORT_BANG_COMMAND = "!w"
+    VERSION = '2.4.3'
+    LAST_MODIFIED = 'May 19, 2006'
     
-    VERSION = '2.4.2'
-    LAST_MODIFIED = 'May 11, 2006'
-    MIN_GAMES_PLAYED_TO_SHOW_SCORE = 0
     DEFAULT_INITIAL_POINT_VALUE = 100
-    MAX_SCORES_TO_SHOW = 10
     INCLUDE_PLAYERS_WITH_NO_GAMES = true
-    CURRENCY = 'gold'
     MONETARY_AWARD_FRACTION = 0.25
     GIVE_AWAY_REDUCTION = 0.10
     PARTICIPATION_AWARD = 5 # gold
@@ -610,9 +600,12 @@ class WordX
     CLUE5_FRACTION = 0.40
     CLUE6_FRACTION = 0.15
     CONFIRMATION_TIMEOUT = 5 # seconds
-    COST_CLASS_CHANGE = 5 # gold
-    MAX_WARMUP_POINTS = 2000
     MAX_MEMOS_PER_PLAYER = 3
+    
+    UNSOLVED_MESSAGES = [
+        "The word sinks back into the roiling vat of molten glyph metal...",
+        "The word descends back into the depths of the dark word ocean...",
+    ]
     
     def initialize
         @channel = nil
@@ -906,7 +899,7 @@ class WordX
     def nobodyGotIt
         @game.end_time = Time.now
         #put "No one solved it in time.  The word was #{@word.word}."
-        put "No one solved it in time.  The word descends back into the depths of the dark word ocean..."
+        put "No one solved it in time." + UNSOLVED_MESSAGES[ rand( UNSOLVED_MESSAGES.length ) ]
         $reby.unbind( "pub", "-", @word.word, "correctGuess", "$wordx" )
         endRound
     end
@@ -1406,6 +1399,8 @@ class WordX
         end
     end
 end
+
+load 'wordbattle.conf'
 
 $wordx = WordX.new
 

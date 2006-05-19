@@ -1,0 +1,15 @@
+class WordX
+    USE_NICKSERV = true
+    OPS = Set.new [
+        "Pistos",
+    ]
+    STATS_SITE = "http://word.purepistos.net"
+    BANG_COMMAND = "!word"
+    SHORT_BANG_COMMAND = "!w"
+    
+    MIN_GAMES_PLAYED_TO_SHOW_SCORE = 0
+    MAX_SCORES_TO_SHOW = 10
+    CURRENCY = 'gold'
+    COST_CLASS_CHANGE = 5 # gold
+    MAX_WARMUP_POINTS = 2000
+end
