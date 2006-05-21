@@ -402,7 +402,7 @@ class BattleManager
             final_titles[ player ] = player.title
             final_money[ player ] = player.money
         end
-        if @survivors.size > 1 # and teams.size < @players.size
+        if @survivors.size > 1 and teams.size < @survivors.size
             @results[ :winning_team ] = @player_teams[ @players[ 0 ] ]
         end
         
