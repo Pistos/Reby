@@ -87,10 +87,17 @@ class Player < ActiveRecord::Base
     MAX_POINT_ADJUSTMENT = 2.0
     MIN_POINT_ADJUSTMENT = 0.1
     MIN_SUCCESS_RATE_HISTORY = 4 # games
+    HP_PER_LEVEL = 10
     
     has_many :participations
     belongs_to :title_set
     has_many :equipment
+    
+    attr_accessor :hp
+    
+    def after_initialize
+        @hp = max_hp
+    end
     
     def games_played( days = nil )
         num_games = nil
@@ -518,6 +525,10 @@ class Player < ActiveRecord::Base
                 item.id
             ]
         )
+    end
+    
+    def max_hp
+        level * HP_PER_LEVEL
     end
 end
 

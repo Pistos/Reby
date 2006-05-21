@@ -93,6 +93,7 @@ class BattleManager
         @initial_money = Hash.new
         @initial_odds = Hash.new
         @player_teams = Hash.new
+        @player_data = Hash.new
         
         @wins = Hash.new( 0 )
         @bets = Array.new
@@ -245,7 +246,8 @@ class BattleManager
                 @player_teams[ p ] != p.nick ?
                 " (#{@player_teams[ p ]})" :
                 ''
-            )
+            ) +
+            " (#{p.hp})"
         } ).join( ', ' )
         put str
     end
@@ -588,8 +590,8 @@ end
 class WordX
     attr_reader :battle
     
-    VERSION = '2.4.3'
-    LAST_MODIFIED = 'May 19, 2006'
+    VERSION = '2.5.0'
+    LAST_MODIFIED = 'May 21, 2006'
     
     DEFAULT_INITIAL_POINT_VALUE = 100
     INCLUDE_PLAYERS_WITH_NO_GAMES = true

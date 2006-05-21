@@ -12,4 +12,6 @@ class WordX
     CURRENCY = 'gold'
     COST_CLASS_CHANGE = 5 # gold
     MAX_WARMUP_POINTS = 2000
+    
+    BASE_WEAPON_DAMAGE = 10
 end
