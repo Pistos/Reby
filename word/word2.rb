@@ -95,7 +95,7 @@ class BattleManager
         @initial_money = Hash.new
         @initial_odds = Hash.new
         @player_teams = Hash.new
-        @player_data = Hash.new( Hash.new )
+        @player_data = Hash.new { |hash, key| hash[ key ] = Hash.new }
         @mode = :rounds
         
         @wins = Hash.new( 0 )
@@ -284,8 +284,7 @@ class BattleManager
                 @player_teams[ p ] != p.nick ?
                 " (#{@player_teams[ p ]})" :
                 ''
-            ) +
-            " (#{@player_data[ p ][ :hp ]} HP)"
+            )
         } ).join( ', ' )
         put str
     end
