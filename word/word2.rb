@@ -56,7 +56,7 @@ end
 
 class BattleManager
     attr_reader :state, :channel, :current_round,
-        :player_teams, :king, :wins, :num_rounds
+        :player_teams, :king, :wins, :num_rounds, :survivors
 
     DEFAULT_NUM_ROUNDS = 3
     BATTLE_SETUP_TIMEOUT = 300 # seconds
@@ -725,7 +725,7 @@ class WordX
         if @battle != nil
             @battle << @game
             @adjustment = Hash.new
-            @battle.players.each do |player|
+            @battle.survivors.each do |player|
                 partic = Participation.new(
                     :player_id => player.id,
                     :game_id => @game.id,
