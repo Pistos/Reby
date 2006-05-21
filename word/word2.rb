@@ -75,6 +75,7 @@ class BattleManager
         'bet' => 'bet',
         'unbet' => 'unbet',
         'bets' => 'listBets',
+        'mode' => 'changeMode',
     }
     
     def initialize( channel, nick )
@@ -88,12 +89,14 @@ class BattleManager
         
         @num_rounds = DEFAULT_NUM_ROUNDS
         @current_round = 0
-        @players = Array.new # Only those playing in this and subsequent rounds
+        @players = Array.new
+        @survivors = Array.new # Only those playing in this and subsequent rounds
         @initial_titles = Hash.new
         @initial_money = Hash.new
         @initial_odds = Hash.new
         @player_teams = Hash.new
-        @player_data = Hash.new
+        @player_data = Hash.new( Hash.new )
+        @mode = :rounds
         
         @wins = Hash.new( 0 )
         @bets = Array.new
@@ -144,6 +147,11 @@ class BattleManager
     def setNumRounds( nick, userhost, handle, channel, text )
         return if channel != @channel.name
         
+        if @battle.battle_mode == 'lms'
+            put "Number of rounds cannot be altered when battle mode is Last Man Standing."
+            return
+        end
+        
         num_rounds = text.to_i
         if num_rounds < 1
             put "Usage: rounds <positive integer>"
@@ -159,7 +167,7 @@ class BattleManager
     
     def teams
         t = Set.new
-        @players.each do |p|
+        @survivors.each do |p|
             t << @player_teams[ p ]
         end
         return t
@@ -176,6 +184,36 @@ class BattleManager
     end
     def inc_round
         @current_round += 1
+    end
+    
+    def setMode( mode, arg = DEFAULT_NUM_ROUNDS )
+        okay = true
+        if @battle.battle_mode != 'lms'
+            old_rounds = @num_rounds
+        end
+        case mode
+            when 'lms'
+                @num_rounds = 99
+                put "Battle mode: Last Man Standing"
+            when 'rounds'
+                @num_rounds = old_rounds || arg.to_i
+                put "Battle mode: Rounds (#{@num_rounds})"
+            else
+                put "Invalid game mode (#{mode})"
+                okay = false
+        end
+        if okay
+            @battle.battle_mode = mode
+        end
+    end
+    def changeMode( nick, userhost, handle, channel, text )
+        mode = text.strip
+        case mode
+            when 'lms', 'rounds'
+                setMode( mode )
+            else
+                put "Valid modes: lms, rounds"
+        end
     end
     
     def teammates?( player1, player2 )
@@ -247,7 +285,7 @@ class BattleManager
                 " (#{@player_teams[ p ]})" :
                 ''
             ) +
-            " (#{p.hp})"
+            " (#{@player_data[ p ][ :hp ]} HP)"
         } ).join( ', ' )
         put str
     end
@@ -330,9 +368,16 @@ class BattleManager
             @initial_titles[ player ] = player.title
             @initial_money[ player ] = player.money
             @initial_odds[ player ] = player.odds
+            @survivors << player
+            @player_data[ player ][ :hp ] = player.max_hp
         end
         
         $wordx.oneRound( nil, nil, nil, @channel.name, nil )
+    end
+    
+    def eliminate( player )
+        @survivors.delete( player )
+        put "#{player.nick} has been knocked out of contention!"
     end
     
     def addWin( player )
@@ -358,7 +403,7 @@ class BattleManager
             final_titles[ player ] = player.title
             final_money[ player ] = player.money
         end
-        if @players.size > 1 and teams.size < @players.size
+        if @survivors.size > 1 # and teams.size < @players.size
             @results[ :winning_team ] = @player_teams[ @players[ 0 ] ]
         end
         
@@ -585,6 +630,15 @@ class BattleManager
         end
         put bets.join( '; ' )
     end
+    
+    def injure( victim, damage )
+        @player_data[ victim ][ :hp ] -= damage
+        if @player_data[ victim ][ :hp ] <= 0
+            eliminate( victim )
+        else
+            put "#{victim.nick} has #{@player_data[ victim ][ :hp ]} HP left."
+        end
+    end
 end
 
 class WordX
@@ -629,7 +683,7 @@ class WordX
             :host     => "localhost",
             :username => "word",
             :password => "word",
-            :database => "word"
+            :database => "word_test"
         )
     end
     
@@ -833,6 +887,28 @@ class WordX
         $reby.bind( "pub", "-", "#{BANG_COMMAND}", "noPracticeMessage", "$wordx" )
     end
     
+    def highest_loser( winner )
+        highest_opponent_rating = -1
+        losing_participation = nil
+        
+        opponents = @game.participations.collect { |p|
+            Player.find( p.player_id )
+        }
+        opponents -= [ winner ]
+        @game.participations.each do |participation|
+            player = Player.find( participation.player_id )
+            next if player == winner
+            
+            player_rating = winner.success_rate( opponents ) || 0
+            if player_rating > highest_opponent_rating
+                highest_opponent_rating = player_rating
+                losing_participation = participation
+            end
+        end
+        
+        return losing_participation
+    end
+    
     def correctGuess( nick, userhost, handle, channel, text )
         @active_channel = channel
         
@@ -860,6 +936,8 @@ class WordX
         
         put "#{winner.nick} got it ... #{@word.word}"
         
+        damage = ( @point_value.to_f / DEFAULT_INITIAL_POINT_VALUE * BASE_WEAPON_DAMAGE ).to_i
+        
         if @given_away_by != nil
             put "Since #{@given_away_by} gave the answer away, the award is reduced."
             @point_value = ( @point_value * GIVE_AWAY_REDUCTION ).to_i
@@ -875,6 +953,20 @@ class WordX
                 Player.update_all "warmup_points = 0"
             end
         else
+            # Determine person struck.
+            
+            loser = nil
+            case @battle.mode
+                when 'lms'
+                    @battle.addWin( winner )
+                    losing_participation = highest_loser( winner )
+                    if losing_participation
+                        loser = losing_participation.player
+                        put "#{winner.nick} strikes #{loser.nick} for #{damage} damage!"
+                        @battle.injure( loser, damage )
+                    end
+            end
+            
             winner_award = ( @point_value * @adjustment[ winner ] ).to_i
         end
 

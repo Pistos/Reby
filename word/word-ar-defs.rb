@@ -93,12 +93,6 @@ class Player < ActiveRecord::Base
     belongs_to :title_set
     has_many :equipment
     
-    attr_accessor :hp
-    
-    def after_initialize
-        @hp = max_hp
-    end
-    
     def games_played( days = nil )
         num_games = nil
         days = days.to_i

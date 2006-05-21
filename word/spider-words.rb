@@ -342,7 +342,7 @@ class WordSpider
                 :host     => "localhost",
                 :username => "word",
                 :password => "word",
-                :database => "word"
+                :database => "word_test"
             )
             if ! ActiveRecord::Base.connected? && @connection_attempts > NUM_CONNECTION_ATTEMPTS
                 $stderr.puts "Too many failed DB connection attempts."
