@@ -1,0 +1,64 @@
+<% @page_title = 'Items' %>
+
+<p>
+Buy items in the game with the "!w b" command.  Example:
+</p>
+
+<code>
+!w b sword0
+</code>
+
+<p>
+will buy a normal sword.
+</p>
+
+<h3>Weapons</h3>
+
+<table class="table">
+<thead>
+<tr>
+    <td>Code</td>
+    <td>Name</td>
+    <td>Price</td>
+    <td>Modifier</td>
+</tr>
+</thead>
+<%
+    @weapons.each_with_index do |item,index|
+        %>
+        <tr class="rowtype<%= index % 2 %>">
+            <td><%= item.code %></td>
+            <td><%= item.name %></td>
+            <td class="numeric"><%= item.price %> gold</td>
+            <td class="numeric"><%= "%+d" % [ item.modifier ] %></td>
+        </tr>
+        <%
+    end
+%>
+</table>
+
+<h3>Armour</h3>
+
+<table class="table">
+<thead>
+<tr>
+    <td>Code</td>
+    <td>Name</td>
+    <td>Price</td>
+    <td>Modifier</td>
+</tr>
+</thead>
+<%
+    @armour.each_with_index do |item,index|
+        %>
+        <tr class="rowtype<%= index % 2 %>">
+            <td><%= item.code %></td>
+            <td><%= item.name %></td>
+            <td class="numeric"><%= item.price %> gold</td>
+            <td class="numeric"><%= "%+d" % [ item.modifier ] %></td>
+        </tr>
+        <%
+    end
+%>
+</table>
+

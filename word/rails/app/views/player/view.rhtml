@@ -81,6 +81,26 @@ notables = @player.notable_opponents
     %></td>
 </tr>
 <tr>
+    <td class="leftlabel">Weapon:</td>
+    <td><%
+        if @player.armament
+            %><%= @player.armament.name %> (<%= "%+d" % [ @player.armament.modifier ] %>)<%
+        else
+            %>(none)<%
+        end
+    %></td>
+</tr>
+<tr>
+    <td class="leftlabel">Armour:</td>
+    <td><%
+        if @player.protection
+            %><%= @player.protection.name %> (<%= "%+d" % [ @player.protection.modifier ] %>)<%
+        else
+            %>(none)<%
+        end
+    %></td>
+</tr>
+<tr>
     <td class="leftlabel">Equipment:</td>
     <td><ul><%
         if @player.equipment.size > 0
