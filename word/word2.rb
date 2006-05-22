@@ -209,6 +209,7 @@ class BattleManager
         end
         if okay
             @battle.battle_mode = mode
+            @@last_mode = mode
         end
     end
     def changeMode( nick, userhost, handle, channel, text )
