@@ -100,13 +100,13 @@ CREATE TABLE weapons (
     price INTEGER NOT NULL,
     modifier INTEGER NOT NULL
 );
-INSERT INTO weapons( code, name, modifier, price ) VALUES ( 'sword0', 'Sword', 0, 0 );
-INSERT INTO weapons( code, name, modifier, price ) VALUES ( 'bow0', 'Bow', 0, 0 );
-INSERT INTO weapons( code, name, modifier, price ) VALUES ( 'staff0', 'Staff', 0, 0 );
-INSERT INTO weapons( code, name, modifier, price ) VALUES ( 'mace0', 'Mace', 0, 0 );
+INSERT INTO weapons( code, name, modifier, price ) VALUES ( 'sword0', 'Sword', 0, 50 );
+INSERT INTO weapons( code, name, modifier, price ) VALUES ( 'bow0', 'Bow', 0, 50 );
+INSERT INTO weapons( code, name, modifier, price ) VALUES ( 'staff0', 'Staff', 0, 50 );
+INSERT INTO weapons( code, name, modifier, price ) VALUES ( 'mace0', 'Mace', 0, 50 );
 INSERT INTO weapons( code, name, modifier, price ) VALUES ( 'cluebat0', 'Clue Bat', 0, 0 );
-INSERT INTO weapons( code, name, modifier, price ) VALUES ( 'dagger0', 'Dagger', 0, 0 );
-INSERT INTO weapons( code, name, modifier, price ) VALUES ( 'katana0', 'Katana', 0, 0 );
+INSERT INTO weapons( code, name, modifier, price ) VALUES ( 'dagger0', 'Dagger', 0, 50 );
+INSERT INTO weapons( code, name, modifier, price ) VALUES ( 'katana0', 'Katana', 0, 50 );
 INSERT INTO weapons( code, name, modifier, price ) VALUES ( 'sword1', '+1 Sword', 1, 1000 );
 INSERT INTO weapons( code, name, modifier, price ) VALUES ( 'bow1', '+1 Bow', 1, 1000 );
 INSERT INTO weapons( code, name, modifier, price ) VALUES ( 'staff1', '+1 Staff', 1, 1000 );
@@ -133,7 +133,7 @@ CREATE TABLE armours (
     price INTEGER NOT NULL,
     modifier INTEGER NOT NULL
 );
-INSERT INTO armours( code, name, modifier, price ) VALUES ( 'cloth-armour', 'Cloth Armour', 0, 0 );
+INSERT INTO armours( code, name, modifier, price ) VALUES ( 'cloth-armour', 'Cloth Armour', 0, 50 );
 INSERT INTO armours( code, name, modifier, price ) VALUES ( 'leather-armour', 'Leather Armour', -1, 1000 );
 INSERT INTO armours( code, name, modifier, price ) VALUES ( 'chain-armour', 'Chain Armour', -2, 2000 );
 
