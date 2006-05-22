@@ -11,6 +11,14 @@ DROP TABLE games;
 DROP TABLE players;
 DROP TABLE words;
 
+CREATE TABLE weapons (
+    id SERIAL PRIMARY KEY,
+    code VARCHAR( 32 ) NOT NULL UNIQUE,
+    name VARCHAR( 64 ) NOT NULL UNIQUE,
+    price INTEGER NOT NULL,
+    modifier INTEGER NOT NULL
+);
+
 CREATE TABLE title_sets (
     id SERIAL PRIMARY KEY,
     name VARCHAR( 64 ) NOT NULL UNIQUE,
@@ -93,13 +101,6 @@ CREATE TABLE equipment (
     equipped BOOLEAN NOT NULL DEFAULT FALSE
 );
 
-CREATE TABLE weapons (
-    id SERIAL PRIMARY KEY,
-    code VARCHAR( 32 ) NOT NULL UNIQUE,
-    name VARCHAR( 64 ) NOT NULL UNIQUE,
-    price INTEGER NOT NULL,
-    modifier INTEGER NOT NULL
-);
 INSERT INTO weapons( code, name, modifier, price ) VALUES ( 'sword0', 'Sword', 0, 50 );
 INSERT INTO weapons( code, name, modifier, price ) VALUES ( 'bow0', 'Bow', 0, 50 );
 INSERT INTO weapons( code, name, modifier, price ) VALUES ( 'staff0', 'Staff', 0, 50 );

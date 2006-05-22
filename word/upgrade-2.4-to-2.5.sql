@@ -49,3 +49,23 @@ CREATE TABLE protections (
 );
 
 ALTER TABLE title_sets ADD COLUMN default_weapon_id INTEGER NOT NULL DEFAULT 5 REFERENCES weapons( id );
+
+update title_sets set default_weapon_id = 1 where id = 1;
+update title_sets set default_weapon_id = 2 where id = 2;
+update title_sets set default_weapon_id = 6 where id = 3;
+update title_sets set default_weapon_id = 3 where id = 4;
+update title_sets set default_weapon_id = 4 where id = 5;
+update title_sets set default_weapon_id = 7 where id = 6;
+
+insert into armaments (
+    player_id, weapon_id
+) select
+    players.id, title_sets.default_weapon_id
+from
+    players, title_sets
+where
+    players.title_set_id = title_sets.id
+    and not exists (
+        select 1 from armaments where armaments.player_id = players.id limit 1
+    )
+;

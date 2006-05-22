@@ -22,6 +22,7 @@ def find_or_create_player( nick )
     player = Player.find_by_nick( nick )
     if not player
         player = Player.create( :nick => nick, :creation_time => Time.now )
+        armament = player.create_armament( :weapon_id => player.title_set.default_weapon_id )
     end
     return player
 end
@@ -1009,7 +1010,7 @@ class WordX
     def nobodyGotIt
         @game.end_time = Time.now
         #put "No one solved it in time.  The word was #{@word.word}."
-        put "No one solved it in time." + UNSOLVED_MESSAGES[ rand( UNSOLVED_MESSAGES.length ) ]
+        put "No one solved it in time.  " + UNSOLVED_MESSAGES[ rand( UNSOLVED_MESSAGES.length ) ]
         $reby.unbind( "pub", "-", @word.word, "correctGuess", "$wordx" )
         endRound
     end
