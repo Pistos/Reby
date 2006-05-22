@@ -650,7 +650,7 @@ class WordX
     attr_reader :battle
     
     VERSION = '2.5.0'
-    LAST_MODIFIED = 'May 21, 2006'
+    LAST_MODIFIED = 'May 22, 2006'
     
     DEFAULT_INITIAL_POINT_VALUE = 100
     INCLUDE_PLAYERS_WITH_NO_GAMES = true
@@ -688,7 +688,7 @@ class WordX
             :host     => "localhost",
             :username => "word",
             :password => "word",
-            :database => "word_test"
+            :database => "word"
         )
     end
     
