@@ -58,7 +58,10 @@ class BattleManager
     attr_reader :state, :channel, :current_round,
         :player_teams, :king, :wins, :num_rounds, :survivors
 
-    DEFAULT_NUM_ROUNDS = 3
+    DEFAULT_NUM_ROUNDS = {
+        'rounds' => 3,
+        'lms' => 99,
+    }
     BATTLE_SETUP_TIMEOUT = 300 # seconds
     MAX_TEAM_NAME_LENGTH = 32
     TOO_MANY_ROUNDS = 11
@@ -78,16 +81,18 @@ class BattleManager
         'mode' => 'changeMode',
     }
     
+    @@last_mode = 'lms'
+    
     def initialize( channel, nick )
         @channel = Channel.find_or_create_by_name( channel )
         
         starter = find_or_create_player( nick )
         @battle = Battle.new(
             :starter => starter,
-            :battle_mode => 'rounds'
+            :battle_mode => @@last_mode
         )
         
-        @num_rounds = DEFAULT_NUM_ROUNDS
+        @num_rounds = DEFAULT_NUM_ROUNDS[ @battle[ :battle_mode ] ]
         @current_round = 0
         @players = Array.new
         @survivors = Array.new # Only those playing in this and subsequent rounds
@@ -108,7 +113,7 @@ class BattleManager
         
         $reby.utimer( BATTLE_SETUP_TIMEOUT, "timeoutGame", "$wordx.battle" )
         
-        put "Defaults: Rounds: #{DEFAULT_NUM_ROUNDS}"
+        put "Mode: #{@battle[ :battle_mode ]}  Defaults: Rounds: #{@num_rounds}"
         put "Commands: " + GAME_BINDS.keys.join( '; ' )
         
         addPlayer( nick, nil, nil, channel, nil )
@@ -186,14 +191,14 @@ class BattleManager
         @current_round += 1
     end
     
-    def setMode( mode, arg = DEFAULT_NUM_ROUNDS )
+    def setMode( mode, arg = DEFAULT_NUM_ROUNDS[ mode ] )
         okay = true
         if @battle.battle_mode != 'lms'
             old_rounds = @num_rounds
         end
         case mode
             when 'lms'
-                @num_rounds = 99
+                @num_rounds = DEFAULT_NUM_ROUNDS[ mode ]
                 put "Battle mode: Last Man Standing"
             when 'rounds'
                 @num_rounds = old_rounds || arg.to_i
@@ -936,6 +941,10 @@ class WordX
         put "#{winner.nick} got it ... #{@word.word}"
         
         damage = ( @point_value.to_f / DEFAULT_INITIAL_POINT_VALUE * BASE_WEAPON_DAMAGE ).to_i
+        armament = winner.armament
+        if armament
+            damage += armament.modifier
+        end
         
         if @given_away_by != nil
             put "Since #{@given_away_by} gave the answer away, the award is reduced."
@@ -961,6 +970,13 @@ class WordX
                     losing_participation = highest_loser( winner )
                     if losing_participation
                         loser = losing_participation.player
+                        protection = loser.protection
+                        if protection
+                            damage += protection.modifier
+                            if damage < 0
+                                damage = 0
+                            end
+                        end
                         put "#{winner.nick} strikes #{loser.nick} for #{damage} damage!"
                         @battle.injure( loser, damage )
                     end
@@ -1160,9 +1176,37 @@ class WordX
         cost = item.price
         if player.debit( cost )
             player.equipment.create( :item_id => item.id )
-            put "#{player.nick} spent #{cost} #{CURRENCY}."
+            put "#{player.nick} purchased a new #{item.name} for #{cost} #{CURRENCY}."
         else
-            put "#{player.nick}: #{item.name.pluralize} cost #{cost} #{CURRENCY}, you haven't got that much!"
+            put "#{player.nick}: #{item.name.pluralize} cost #{cost} #{CURRENCY}; you haven't got that much!"
+        end
+    end
+    def sellWeapon( player, weapon )
+        cost = weapon.price
+        if player.debit( cost )
+            if player.armament
+                player.armament.weapon = weapon
+                player.save
+            else
+                armament = player.create_armament( :weapon_id => weapon.id )
+            end
+            put "#{player.nick} purchased a new #{weapon.name} for #{cost} #{CURRENCY}."
+        else
+            put "#{player.nick}: #{weapon.name.pluralize} cost #{cost} #{CURRENCY}; you haven't got that much!"
+        end
+    end
+    def sellArmour( player, armour )
+        cost = armour.price
+        if player.debit( cost )
+            if player.protection
+                player.protection.armour = armour
+                player.save
+            else
+                protection = player.create_protection( :armour_id => armour.id )
+            end
+            put "#{player.nick} purchased a new #{armour.name} for #{cost} #{CURRENCY}."
+        else
+            put "#{player.nick}: #{armour.name.pluralize} cost #{cost} #{CURRENCY}; you haven't got that much!"
         end
     end
     
@@ -1248,16 +1292,22 @@ class WordX
         
         command = text.strip
         case command
-            when /^b\S*\s+(.+)$/
+            when /^b\S*\s*(.*)$/
                 arg = $1
                 
                 item = Item.find_by_code( arg )
+                weapon = Weapon.find_by_code( arg )
+                armour = Armour.find_by_code( arg )
                 if item != nil
                     if player.under_limit?( item )
                         sellItem( player, item )
                     else
                         put "#{nick}: You may not have more than #{item.ownership_limit} #{item.ownership_limit > 1 ? item.name.pluralize : item.name}"
                     end
+                elsif weapon != nil
+                    sellWeapon( player, weapon )
+                elsif armour != nil
+                    sellArmour( player, armour )
                 elsif @game != nil
                     case arg
                         when '4'
@@ -1272,7 +1322,11 @@ class WordX
                 else
                     put(
                         "No such item '#{arg}' for sale.  Items: " + (
-                            Item.find( :all ).collect { |item| item.code }.join( ', ' )
+                            (
+                                Item.find( :all ).collect { |item| item.code } +
+                                Weapon.find( :all ).collect { |weapon| weapon.code } +
+                                Armour.find( :all ).collect { |armour| armour.code }
+                            ).join( ', ' )
                         )
                     )
                 end
@@ -1334,11 +1388,19 @@ class WordX
             when /^i/
                 # Inventory listing
                 
-                inventory = player.equipment.collect { |eq|
-                    eq.item.name + (
-                        eq.equipped ? ' (equipped)' : ''
-                    )
-                }.join( ', ' )
+                if player.armament
+                    weapon = player.armament.name
+                end
+                if player.protection
+                    armour = player.protection.name
+                end
+                inventory = (
+                    player.equipment.collect { |eq|
+                        eq.item.name + (
+                            eq.equipped ? ' (equipped)' : ''
+                        )
+                    } + [ weapon ] + [ armour ]
+                ).compact.join( ', ' )
                 
                 if inventory.empty?
                     sendNotice( "You have no items.", player.nick )

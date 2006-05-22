@@ -92,6 +92,8 @@ class Player < ActiveRecord::Base
     has_many :participations
     belongs_to :title_set
     has_many :equipment
+    has_one :armament
+    has_one :protection
     
     def games_played( days = nil )
         num_games = nil
@@ -559,6 +561,10 @@ end
 
 class Item < ActiveRecord::Base
 end
+class Weapon < ActiveRecord::Base
+end
+class Armour < ActiveRecord::Base
+end
 
 class Equipment < ActiveRecord::Base
     belongs_to :player
@@ -566,6 +572,30 @@ class Equipment < ActiveRecord::Base
     
     def name
         item.name
+    end
+end
+
+class Armament < ActiveRecord::Base
+    belongs_to :player
+    belongs_to :weapon
+    
+    def name
+        weapon.name
+    end
+    def modifier
+        weapon.modifier
+    end
+end
+
+class Protection < ActiveRecord::Base
+    belongs_to :player
+    belongs_to :armour
+    
+    def name
+        armour.name
+    end
+    def modifier
+        armour.modifier
     end
 end
 

@@ -20,10 +20,17 @@ INSERT INTO title_levels VALUES (19, 50000);
 INSERT INTO title_levels VALUES (20, 70000);
 INSERT INTO title_levels VALUES (21, 100000);
 
-INSERT INTO title_sets (id, name) VALUES ( 0, 'Newbie' );
+INSERT INTO title_sets (id, name, default_weapon_id) VALUES (
+    0,
+    'Newbie',
+    ( SELECT weapons.id FROM weapons WHERE weapons.code = 'cluebat0' )
+);
 INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 0, 1, 'Newbie' );
 
-INSERT INTO title_sets (name) VALUES ( 'Knight' );
+INSERT INTO title_sets (name, default_weapon_id) VALUES (
+    'Knight',
+    ( SELECT weapons.id FROM weapons WHERE weapons.code = 'sword0' )
+);
 INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 1, 1, 'Slave' );
 INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 1, 2, 'Servant' );
 INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 1, 3, 'Serf' );
@@ -46,7 +53,10 @@ INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 1, 19, 'Platinu
 INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 1, 20, 'Paladin' );
 INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 1, 21, 'Grand Paladin' );
 
-INSERT INTO title_sets (name) VALUES ( 'Archer' );
+INSERT INTO title_sets (name, default_weapon_id) VALUES (
+    'Archer',
+    ( SELECT weapons.id FROM weapons WHERE weapons.code = 'bow0' )
+);
 INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 2, 1, 'Insult Hurler' );
 INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 2, 2, 'Mud Slinger' );
 INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 2, 3, 'Spitballer' );
@@ -69,7 +79,10 @@ INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 2, 19, 'Emerald
 INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 2, 20, 'Diamond Archer' );
 INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 2, 21, 'Master Archer' );
 
-INSERT INTO title_sets (name) VALUES ( 'Rogue' );
+INSERT INTO title_sets (name, default_weapon_id) VALUES (
+    'Rogue',
+    ( SELECT weapons.id FROM weapons WHERE weapons.code = 'dagger0' )
+);
 INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 3, 1, 'Bad Liar' );
 INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 3, 2, 'Urchin' );
 INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 3, 3, 'Punk' );
@@ -92,7 +105,10 @@ INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 3, 19, 'Lesser 
 INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 3, 20, 'Greater Assassin' );
 INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 3, 21, 'Master Assassin' );
 
-INSERT INTO title_sets (name) VALUES ( 'Martial Artist' );
+INSERT INTO title_sets (name, default_weapon_id) VALUES (
+    'Martial Artist',
+    ( SELECT weapons.id FROM weapons WHERE weapons.code = 'staff0' )
+);
 INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 4, 1, 'Wuss' );
 INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 4, 2, 'Bully' );
 INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 4, 3, 'Rabblerouser' );
@@ -115,7 +131,10 @@ INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 4, 19, '9th Dan
 INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 4, 20, 'Sensei' );
 INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 4, 21, 'Grandmaster' );
 
-INSERT INTO title_sets (name) VALUES ( 'Barbarian' );
+INSERT INTO title_sets (name, default_weapon_id) VALUES (
+    'Barbarian',
+    ( SELECT weapons.id FROM weapons WHERE weapons.code = 'mace0' )
+);
 INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 5, 1, 'Cretin' );
 INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 5, 2, 'Clod' );
 INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 5, 3, 'Neanderthal' );
@@ -138,7 +157,10 @@ INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 5, 19, 'Barbari
 INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 5, 20, 'Barbarian Chief' );
 INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 5, 21, 'Barbarian King' );
 
-INSERT INTO title_sets (id, name) VALUES ( 6, 'Samurai' );
+INSERT INTO title_sets (name, default_weapon_id) VALUES (
+    'Samurai',
+    ( SELECT weapons.id FROM weapons WHERE weapons.code = 'katana0' )
+);
 INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 6, 1, 'Sushi Chef' );
 INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 6, 2, 'Iron Chef' );
 INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 6, 3, 'Unarmed Samurai' );
