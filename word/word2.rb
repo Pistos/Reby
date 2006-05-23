@@ -773,7 +773,7 @@ class WordX
         if @battle != nil
             round_str = "(round #{@battle.current_round} of #{@battle.num_rounds})"
         end
-        putquick "Unscramble ... #{mixed_word}         #{round_str}"
+        putquick "Unscramble ... \002#{mixed_word}\002         #{round_str}"
     end
 
     def printScore( nick, userhost, handle, channel, text )
