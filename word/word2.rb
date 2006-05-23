@@ -286,6 +286,7 @@ class BattleManager
     def listPlayers( nick, userhost, handle, channel, text )
         str = "Players: "
         str << ( @players.collect { |p|
+            "L#{p.level} " +
             ( "%s (1:%.4f odds)" % [ p.nick, p.odds || 0.0 ] ) +
             (
                 @player_teams[ p ] != p.nick ?
@@ -642,7 +643,8 @@ class BattleManager
         if @player_data[ victim ][ :hp ] <= 0
             eliminate( victim )
         else
-            put "#{victim.nick} has #{@player_data[ victim ][ :hp ]} HP left."
+            put( "HP: " + @survivors.collect { |s| "#{s.nick}: #{@player_data[ s ][ :hp ]}" }.join( '  ' ) )
+            #put "#{victim.nick} has #{@player_data[ victim ][ :hp ]} HP left."
         end
     end
 end

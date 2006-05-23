@@ -87,7 +87,7 @@ class Player < ActiveRecord::Base
     MAX_POINT_ADJUSTMENT = 2.0
     MIN_POINT_ADJUSTMENT = 0.1
     MIN_SUCCESS_RATE_HISTORY = 4 # games
-    HP_PER_LEVEL = 10
+    HP_PER_LEVEL = 5
     
     has_many :participations
     belongs_to :title_set
