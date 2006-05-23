@@ -727,6 +727,9 @@ class WordX
         @channel = Channel.find_or_create_by_name( channel )
         @game = Game.create( { :word_id => @word.id, :start_time => Time.now } )
         @initial_point_value = DEFAULT_INITIAL_POINT_VALUE
+        if @word.word.length < 6
+            @initial_point_value = ( @initial_point_value * ( @word.word.length.to_f / 6 ) ).to_i
+        end
         @given_away_by = nil
         @word_regexp = Regexp.new( @word.word.split( // ).join( ".*" ) )
         
