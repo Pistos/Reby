@@ -94,6 +94,7 @@ class Player < ActiveRecord::Base
     has_many :equipment
     has_one :armament
     has_one :protection
+    has_many :targettings, :order => 'ordinal DESC'
     
     def games_played( days = nil )
         num_games = nil
@@ -526,6 +527,24 @@ class Player < ActiveRecord::Base
     def max_hp
         level * HP_PER_LEVEL
     end
+    
+    def opponents( game )
+        game.participations.collect { |p|
+            ( p.player_id != id ) ? Player.find( p.player_id ) : nil
+        }.compact
+    end
+    
+    def select_target( game )
+        target = nil
+        opps = opponents( game )
+        targettings.each do |t|
+            if opps.include? t.target
+                target = t.target
+                break
+            end
+        end
+        return target
+    end
 end
 
 class Participation < ActiveRecord::Base
@@ -600,4 +619,8 @@ class Protection < ActiveRecord::Base
 end
 
 class GameSizeFrequency < ActiveRecord::Base
+end
+
+class Targetting < ActiveRecord::Base
+    belongs_to :target, :foreign_key => 'target', :class_name => 'Player'
 end

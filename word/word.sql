@@ -151,6 +151,14 @@ CREATE TABLE battle_words (
     word_id INTEGER NOT NULL REFERENCES words( id )
 );
 
+CREATE TABLE targettings (
+    id SERIAL PRIMARY KEY,
+    player_id INTEGER NOT NULL REFERENCES players( id ),
+    target INTEGER NOT NULL REFERENCES players( id ),
+    ordinal INTEGER NOT NULL,
+    UNIQUE ( player_id, ordinal )
+);
+
 CREATE OR REPLACE VIEW word_frequency AS
 SELECT
     words.id,

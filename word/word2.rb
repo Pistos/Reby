@@ -652,8 +652,8 @@ end
 class WordX
     attr_reader :battle
     
-    VERSION = '2.5.0'
-    LAST_MODIFIED = 'May 22, 2006'
+    VERSION = '2.5.1'
+    LAST_MODIFIED = 'May 24, 2006'
     
     DEFAULT_INITIAL_POINT_VALUE = 100
     INCLUDE_PLAYERS_WITH_NO_GAMES = true
@@ -900,12 +900,9 @@ class WordX
     
     def highest_loser( winner )
         highest_opponent_rating = -1
-        losing_participation = nil
+        loser = nil
         
-        opponents = @game.participations.collect { |p|
-            Player.find( p.player_id )
-        }
-        opponents -= [ winner ]
+        opponents = winner.opponents( @game )
         @game.participations.each do |participation|
             player = Player.find( participation.player_id )
             next if player == winner
@@ -913,11 +910,11 @@ class WordX
             player_rating = winner.success_rate( opponents ) || 0
             if player_rating > highest_opponent_rating
                 highest_opponent_rating = player_rating
-                losing_participation = participation
+                loser = participation.player
             end
         end
         
-        return losing_participation
+        return loser
     end
     
     def correctGuess( nick, userhost, handle, channel, text )
@@ -974,9 +971,11 @@ class WordX
             case @battle.mode
                 when 'lms'
                     @battle.addWin( winner )
-                    losing_participation = highest_loser( winner )
-                    if losing_participation
-                        loser = losing_participation.player
+                    loser = winner.select_target( @game )
+                    if loser.nil?
+                        loser = highest_loser( winner )
+                    end
+                    if loser
                         protection = loser.protection
                         if protection
                             damage += protection.modifier
@@ -986,6 +985,8 @@ class WordX
                         end
                         put "#{winner.nick} strikes #{loser.nick} for #{damage} damage!"
                         @battle.injure( loser, damage )
+                    else
+                        put "?? #{winner.nick} swings at empty air??"
                     end
             end
             
@@ -1391,6 +1392,7 @@ class WordX
                 sendNotice "uneq[uip] <item code>", player.nick
                 sendNotice "r[emove] <item code>", player.nick
                 sendNotice "i[nventory]", player.nick
+                sendNotice "t[arget] <player> <priority>", player.nick
                 
             when /^i/
                 # Inventory listing
@@ -1432,8 +1434,33 @@ class WordX
                     end
                 end
                 
+            when /^t\S*$/
+                if player.targettings.empty?
+                    put "You have no targets setup."
+                else
+                    put(
+                        player.targettings.collect { |t| t.target.nick + ' ' + t.ordinal.to_s }.join( ', ' )
+                    )
+                end
+            when /^t\S*(?:\s+(\S+)\s+(-?\d+))+$/
+                command.scan( /(\S+)\s+(-?\d+)/ ) do |match|
+                    victim_nick = $1
+                    ordinal = $2.to_i
+                    victim = Player.find_by_nick( victim_nick )
+                    if victim
+                        targetting = player.targettings.find( :first, :conditions => [ 'target = ?', victim.id ] )
+                        if targetting
+                            targetting.update_attribute( :ordinal, ordinal )
+                        else
+                            targetting = player.targettings.create( :target => victim, :ordinal => ordinal )
+                        end
+                        put "#{player.nick} is now targetting #{victim_nick} with priority #{ordinal}."
+                    else
+                        put "No such player: '#{victim_nick}'"
+                    end
+                end
             else
-                put "Unknown command '#{command}'.  Try '#{SHORT_BANG_COMMAND} help' for help."
+                put "Unknown command '#{command}', or invalid syntax.  Try '#{SHORT_BANG_COMMAND} help' for help."
         end
     end
     
@@ -1499,14 +1526,7 @@ class WordX
             when /^msg\s+(.+)$/
                 sendMemo nick, $1
             when /^test(\s+\S+)+/
-                opponents = Array.new
-                command.scan( /\s+(\S+)/ ) do |s|
-                    player = Player.find_by_nick s
-                    if player
-                        opponents << player
-                    end
-                end
-                put Player.find_by_nick( nick ).point_adjustment( opponents )
+                put "bleh"
         end
     end
     
