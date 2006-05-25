@@ -282,12 +282,21 @@ class BattleManager
             put "#{nick}: You cannot leave what you have not joined."
         end
     end
+    
+    def lms_players
+        @battle.battle_mode == 'lms' ? @players : []
+    end
 
     def listPlayers( nick, userhost, handle, channel, text )
         str = "Players: "
         str << ( @players.collect { |p|
             "L#{p.level} " +
-            ( "%s (1:%.4f odds)" % [ p.nick, p.odds || 0.0 ] ) +
+            (
+                "%s (1:%.4f odds)" % [
+                    p.nick,
+                    p.odds( lms_players ) || 0.0
+                ]
+            ) +
             (
                 @player_teams[ p ] != p.nick ?
                 " (#{@player_teams[ p ]})" :
@@ -374,7 +383,7 @@ class BattleManager
         @players.each do |player|
             @initial_titles[ player ] = player.title
             @initial_money[ player ] = player.money
-            @initial_odds[ player ] = player.odds
+            @initial_odds[ player ] = player.odds( lms_players )
             @survivors << player
             @player_data[ player ][ :hp ] = player.max_hp
         end
@@ -576,7 +585,7 @@ class BattleManager
         if bettee.nil?
             put "There is no player by the name of '#{bettee_nick}'."
             return
-        elsif bettee.odds.nil?
+        elsif bettee.odds( lms_players ).nil?
             put "You cannot bet on new players."
             return
         end

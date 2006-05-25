@@ -120,6 +120,7 @@ class Player < ActiveRecord::Base
     MAX_POINT_ADJUSTMENT = 2.0
     MIN_POINT_ADJUSTMENT = 0.1
     MIN_SUCCESS_RATE_HISTORY = 4 # games
+    MIN_BATTLE_HISTORY = 2 # battles
     HP_PER_LEVEL = 5
     
     has_many :participations
@@ -431,16 +432,14 @@ class Player < ActiveRecord::Base
     end
     
     def lms_success_rate( opponents )
+        if not opponents.include? self
+            opponents << self
+        end
         battles = Battle.battles_involving( opponents )
-        if battles.empty?
+        if battles.empty? or battles.size < MIN_BATTLE_HISTORY
             return nil
         end
         won = battles_won & battles
-        $reby.log ">-------------"
-        $reby.log battles.collect { |b| b.id }.inspect
-        $reby.log battles_won.collect { |b| b.id }.inspect
-        $reby.log won.collect { |b| b.id }.inspect
-        $reby.log "<-------------"
         won.size.to_f / battles.size
     end
     
@@ -546,19 +545,24 @@ class Player < ActiveRecord::Base
         return Word.count( [ "suggester = ?", id ] )
     end
     
-    def odds
-        r = success_rate
-        if success_rate != nil
+    def odds( opponents = [] )
+        if opponents.empty?
+            r = success_rate( opponents )
+        else
+            r = lms_success_rate( opponents )
+        end
+        if r != nil
             return 2.0 - r.to_f
         else
             return nil
         end
     end
     
-    def odds_string( space = ' ' )
-        return nil if odds.nil?
+    def odds_string( space = ' ', opponents = [] )
+        the_odds = odds( opponents )
+        return nil if the_odds.nil?
         first_left = left = 1
-        first_right = right = odds
+        first_right = right = the_odds
         i = 2
         while left < 100 and ( right - right.to_i ).abs > 0.1
             left = first_left * i
@@ -690,7 +694,7 @@ class Protection < ActiveRecord::Base
     end
 end
 
-class GameSizeFrequency
+class GameSizeFrequency < ActiveRecord::Base
 end
 
 class Targetting < ActiveRecord::Base
