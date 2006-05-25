@@ -691,7 +691,7 @@ class WordX
             :host     => "localhost",
             :username => "word",
             :password => "word",
-            :database => "word_test"
+            :database => "word"
         )
     end
     
