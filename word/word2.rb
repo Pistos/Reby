@@ -411,7 +411,7 @@ class BattleManager
             final_money[ player ] = player.money
         end
         if @survivors.size > 1 and teams.size < @survivors.size
-            @results[ :winning_team ] = @player_teams[ @players[ 0 ] ]
+            @results[ :winning_team ] = @player_teams[ @survivors[ 0 ] ]
         end
         
         players.each do |player|
