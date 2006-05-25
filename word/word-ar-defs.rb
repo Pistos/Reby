@@ -529,8 +529,10 @@ class Player < ActiveRecord::Base
     end
     
     def opponents( game )
+        p = game.participations.find( :first, :conditions => [ 'player_id = ?', id ] )
+        player_team = p.team
         game.participations.collect { |p|
-            ( p.player_id != id ) ? Player.find( p.player_id ) : nil
+            ( p.player_id != id and p.team != player_team ) ? Player.find( p.player_id ) : nil
         }.compact
     end
     
@@ -544,6 +546,22 @@ class Player < ActiveRecord::Base
             end
         end
         return target
+    end
+    
+    def setup_target( victim_nick, ordinal )
+        victim = Player.find_by_nick( victim_nick )
+        if victim
+            targetting = targettings.find( :first, :conditions => [ 'target = ?', victim.id ] )
+            if targetting.nil?
+                targetting = targettings.find( :first, :conditions => [ 'ordinal = ?', ordinal ] )
+            end
+            if targetting
+                targetting.update_attributes( :target => victim, :ordinal => ordinal )
+            else
+                targetting = targettings.create( :target => victim, :ordinal => ordinal )
+            end
+        end
+        return( victim != nil )
     end
 end
 

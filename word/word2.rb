@@ -652,8 +652,8 @@ end
 class WordX
     attr_reader :battle
     
-    VERSION = '2.5.1'
-    LAST_MODIFIED = 'May 24, 2006'
+    VERSION = '2.5.2'
+    LAST_MODIFIED = 'May 25, 2006'
     
     DEFAULT_INITIAL_POINT_VALUE = 100
     INCLUDE_PLAYERS_WITH_NO_GAMES = true
@@ -691,7 +691,7 @@ class WordX
             :host     => "localhost",
             :username => "word",
             :password => "word",
-            :database => "word"
+            :database => "word_test"
         )
     end
     
@@ -1446,14 +1446,7 @@ class WordX
                 command.scan( /(\S+)\s+(-?\d+)/ ) do |match|
                     victim_nick = $1
                     ordinal = $2.to_i
-                    victim = Player.find_by_nick( victim_nick )
-                    if victim
-                        targetting = player.targettings.find( :first, :conditions => [ 'target = ?', victim.id ] )
-                        if targetting
-                            targetting.update_attribute( :ordinal, ordinal )
-                        else
-                            targetting = player.targettings.create( :target => victim, :ordinal => ordinal )
-                        end
+                    if player.setup_target( victim_nick, ordinal )
                         put "#{player.nick} is now targetting #{victim_nick} with priority #{ordinal}."
                     else
                         put "No such player: '#{victim_nick}'"
