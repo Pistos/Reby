@@ -14,6 +14,7 @@
 # !wordbattle
 # !wordscore [number of scores to list]
 # !wordrank[ing] [number of ranks to list]
+# !w help
 
 require 'word-ar-defs'
 require 'set'
@@ -26,7 +27,6 @@ def find_or_create_player( nick )
     end
     return player
 end
-
 
 class Array
     def rank_and_score( player )
@@ -1519,7 +1519,19 @@ class WordX
             when /^msg\s+(.+)$/
                 sendMemo nick, $1
             when /^test(\s+\S+)+/
-                put "bleh"
+                players = []
+                command.scan( /\s+(\S+)/ ) do |n|
+                    p = Player.find_by_nick( n[ 0 ] )
+                    if p
+                        players << p
+                    end                    
+                end
+                command.scan( /\s+(\S+)/ ) do |n|
+                    p = Player.find_by_nick( n[ 0 ] )
+                    if p
+                        put "#{p.nick} LMS success rate: #{p.lms_success_rate(players).inspect}"
+                    end
+                end
         end
     end
     

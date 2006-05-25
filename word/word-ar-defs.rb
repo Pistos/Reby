@@ -76,7 +76,40 @@ end
 class Battle < ActiveRecord::Base
     has_many :games
     belongs_to :starter, :foreign_key => 'starter', :class_name => 'Player'
+    
+    def Battle::battles_involving( players )
+        sql = <<-EOSQL
+            SELECT DISTINCT battles.*
+            FROM
+                battle_participants AS bp,
+                battles
+            WHERE
+                bp.battle_id = battles.id
+                AND (
+                    SELECT COUNT(*)
+                    FROM battle_participants AS bp2
+                    WHERE bp2.battle_id = bp.battle_id
+                ) = ?
+        EOSQL
+        
+        players.each do |p|
+            sql << <<-EOSQL
+                AND EXISTS (
+                    SELECT 1
+                    FROM battle_participants AS bp3
+                    WHERE
+                        bp3.battle_id = bp.battle_id
+                        AND bp3.player_id = ?
+                )
+            EOSQL
+        end
+        
+        sql_array = [ sql, players.size ] + players.collect { |p| p.id }
+        
+        Battle.find_by_sql( sql_array )
+    end
 end
+
 class Game < ActiveRecord::Base
     has_many :participations
     belongs_to :battle
@@ -390,6 +423,27 @@ class Player < ActiveRecord::Base
         return rate
     end
     
+    def battles_won
+        wins = BattleWinner.find( :all, :conditions => [ 'battle_winner = ?', id ] )
+        if wins
+            wins.collect { |w| w.battle }
+        end
+    end
+    
+    def lms_success_rate( opponents )
+        battles = Battle.battles_involving( opponents )
+        if battles.empty?
+            return nil
+        end
+        won = battles_won & battles
+        $reby.log ">-------------"
+        $reby.log battles.collect { |b| b.id }.inspect
+        $reby.log battles_won.collect { |b| b.id }.inspect
+        $reby.log won.collect { |b| b.id }.inspect
+        $reby.log "<-------------"
+        won.size.to_f / battles.size
+    end
+    
     def point_adjustment( opponents )
         sr = success_rate( opponents )
         
@@ -636,9 +690,16 @@ class Protection < ActiveRecord::Base
     end
 end
 
-class GameSizeFrequency < ActiveRecord::Base
+class GameSizeFrequency
 end
 
 class Targetting < ActiveRecord::Base
     belongs_to :target, :foreign_key => 'target', :class_name => 'Player'
+end
+
+class BattleWinner < ActiveRecord::Base
+    belongs_to :battle
+end
+
+class BattleParticipant < ActiveRecord::Base
 end
