@@ -123,6 +123,9 @@ class BattleManager
     def put( text, destination = @channel.name )
         $reby.putserv "PRIVMSG #{destination} :[b] #{text}"
     end
+    def putquick( text, destination = @channel.name )
+        $reby.putquick "PRIVMSG #{destination} :[b] #{text}"
+    end
     def sendNotice( text, destination = @channel.name )
         $reby.putserv "NOTICE #{destination} :#{text}"
     end
@@ -393,7 +396,7 @@ class BattleManager
     
     def eliminate( player )
         @survivors.delete( player )
-        put "#{player.nick} has been knocked out of contention!"
+        putquick "#{player.nick} has been knocked out of contention!"
     end
     
     def addWin( player )
@@ -663,8 +666,7 @@ class BattleManager
         if @player_data[ victim ][ :hp ] <= 0
             eliminate( victim )
         else
-            put( "HP: " + @survivors.collect { |s| "#{s.nick}: #{@player_data[ s ][ :hp ]}" }.join( '  ' ) )
-            #put "#{victim.nick} has #{@player_data[ victim ][ :hp ]} HP left."
+            putquick( "HP: " + @survivors.collect { |s| "#{s.nick}: #{@player_data[ s ][ :hp ]}" }.join( '  ' ) )
         end
     end
 end
@@ -962,7 +964,7 @@ class WordX
         
         @game.end_time = Time.now
         
-        put "#{winner.nick} got it ... #{@word.word}"
+        putquick "#{winner.nick} got it ... #{@word.word}"
         
         damage = ( @point_value.to_f / DEFAULT_INITIAL_POINT_VALUE * BASE_WEAPON_DAMAGE ).to_i
         armament = winner.armament
@@ -971,7 +973,7 @@ class WordX
         end
         
         if @given_away_by != nil
-            put "Since #{@given_away_by} gave the answer away, the award is reduced."
+            putquick "Since #{@given_away_by} gave the answer away, the award is reduced."
             @point_value = ( @point_value * GIVE_AWAY_REDUCTION ).to_i
         end
         
@@ -1003,7 +1005,7 @@ class WordX
                                 damage = 0
                             end
                         end
-                        put "#{winner.nick} strikes #{loser.nick} for #{damage} damage!"
+                        putquick "#{winner.nick} strikes #{loser.nick} for #{damage} damage!"
                         @battle.injure( loser, damage )
                     else
                         put "?? #{winner.nick} swings at empty air??"
@@ -1013,7 +1015,7 @@ class WordX
             winner_award = ( @point_value * @adjustment[ winner ] ).to_i
         end
 
-        put "... for #{winner_award} points."
+        putquick "... for #{winner_award} points."
         
         # Record score.
         
@@ -1036,7 +1038,7 @@ class WordX
     def nobodyGotIt
         @game.end_time = Time.now
         #put "No one solved it in time.  The word was #{@word.word}."
-        put "No one solved it in time.  " + UNSOLVED_MESSAGES[ rand( UNSOLVED_MESSAGES.length ) ]
+        putquick "No one solved it in time.  " + UNSOLVED_MESSAGES[ rand( UNSOLVED_MESSAGES.length ) ]
         $reby.unbind( "pub", "-", @word.word, "correctGuess", "$wordx" )
         endRound
     end
@@ -1100,23 +1102,23 @@ class WordX
     end
     def showClue1
         @point_value = (@initial_point_value * 0.95).to_i
-        put clue1
+        putquick clue1
     end
     def showClue2
         @point_value = (@initial_point_value * 0.90).to_i
-        put clue2
+        putquick clue2
     end
     def showClue3
         @point_value = (@initial_point_value * 0.85).to_i
-        put clue3
+        putquick clue3
     end
     def showClue4
         @point_value = (@initial_point_value * CLUE4_FRACTION).to_i
-        put clue4
+        putquick clue4
     end
     def showClue5
         @point_value = (@initial_point_value * CLUE5_FRACTION).to_i
-        put clue5
+        putquick clue5
     end
     def showClue6
         @point_value = (@initial_point_value * CLUE6_FRACTION).to_i
@@ -1124,7 +1126,7 @@ class WordX
     end
 
     def showDefinition
-        put clue6
+        putquick clue6
         @def_shown = true
     end
 
@@ -1242,7 +1244,7 @@ class WordX
         cost = ( @initial_point_value * ( 1.0 - fraction ) ).to_i
         if player.debit( cost )
             sendNotice( clue, player.nick )
-            put "#{player.nick} spent #{cost} #{CURRENCY}."
+            putquick "#{player.nick} spent #{cost} #{CURRENCY}."
         else
             put "#{player.nick}: You don't have the #{cost} #{CURRENCY} needed to buy that!"
         end
@@ -1279,7 +1281,7 @@ class WordX
     def initiateRegistrationCheck( player )
         if USE_NICKSERV
             @registered_players[ player ] = false
-            $reby.putserv "WHOIS #{player.nick}"
+            $reby.putquick "WHOIS #{player.nick}"
         else
             @registered_players[ player ] = true
             @registration_check_pending[ player ] = false
@@ -1377,7 +1379,6 @@ class WordX
                     end
                 end
                 if not players.empty?
-                    $stderr.puts players.inspect
                     success_rate = players[ 0 ].success_rate( players )
                     if success_rate
                         player_list = players[ 1..-1 ].collect { |p| p.nick }.join( ', ' )
