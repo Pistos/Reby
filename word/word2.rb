@@ -674,7 +674,7 @@ end
 class WordX
     attr_reader :battle
     
-    VERSION = '2.5.2'
+    VERSION = '2.5.3'
     LAST_MODIFIED = 'May 25, 2006'
     
     DEFAULT_INITIAL_POINT_VALUE = 100
@@ -1215,6 +1215,7 @@ class WordX
         cost = weapon.price
         if player.debit( cost )
             if player.armament
+                player.credit( ( player.armament.weapon.price.to_f * BUYBACK_FRACTION ).to_i )
                 player.armament.weapon = weapon
                 player.save
             else
@@ -1229,6 +1230,7 @@ class WordX
         cost = armour.price
         if player.debit( cost )
             if player.protection
+                player.credit( ( player.protection.armour.price.to_f * BUYBACK_FRACTION ).to_i )
                 player.protection.armour = armour
                 player.save
             else

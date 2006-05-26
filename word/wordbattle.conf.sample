@@ -14,4 +14,5 @@ class WordX
     MAX_WARMUP_POINTS = 2000
     
     BASE_WEAPON_DAMAGE = 10
+    BUYBACK_FRACTION = 0.5
 end
