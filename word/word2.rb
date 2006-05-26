@@ -439,67 +439,78 @@ class BattleManager
         
         # Determine battle victor
         
-        win_counts = Hash.new( 0 )
-        @battle.games.each do |game|
-            game.participations.each do |par|
-                if par.points_awarded != nil and par.points_awarded > 0
-                    win_counts[ par.player ] += 1
-                    break
-                end
-            end
-        end
-        winningest_players = Array.new
-        high_wins = 0
-        win_counts.each do |player, wins|
-            if wins > high_wins
-                high_wins = wins
-                winningest_players = [ player ]
-            elsif wins == high_wins
-                winningest_players << player
-            end
-        end
-        
-        @battle_victor = winningest_players[ 0 ]
-        if winningest_players.size > 1
-            # We must resolve the tie.
-            
-            winningest_players[ 1..-1 ].each do |player|
-                r = @results[ player ]
-                w = @results[ @battle_victor ]
-                
-                score_delta = r[ :final_score ] - r[ :initial_score ]
-                w_score_delta = w[ :final_score ] - w[ :initial_score ]
-                
-                if score_delta > w_score_delta
-                    # Tie broken by point gain.
-                    @battle_victor = player
-                elsif score_delta == w_score_delta
-                    if r[ :final_score ] > w[ :final_score ]
-                        # Tie broken by final score.
-                        @battle_victor = player
-                    elsif r[ :final_score ] == w[ :final_score ]
-                        if r[ :initial_score ] > w[ :initial_score ]
-                            # Tie broken by initial score.
-                            @battle_victor = player
-                        else
-                            # Tie broken by random chance?
-                            put "? Tie between #{player.nick} and #{@battle_victor.nick}?"
+        case @battle.battle_mode
+            when 'lms'
+                @battle_victors = @survivors
+            when 'rounds'
+                win_counts = Hash.new( 0 )
+                @battle.games.each do |game|
+                    game.participations.each do |par|
+                        if par.points_awarded != nil and par.points_awarded > 0
+                            win_counts[ par.player ] += 1
+                            break
                         end
                     end
                 end
-            end
+                winningest_players = Array.new
+                high_wins = 0
+                win_counts.each do |player, wins|
+                    if wins > high_wins
+                        high_wins = wins
+                        winningest_players = [ player ]
+                    elsif wins == high_wins
+                        winningest_players << player
+                    end
+                end
+                
+                @battle_victors = [ winningest_players[ 0 ] ]
+                if winningest_players.size > 1
+                    # We must resolve the tie.
+                    
+                    winningest_players[ 1..-1 ].each do |player|
+                        r = @results[ player ]
+                        w = @results[ @battle_victors[ 0 ] ]
+                        
+                        score_delta = r[ :final_score ] - r[ :initial_score ]
+                        w_score_delta = w[ :final_score ] - w[ :initial_score ]
+                        
+                        if score_delta > w_score_delta
+                            # Tie broken by point gain.
+                            @battle_victors = [ player ]
+                        elsif score_delta == w_score_delta
+                            if r[ :final_score ] > w[ :final_score ]
+                                # Tie broken by final score.
+                                @battle_victors = [ player ]
+                            elsif r[ :final_score ] == w[ :final_score ]
+                                if r[ :initial_score ] > w[ :initial_score ]
+                                    # Tie broken by initial score.
+                                    @battle_victors = [ player ]
+                                else
+                                    # Tie broken by random chance?
+                                    put "? Tie between #{player.nick} and #{@battle_victors[ 0 ].nick}?"
+                                end
+                            end
+                        end
+                    end
+                end
         end
 
         # Reward battle victor.
         
-        award = BATTLE_AWARD_PER_ROUND * @battle.games.length
-        @battle_victor.money += award
-        @battle_victor.save
-        @results[ @battle_victor ][ :final_money ] += award
+        total_award = BATTLE_AWARD_PER_ROUND * @battle.games.length
+        individual_award = ( total_award.to_f / @battle_victors.size ).to_i
+        @battle_victors.each do |bv|
+            bv.money += individual_award
+            bv.save
+            @results[ bv ][ :final_money ] += individual_award
+        end
     end
         
     def report
-        report_text = "Battle over.  #{@battle_victor.nick} is the battle victor!"
+        report_text = "Battle over."
+        if @battle_victors.size == 1
+            report_text << "  #{@battle_victors[ 0 ].nick} is the battle victor!"
+        end
         
         if @results[ :winning_team ]
             report_text << "  Team #{@results[ :winning_team ]} won!"
@@ -586,7 +597,7 @@ class BattleManager
             put "There is no player by the name of '#{bettee_nick}'."
             return
         elsif bettee.odds( lms_players ).nil?
-            put "You cannot bet on new players."
+            put "You cannot bet on players with no calculated odds."
             return
         end
         
@@ -629,8 +640,8 @@ class BattleManager
         @winnings = []
         @losings = []
         @bets.each do |bet|
-            if bet.bettee == @battle_victor
-                amount_won = ( bet.amount * @initial_odds[ @battle_victor ] ).to_i
+            if bet.bettee == @battle_victors[ 0 ]
+                amount_won = ( bet.amount * @initial_odds[ @battle_victors[ 0 ] ] ).to_i
                 @winnings << { :bet => bet, :amount => amount_won - bet.amount }
                 bet.bettor.credit( amount_won )
             else
