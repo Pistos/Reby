@@ -168,9 +168,9 @@ INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 6, 4, 'Butterkn
 INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 6, 5, 'Wooden Swordsman' );
 INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 6, 6, 'Rusty Swordsman' );
 INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 6, 7, 'Dull Swordsman' );
-INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 6, 8, 'Ronin' );
-INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 6, 9, 'Kenin' );
-INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 6, 10, 'Ashigaru' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 6, 8, 'Ashigaru' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 6, 9, 'Ronin' );
+INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 6, 10, 'Kenin' );
 INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 6, 11, 'Samurai' );
 INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 6, 12, 'Sohei' );
 INSERT INTO titles (title_set_id, title_level_id, text) VALUES ( 6, 13, 'Power Slicer' );
