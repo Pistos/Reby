@@ -281,6 +281,7 @@ class BattleManager
             end
         elsif @players.delete( player )
             put "#{nick} has withdrawn from the game."
+            clearBets
         else
             put "#{nick}: You cannot leave what you have not joined."
         end
@@ -335,8 +336,7 @@ class BattleManager
         doAbort
     end
     
-    def doAbort
-        unbindSetupBinds
+    def clearBets
         bettors = Set.new
         @bets.each do |bet|
             bettors << bet.bettor
@@ -344,6 +344,11 @@ class BattleManager
         bettors.each do |bettor|
             unbet( bettor.nick, nil, nil, nil, nil )
         end
+    end
+    
+    def doAbort
+        unbindSetupBinds
+        clearBets
         put "Game aborted."
         $wordx.abortBattle
     end
@@ -609,6 +614,9 @@ class BattleManager
             return
         end
         
+        # Remove any existing bet of this bettor on this bettee
+        @bets = @bets.reject { |b| b.bettor == bettor && b.bettee == bettee }
+        
         @bets << Bet.new( bettor, bettee, amount )
         
         put "#{bettor.nick} has bet #{amount} #{WordX::CURRENCY} on #{bettee.nick}."
@@ -658,7 +666,11 @@ class BattleManager
         @bets.each do |bet|
             bets << "#{bet.bettor.nick} #{bet.amount} on #{bet.bettee.nick}"
         end
-        put bets.join( '; ' )
+        if bets.empty?
+            put "No one has bet anything on anyone."
+        else
+            put bets.join( '; ' )
+        end
     end
     
     def injure( victim, damage )
@@ -675,7 +687,7 @@ class WordX
     attr_reader :battle
     
     VERSION = '2.5.3'
-    LAST_MODIFIED = 'May 25, 2006'
+    LAST_MODIFIED = 'May 29, 2006'
     
     DEFAULT_INITIAL_POINT_VALUE = 100
     INCLUDE_PLAYERS_WITH_NO_GAMES = true
@@ -753,7 +765,7 @@ class WordX
             @initial_point_value = ( @initial_point_value * ( @word.word.length.to_f / 6 ) ).to_i
         end
         @given_away_by = nil
-        @word_regexp = Regexp.new( @word.word.split( // ).join( ".*" ) )
+        @word_regexp = Regexp.new( @word.word.split( // ).join( ".{0,2}" ) )
         
         if @battle != nil
             @battle << @game
@@ -1353,7 +1365,7 @@ class WordX
                     end
                 else
                     put(
-                        "No such item '#{arg}' for sale.  Items: " + (
+                        "No such item '#{arg}' for sale.  #{STATS_SITE}/item/list  Items: " + (
                             (
                                 Item.find( :all ).collect { |item| item.code } +
                                 Weapon.find( :all ).collect { |weapon| weapon.code } +
