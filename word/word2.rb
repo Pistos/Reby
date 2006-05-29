@@ -1422,6 +1422,7 @@ class WordX
             when /^h/
                 # Help
                 
+                put "http://wiki.purepistos.net/doku.php?id=Reby:Scripts:word2.rb"
                 sendNotice "Commands:", player.nick
                 sendNotice "eq[uip] <item code>", player.nick
                 sendNotice "uneq[uip] <item code>", player.nick
