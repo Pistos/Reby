@@ -4,7 +4,7 @@
 #
 # Ruby-Eggdrop Bridge Yes-this-letter-has-no-meaning-in-the-acronym
 # :title: Reby
-# Version:: 0.7.4 (April 27, 2006)
+# Version:: 0.7.5 (August 13, 2006)
 #
 # Author:: Pistos (irc.freenode.net)
 # http://purepistos.net/eggdrop/reby
@@ -77,8 +77,8 @@ class Reby
         @LOOP_CHECK_MILESTONE = 10
         @REBY_PREFIX = "^\\[\\d+:\\d+\\] REBY"
 
-        @VERSION = "0.7.4"
-        @LAST_MODIFIED = "April 27, 2006"
+        @VERSION = "0.7.5"
+        @LAST_MODIFIED = "August 13, 2006"
         @GOD_IS_GOOD = true
 
         @registered_methods = Array.new
@@ -755,6 +755,17 @@ class Reby
 
     def myip
         return getReturnValue( evalTcl( "myip" ) )
+    end
+    
+    def newban( target, creator, comment = "Ban set at #{Time.now}", lifetime = nil, options = nil )
+        command = "newban #{target.toTclString} #{creator.toTclString} {#{comment}} "
+        if lifetime
+            command << " #{lifetime}"
+        end
+        if options
+            command << " #{options}"
+        end
+        sendTcl command
     end
 
     def nick2hand( nick, channel = "" )

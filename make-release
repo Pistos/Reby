@@ -1,0 +1,27 @@
+#!/usr/bin/env ruby
+if ARGV.length < 1
+    puts "#{$0} <version number>"
+end
+
+FILES = [
+    'rebysample.rb',
+    'reby.conf.sample',
+    'resetreby',
+    'killreby',
+    'reby.rb',
+]
+
+release = "reby-#{ARGV[0]}"
+
+Dir.chdir "#{ENV['HOME']}/src"
+puts `mkdir #{release}`
+Dir.chdir release
+
+FILES.each do |f|
+    puts `cp ~/svn/reby/#{f} .`
+end
+
+Dir.chdir '..'
+puts `tar cjvf #{release}.tar.bz2 #{release}`
+puts `tar czvf #{release}.tar.gz #{release}`
+puts `scp #{release}.* pistos@purepistos.net:~/www/eggdrop/reby`
