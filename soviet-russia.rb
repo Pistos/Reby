@@ -199,8 +199,8 @@ end
 class SovietRussia
     # Add bot names to this list, if you like.
     IGNORED = [ "", "*" ]
-    PARSER_BIN = '/home/geobot/src/link-4.1a/parse'
-    PARSER_DATA_DIR = '/home/geobot/src/link-4.1a/data'
+    PARSER_BIN = '/misc/src/link-4.1b/parse'
+    PARSER_DATA_DIR = '/misc/src/link-4.1b/data'
     WORD_COUNT_MINIMUM = 3
     MIN_SPACING = 5 * 60 # seconds
     

@@ -31,7 +31,7 @@ class RussianRoulette
         
         has_bullet = ( rand( 6 ) == 0 )
         if has_bullet
-            put "*BANG*"
+            put "*spin* ... *BANG*"
             if ALSO_BAN
                 $reby.newban(
                     nick,
@@ -42,7 +42,7 @@ class RussianRoulette
             end
             kick nick
         else
-            put "(click)"
+            put "*spin* ... -click-"
         end
     end
     
