@@ -59,12 +59,11 @@ class Constituent < Array
     end
     
     def in_soviet_russia
-        $reby.log to_s
         agent = nil
         verb_phrase = nil
         
         catch( :found ) do
-            each do |part|
+            each_with_index do |part,index|
                 case part
                     when Constituent
                         if part.kind == "VP"
@@ -73,22 +72,16 @@ class Constituent < Array
                                 agent = subpart
                                 verb_phrase = part[ 0 ]
                                 throw :found
-                            else
-                                $reby.log "#{subpart} is not a valid NP"
                             end
-                        else
-                            $reby.log "#{part} is not a VP, it is a #{part.kind}"
                         end
                         
                         # Not found in this VP.  Check children.
-                        $reby.log "Not found in (#{self}), checking kids"
                         agent, verb_phrase = part.in_soviet_russia
                         if agent and verb_phrase
                             throw :found
                         end
                 end
             end
-            $reby.log "Nothing found (#{self})"
         end
         
         if agent
@@ -103,12 +96,11 @@ class Constituent < Array
                     verb_phrase = habitual_form
                 end
             else
-                $reby.log "bf: '#{base_form}'\thf: '#{habitual_form}'"
                 verb_phrase = nil
             end
         end
         if not verb_phrase
-            $reby.log "No verb_phrase."
+            #
         elsif verb_phrase =~ /^(?:is|are|be|has|have)$/
             verb_phrase = nil
         end
@@ -135,7 +127,7 @@ class Constituent < Array
                         if i == 0
                             plural = pluralized
                         elsif pluralized
-                            $reby.log "plural, but index = #{i}"
+                            #$reby.log "plural, but index = #{i}"
                         end
                 end
             end
@@ -151,11 +143,9 @@ class String
         if /^(?:an?|some|several|many|one) (.+)$/i =~ retval
             retval = $1.strip.pluralize
             plural = true
-            $reby.log "#{self} plural"
         else
             if retval.pluralize == retval
                 plural = true
-                $reby.log "#{self} plural2"
             end
         end
         [ retval, plural ]
@@ -168,20 +158,15 @@ class String
         begin
             open( "http://dictionary.reference.com/search?q=#{self_}" ) do |http|
                 text = http.read
-                if />(?:\d+ entries|1 entry) found for <i>#{self_}<\/i>.+?(<TABLE>.+?<\/TABLE>)/m =~ text
-                    text2 = $1
-                    if /<TABLE><TR><TD><b>(.+?)<\/b>/m =~ text2
-                        base_form = $1.gsub( '&#183;', '' )
-                    else
-                        $reby.log "No base form found in '#{text2}'"
+                if /(?:\d+ results|1 result) for: <em>#{self_}<\/em>.+?American Heritage Dictionary.+?<TABLE><TR><TD><b>(.+?)<\/b>.+?<B> *(\S+) *<\/B><br \/>/m =~ text
+                    base_form = $1
+                    habitual_form = $2
+                    if not base_form.nil?
+                        base_form.gsub!( '&#183;', '' )
                     end
-                    if /<B>([^<>]+?) <\/B><(?:BR|OL)>/m =~ text2
-                        habitual_form = $1.gsub( '&#183;', '' )
-                    else
-                        $reby.log "No habitual form found in\n**********\n#{text2}\n**********"
+                    if not habitual_form.nil?
+                        habitual_form.gsub!( '&#183;', '' )
                     end
-                else
-                    $reby.log "No entries found."
                 end
             end
         rescue Exception => e

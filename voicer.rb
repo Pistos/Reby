@@ -92,11 +92,11 @@ class Voicer
     end
     
     def heardSpeech( nick, userhost, handle, channel, args )
-        if channel == CHANNEL
+        #if channel == CHANNEL
             processActivity( nick, channel )
-        else
+        #else
             #$reby.log "Voicer: #{channel} != #{CHANNEL}"
-        end
+        #end
     end
     
     def sawPRIVMSG( from, keyword, text )
@@ -105,11 +105,11 @@ class Voicer
         if delimiter_index != nil
             nick = from[ 0...delimiter_index ]
             channel, speech = text.split( " :", 2 )
-            if channel == CHANNEL
+            #if channel == CHANNEL
                 processActivity( nick, channel )
-            elsif not $reby.isbotnick( channel )
-                $reby.log "Bad channel: '#{channel}' (#{channel.class}) !~ '#{CHANNEL}'"
-            end
+            #elsif not $reby.isbotnick( channel )
+                #$reby.log "Bad channel: '#{channel}' (#{channel.class}) !~ '#{CHANNEL}'"
+            #end
         else
             $reby.log "[voicer] No nick?  '#{from}' (#{from.index( '!' )})"
         end
