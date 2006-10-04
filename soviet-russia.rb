@@ -68,7 +68,14 @@ class Constituent < Array
                     when Constituent
                         if part.kind == "VP"
                             subpart = part[ 1 ]
-                            if subpart and subpart.class == Constituent and subpart.kind == "NP" and /^(?:i|you|we|me|they|them|it|he|she|him|her|us|this|that|those|these|\w*self)$/i !~ subpart.text.strip
+                            subpart_text = subpart.text.strip
+                            if(
+                                subpart and
+                                subpart.class == Constituent and
+                                subpart.kind == "NP" and
+                                /^(?:you|we|us|i|me|they|them|it|he|she|him|her|this|that|those|these|\w*self|mathetes)\b/i !~ subpart_text and
+                                subpart_text.length < SovietRussia::MAX_NP_LENGTH
+                            )
                                 agent = subpart
                                 verb_phrase = part[ 0 ]
                                 throw :found
@@ -101,7 +108,7 @@ class Constituent < Array
         end
         if not verb_phrase
             #
-        elsif verb_phrase =~ /^(?:is|are|be|has|have)$/
+        elsif verb_phrase =~ /^(?:is|was|are|were|be|has|have|mines|.)$/ or verb_phrase =~ /-/
             verb_phrase = nil
         end
         return [ agent, verb_phrase ]
@@ -140,7 +147,7 @@ class String
     def noun_adjust
         retval = self.strip
         plural = false
-        if /^(?:an?|some|several|many|one) (.+)$/i =~ retval
+        if /^(?:an?|some|several|many|one|my|your|their|his|her|our) (.+)$/i =~ retval
             retval = $1.strip.pluralize
             plural = true
         else
@@ -188,6 +195,7 @@ class SovietRussia
     PARSER_DATA_DIR = '/misc/src/link-4.1b/data'
     WORD_COUNT_MINIMUM = 3
     MIN_SPACING = 5 * 60 # seconds
+    MAX_NP_LENGTH = 40
     
     def initialize
         $reby.bind( "raw", "-", "PRIVMSG", "sawPRIVMSG", "$sovietrussia" )
@@ -219,7 +227,7 @@ class SovietRussia
             )
                 if not IGNORED.include?( nick ) and @auto[ channel ]
                     speech.gsub!( /[\\{}()]/, '' )
-                    if speech =~ /^\w/
+                    if speech =~ /^\w/ and speech !~ /^mathetes/i
                         if speech.split.length >= WORD_COUNT_MINIMUM
                             process( speech, channel, nick )
                         end
