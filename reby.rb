@@ -294,7 +294,7 @@ class Reby
     # Sends raw Tcl code to the eggdrop for evaluation.
     # Ignores any return value.
     def sendTcl( tcl_code )
-        log "sendTcl: #{tcl_code}"
+        #log "sendTcl: #{tcl_code}"
         tcl_code_stripped = tcl_code.gsub( /\n/, "" )
         @con.puts ".tcl #{tcl_code_stripped}"
     end
@@ -456,7 +456,7 @@ class Reby
             begin
                 while $reby_signal == nil
                     line = @con.readline
-                    log line if line =~ /^Tcl|REBY/
+                    #log line if line =~ /^Tcl|REBY/
                     case line
                         when /#{@REBY_PREFIX} call (\S+) (\S+) (.+)/
                             instance = $1
@@ -471,7 +471,7 @@ class Reby
                             full_method_name = getFullMethodName( instance, method_name )
                             if @registered_methods.include?( full_method_name )
                                 ruby_code = "#{full_method_name}(#{ arglist.join( ',' ) })"
-                                log "Reby call: #{ruby_code}"
+                                #log "Reby call: #{ruby_code}"
                                 Thread.new( ruby_code ) do |code_to_evaluate|
                                     code_to_evaluate = 
                                         "begin\n" +
@@ -493,7 +493,7 @@ class Reby
                         when /#{@REBY_PREFIX} return (\d+) (.+)/
                             return_id = $1.to_i
                             retval = $2
-                            log "Reby return (#{return_id}): #{retval}"
+                            #log "Reby return (#{return_id}): #{retval}"
                             @return_values[ return_id ] = retval.strip
                         when /#{@REBY_PREFIX}/
                             log "*** UNKNOWN REBY MESSAGE ***"
