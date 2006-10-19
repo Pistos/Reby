@@ -16,7 +16,7 @@ class RussianRoulette
         "That's gotta hurt...",
     ]
     ALSO_BAN = true
-    BAN_TIME = 2 # minutes
+    BAN_TIME = 1 # minutes
     
     def initialize
         $reby.bind( "pub", "-", "!roulette", "pullTrigger", "$roulette" )
@@ -29,14 +29,15 @@ class RussianRoulette
     def pullTrigger( nick, userhost, handle, channel, args )
         @channel = channel
         
+        put '*spin* ...'
+        sleep 2
         has_bullet = ( rand( 6 ) == 0 )
         if has_bullet
-            put "*spin* ... *BANG*"
             if ALSO_BAN
                 $reby.newban(
                     nick,
                     "RussianRoulette",
-                    "Russian Roulette; until #{Time.now + BAN_TIME * 60}",
+                    "Russian Roulette; for #{BAN_TIME} minute(s).",
                     BAN_TIME
                 )
             end
@@ -50,7 +51,7 @@ class RussianRoulette
         $reby.putkick(
             @channel,
             [ victim ],
-            '{' + 
+            '{ *BANG* ' + 
                 REASONS[ rand( REASONS.size ) ] +
             '}'
         )
