@@ -68,13 +68,12 @@ class Constituent < Array
                     when Constituent
                         if part.kind == "VP"
                             subpart = part[ 1 ]
-                            subpart_text = subpart.text.strip
                             if(
                                 subpart and
                                 subpart.class == Constituent and
                                 subpart.kind == "NP" and
-                                /^(?:you|we|us|i|me|they|them|it|he|she|him|her|this|that|those|these|\w*self|mathetes)\b/i !~ subpart_text and
-                                subpart_text.length < SovietRussia::MAX_NP_LENGTH
+                                /^(?:you|we|us|i|me|they|them|it|he|she|him|her|this|that|those|these|\w*self|mathetes)\b/i !~ subpart.text.strip and
+                                subpart.text.strip.length < SovietRussia::MAX_NP_LENGTH
                             )
                                 agent = subpart
                                 verb_phrase = part[ 0 ]
