@@ -608,7 +608,7 @@ class Reby
                     end
                 end
             when :msg
-                bind_specs, line_args = bind_for( :pub_binds, line )
+                bind_specs, line_args = bind_for( :msg_binds, line )
                 if bind_specs
                     obj = eval( bind_specs[ :object_name ] )
                     if obj
