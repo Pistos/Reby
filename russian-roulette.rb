@@ -30,7 +30,7 @@ class RussianRoulette
         @channel = channel
         
         put '*spin* ...'
-        sleep 2
+        sleep 4
         has_bullet = ( rand( 6 ) == 0 )
         if has_bullet
             if ALSO_BAN
@@ -43,7 +43,7 @@ class RussianRoulette
             end
             kick nick
         else
-            put "*spin* ... -click-"
+            put "-click-"
         end
     end
     
