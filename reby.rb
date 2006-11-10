@@ -4,7 +4,7 @@
 #
 # Ruby-Eggdrop Bridge Yes-this-letter-has-no-meaning-in-the-acronym
 # :title: Reby
-# Version:: 0.7.5 (August 13, 2006)
+# Version:: 0.7.5 (November 10, 2006)
 #
 # Author:: Pistos (irc.freenode.net)
 # http://purepistos.net/eggdrop/reby
@@ -62,7 +62,7 @@ require "thread"
 # Any commands not defined here can be called by using #evalTcl,
 # or even #sendTcl.
 class Reby
-    def initialize
+    def initialize( console_mode = false )
         # These values are just defaults.  Specify them in reby.conf.
         @host = "localhost"
         @port = 6086
@@ -70,6 +70,17 @@ class Reby
         @password = nil
         @log_timestamp_format = "%Y-%m-%d %H:%M:%S"
         @logfile = $stdout
+        @debug_channel = '#mathetes'
+        @console_mode = console_mode
+        
+        if @console_mode
+            puts "Running in console mode."
+            @console = {
+                :pub_binds => Hash.new,
+                :msg_binds => Hash.new,
+                :nick => 'Pistos',
+            }
+        end
 
         # Most users won't need to change anything under here.
         # Change these if you think you know what you're doing.
@@ -78,7 +89,7 @@ class Reby
         @REBY_PREFIX = "^\\[\\d+:\\d+\\] REBY"
 
         @VERSION = "0.7.5"
-        @LAST_MODIFIED = "August 13, 2006"
+        @LAST_MODIFIED = "November 10, 2006"
         @GOD_IS_GOOD = true
 
         @registered_methods = Array.new
@@ -111,7 +122,7 @@ class Reby
                         begin
                             load( fn )
                         rescue Exception => e
-                            putserv "PRIVMSG #mathetes: Eep!  A critical Reby error!"
+                            putserv "PRIVMSG #{@debug_channel}: Eep!  A critical Reby error!"
                             log "Reby error: " + e.message
                             log e.backtrace.join( "\n" )
                         end
@@ -138,7 +149,7 @@ class Reby
 
     # Connects to the eggdrop via telnet and logs in if not already connected.
     def connect
-        if @con == nil
+        if @con == nil and not @console_mode
             log "Connecting to eggdrop"
             @con = Net::Telnet::new(
                 {
@@ -294,9 +305,11 @@ class Reby
     # Sends raw Tcl code to the eggdrop for evaluation.
     # Ignores any return value.
     def sendTcl( tcl_code )
-        #log "sendTcl: #{tcl_code}"
-        tcl_code_stripped = tcl_code.gsub( /\n/, "" )
-        @con.puts ".tcl #{tcl_code_stripped}"
+        if not @console_mode
+            #log "sendTcl: #{tcl_code}"
+            tcl_code_stripped = tcl_code.gsub( /\n/, "" )
+            @con.puts ".tcl #{tcl_code_stripped}"
+        end
     end
 
     # Evaluate raw Tcl code.
@@ -317,6 +330,8 @@ class Reby
     # The return value is always of type String; use the Reby.get___ReturnValue
     # methods to get the return value in other forms.
     def getReturnValue( return_id )
+        return nil if @console_mode
+        
         num_loops = 0
         printed_stack = false
         while @return_values[ return_id ] == nil
@@ -380,8 +395,13 @@ class Reby
     # Writes a line of text to Reby's log file, which defaults to $stdout,
     # or can be specified in reby.conf.
     def log( text )
-        @logfile.puts "#{Time.new.strftime( @log_timestamp_format )} #{text}"
-        @logfile.flush
+        message = "#{Time.new.strftime( @log_timestamp_format )} #{text}"
+        if not @console_mode
+            @logfile.puts message
+            @logfile.flush
+        else
+            puts message
+        end
     end
 
     # Don't put $ at the beginning of tcl_varname.
@@ -448,9 +468,17 @@ class Reby
         f.puts Process.pid
         f.close
 
-        bind( "notc", "-", "*ickname*", "nicknameNotice", "$reby" )
-
         log "Reby #{@VERSION} (#{@LAST_MODIFIED}) started."
+        
+        if not @console_mode
+            normal_start
+        else
+            console_start
+        end
+    end
+        
+    def normal_start
+        bind( "notc", "-", "*ickname*", "nicknameNotice", "$reby" )
         
         while $reby_signal == nil
             begin
@@ -479,7 +507,7 @@ class Reby
                                         <<-EOS
                                         
                                             rescue Exception => e
-                                                putserv "PRIVMSG #mathetes :Eep!  A critical Reby error!"
+                                                putserv "PRIVMSG #{@debug_channel} :Eep!  A critical Reby error!"
                                                 log "Reby error: " + e.message
                                                 log e.backtrace.join( "\n" )
                                             end
@@ -511,9 +539,105 @@ class Reby
         logout
     end
     
+    def console_start
+        loop do
+            prompt = 'reby>'
+            case @console[ :target ]
+                when :pub
+                    prompt = "pub #{@console[ :channel ]} <#{@console[ :nick ]}>"
+                when :msg
+                    prompt = "msg <#{@console[ :nick ]}>"
+            end
+            $stdout.print "#{prompt} "; $stdout.flush
+            line = $stdin.gets
+            break if line.nil?
+            line.strip!
+            case line
+                when %r{^/(.+)}
+                    process_console_command $1
+                else
+                    process_console_line line
+            end
+        end
+    end
+    
     def cleanup
         @script_threads.each do |thread|
             thread.exit
+        end
+    end
+    
+    def process_console_command( command )
+        case command
+            when /^(pub|msg)(.*)/
+                @console[ :target ] = $1.to_sym
+                rest = $2
+                if rest
+                    @console[ :channel ] = rest.strip
+                end
+            when /^reby$/
+                @console[ :target ] = nil
+        end
+    end
+    
+    def bind_for( bindset, line )
+        /^(\S+)(?:\s+(.*))?$/ =~ line
+        line_command = $1
+        line_args = $2
+        trigger, bind_specs = @console[ bindset ].find { |k,v|
+            k == line_command
+        }
+        [ bind_specs, line_args ]
+    end
+    
+    def process_console_line( line )
+        case @console[ :target ]
+            when :pub
+                bind_specs, line_args = bind_for( :pub_binds, line )
+                if bind_specs
+                    obj = eval( bind_specs[ :object_name ] )
+                    if obj
+                        bind_args = [
+                            @console[ :nick ],
+                            'bleh@blue.com',
+                            nil,
+                            @console[ :channel ],
+                            line_args
+                        ]
+                        obj.send( bind_specs[ :method ], *bind_args )
+                    end
+                end
+            when :msg
+                bind_specs, line_args = bind_for( :pub_binds, line )
+                if bind_specs
+                    obj = eval( bind_specs[ :object_name ] )
+                    if obj
+                        bind_args = [
+                            @console[ :nick ],
+                            'bleh@blue.com',
+                            nil,
+                            line_args
+                        ]
+                        obj.send( bind_specs[ :method ], *bind_args )
+                    end
+                end
+            else
+                # Evaluate as Reby (Ruby) code.
+                Thread.new( line ) do |code_to_evaluate|
+                    code_to_evaluate = 
+                        "begin\n" +
+                            code_to_evaluate +
+                        <<-EOS
+                        
+                            rescue Exception => e
+                                $stderr.puts "Eep!  A critical Reby error!"
+                                log "Reby error: " + e.message
+                                log e.backtrace.join( "\n" )
+                            end
+                        EOS
+                            
+                    eval code_to_evaluate
+                end
         end
     end
 
@@ -535,17 +659,33 @@ class Reby
                     "rebyCall {#{instance}} #{method_name} [list $nick $userhost $handle $channel] " +
                     "}"
             when "msg", "msgm"
-                sendTcl "proc #{tcl_proc_name} {nick userhost handle text} { " +
-                    "rebyCall {#{instance}} #{method_name} [list $nick $userhost $handle [subst -nobackslashes -nocommands -novariables $text]] " +
-                    "}"
+                if not @console_mode
+                    sendTcl "proc #{tcl_proc_name} {nick userhost handle text} { " +
+                        "rebyCall {#{instance}} #{method_name} [list $nick $userhost $handle [subst -nobackslashes -nocommands -novariables $text]] " +
+                        "}"
+                else
+                    bind_spec = {
+                        :object_name => instance,
+                        :method => method_name.to_sym,
+                    }
+                    @console[ :msg_binds ][ command_or_mask ] = bind_spec
+                end
             when "part"
                 sendTcl "proc #{tcl_proc_name} {nick userhost handle channel {msg ""}} { " +
                     "rebyCall {#{instance}} #{method_name} [list $nick $userhost $handle $channel [subst -nobackslashes -nocommands -novariables $msg]] " +
                     "}"
             when "pub","pubm"
-                sendTcl "proc #{tcl_proc_name} {nick userhost handle channel text} { " +
-                    "rebyCall {#{instance}} #{method_name} [list $nick $userhost $handle $channel [subst -nobackslashes -nocommands -novariables $text]] " +
-                    "}"
+                if not @console_mode
+                    sendTcl "proc #{tcl_proc_name} {nick userhost handle channel text} { " +
+                        "rebyCall {#{instance}} #{method_name} [list $nick $userhost $handle $channel [subst -nobackslashes -nocommands -novariables $text]] " +
+                        "}"
+                else
+                    bind_spec = {
+                        :object_name => instance,
+                        :method => method_name.to_sym,
+                    }
+                    @console[ :pub_binds ][ command_or_mask ] = bind_spec
+                end
             when "notc"
                 sendTcl "proc #{tcl_proc_name} {nick userhost handle text {dest ""}} { " +
                     "rebyCall {#{instance}} #{method_name} [list $nick $userhost $handle [subst -nobackslashes -nocommands -novariables $text] $dest] " +
@@ -789,7 +929,12 @@ class Reby
     end
 
     def doPut( type, text, options = "" )
-        sendTcl "#{type} {#{ text }} #{options}"
+        message = "#{type} {#{ text }} #{options}"
+        if not @console_mode
+            sendTcl message
+        else
+            puts message
+        end
     end
     protected :doPut
 
@@ -1001,10 +1146,15 @@ $reby = nil
 begin
     loop do
         $reby_signal = nil
-        $reby = Reby.new
-        $reby.loadConfiguration( ARGV[ 0 ] || "reby.conf" )
+        args = ARGV.dup
+        console_mode = false
+        if args.delete( '--console' )
+            console_mode = true
+        end
+        $reby = Reby.new( console_mode )
+        $reby.loadConfiguration( args[ 0 ] || "reby.conf" )
         $reby.start
-        break if $reby_signal == "SIGTERM"
+        break if $reby_signal == "SIGTERM" or console_mode
         $reby.log "*** Restarting ***"
         $reby.cleanup
     end
