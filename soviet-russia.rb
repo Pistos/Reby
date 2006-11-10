@@ -193,7 +193,7 @@ class SovietRussia
     PARSER_BIN = '/misc/src/link-4.1b/parse'
     PARSER_DATA_DIR = '/misc/src/link-4.1b/data'
     WORD_COUNT_MINIMUM = 3
-    MIN_SPACING = 5 * 60 # seconds
+    MIN_SPACING = 30 * 60 # seconds
     MAX_NP_LENGTH = 40
     
     def initialize
