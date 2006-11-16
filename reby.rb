@@ -62,7 +62,7 @@ require "thread"
 # Any commands not defined here can be called by using #evalTcl,
 # or even #sendTcl.
 class Reby
-    def initialize( console_mode = false )
+    def initialize( config_file, console_mode = false, console_command_file = nil )
         # These values are just defaults.  Specify them in reby.conf.
         @host = "localhost"
         @port = 6086
@@ -70,6 +70,7 @@ class Reby
         @password = nil
         @log_timestamp_format = "%Y-%m-%d %H:%M:%S"
         @logfile = $stdout
+        @config_file = config_file
         @debug_channel = '#mathetes'
         @console_mode = console_mode
         
@@ -79,7 +80,11 @@ class Reby
                 :pub_binds => Hash.new,
                 :msg_binds => Hash.new,
                 :nick => 'Pistos',
+                :queued_commands => Array.new
             }
+            if console_command_file
+                load_console_commands console_command_file
+            end
         end
 
         # Most users won't need to change anything under here.
@@ -101,16 +106,16 @@ class Reby
         @con = nil
     end
 
-    def loadConfiguration( config_file )
-        log "Loading configuration from #{config_file}"
-        permissions = File.stat( config_file ).mode
+    def loadConfiguration
+        log "Loading configuration from #{@config_file}"
+        permissions = File.stat( @config_file ).mode
         if ( permissions & 040 ) == 1
-            log "Warning: #{config_file} is group readable! (#{'%o' % permissions})"
+            log "Warning: #{@config_file} is group readable! (#{'%o' % permissions})"
         end
         if ( permissions & 04 ) == 1
-            log "Warning: #{config_file} is world readable! (#{'%o' % permissions})"
+            log "Warning: #{@config_file} is world readable! (#{'%o' % permissions})"
         end
-        IO.readlines( config_file ).each do |line|
+        IO.readlines( @config_file ).each do |line|
             case line
                 when /^host (.+)$/
                     @host = $1
@@ -539,6 +544,16 @@ class Reby
         logout
     end
     
+    def load_console_commands( file )
+        return if not @console
+        
+        File.open( file ) do |f|
+            f.each_line do |line|
+                @console[ :queued_commands ] << line
+            end
+        end
+    end
+    
     def console_start
         loop do
             prompt = 'reby>'
@@ -549,7 +564,12 @@ class Reby
                     prompt = "msg <#{@console[ :nick ]}>"
             end
             $stdout.print "#{prompt} "; $stdout.flush
-            line = $stdin.gets
+            if @console[ :queued_commands ].empty?
+                line = $stdin.gets
+            else
+                line = @console[ :queued_commands ].shift.strip
+                puts line
+            end
             break if line.nil?
             line.strip!
             case line
@@ -593,18 +613,20 @@ class Reby
     def process_console_line( line )
         case @console[ :target ]
             when :pub
-                bind_specs, line_args = bind_for( :pub_binds, line )
-                if bind_specs
-                    obj = eval( bind_specs[ :object_name ] )
-                    if obj
-                        bind_args = [
-                            @console[ :nick ],
-                            'bleh@blue.com',
-                            nil,
-                            @console[ :channel ],
-                            line_args
-                        ]
-                        obj.send( bind_specs[ :method ], *bind_args )
+                Thread.new do
+                    bind_specs, line_args = bind_for( :pub_binds, line )
+                    if bind_specs
+                        obj = eval( bind_specs[ :object_name ] )
+                        if obj
+                            bind_args = [
+                                @console[ :nick ],
+                                'bleh@blue.com',
+                                nil,
+                                @console[ :channel ],
+                                line_args
+                            ]
+                            obj.send( bind_specs[ :method ], *bind_args )
+                        end
                     end
                 end
             when :msg
@@ -1148,11 +1170,24 @@ begin
         $reby_signal = nil
         args = ARGV.dup
         console_mode = false
-        if args.delete( '--console' )
-            console_mode = true
+        conf_file = 'reby.conf'
+        console_command_file = nil
+        
+        while args.length > 0
+            arg = args.shift
+            case arg
+                when '--console'
+                    console_mode = true
+                when
+                    '--console-commands'
+                    console_command_file = args.shift
+                else
+                    conf_file = arg
+            end
         end
-        $reby = Reby.new( console_mode )
-        $reby.loadConfiguration( args[ 0 ] || "reby.conf" )
+        
+        $reby = Reby.new( conf_file, console_mode, console_command_file )
+        $reby.loadConfiguration
         $reby.start
         break if $reby_signal == "SIGTERM" or console_mode
         $reby.log "*** Restarting ***"
