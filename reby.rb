@@ -625,22 +625,30 @@ class Reby
                                 @console[ :channel ],
                                 line_args
                             ]
-                            obj.send( bind_specs[ :method ], *bind_args )
+                            begin
+                                obj.send( bind_specs[ :method ], *bind_args )
+                            rescue Exception => e
+                                $stderr.puts "Eep!  A critical Reby error!"
+                                log "Reby error: " + e.message
+                                log e.backtrace.join( "\n" )
+                            end
                         end
                     end
                 end
             when :msg
-                bind_specs, line_args = bind_for( :msg_binds, line )
-                if bind_specs
-                    obj = eval( bind_specs[ :object_name ] )
-                    if obj
-                        bind_args = [
-                            @console[ :nick ],
-                            'bleh@blue.com',
-                            nil,
-                            line_args
-                        ]
-                        obj.send( bind_specs[ :method ], *bind_args )
+                Thread.new do
+                    bind_specs, line_args = bind_for( :msg_binds, line )
+                    if bind_specs
+                        obj = eval( bind_specs[ :object_name ] )
+                        if obj
+                            bind_args = [
+                                @console[ :nick ],
+                                'bleh@blue.com',
+                                nil,
+                                line_args
+                            ]
+                            obj.send( bind_specs[ :method ], *bind_args )
+                        end
                     end
                 end
             else

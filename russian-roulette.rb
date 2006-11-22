@@ -1,4 +1,4 @@
-# kicker.rb
+# russian-roulette.rb
 
 # Kicks people based on public PRIVMSG regexps.
 
