@@ -68,7 +68,6 @@ class Voicer
                     who = speaker
                     if who != ""
                         takeVoice( who )
-                        $reby.log "devoiced after #{now - time} seconds."
                     end
                     devoiced.push speaker
                 end
