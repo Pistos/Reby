@@ -311,7 +311,7 @@ class Reby
     # Ignores any return value.
     def sendTcl( tcl_code )
         if not @console_mode
-            #log "sendTcl: #{tcl_code}"
+            log "sendTcl: #{tcl_code}"
             tcl_code_stripped = tcl_code.gsub( /\n/, "" )
             @con.puts ".tcl #{tcl_code_stripped}"
         end
@@ -1203,7 +1203,12 @@ begin
     end
     $reby.log "*** Terminating ***"
 rescue Exception => e
-    $reby.log( "Reby error: " + e.message )
-    $reby.log( e.backtrace.join( "\n" ) )
+    if $reby
+        $reby.log( "Reby error: " + e.message )
+        $reby.log( e.backtrace.join( "\n" ) )
+    else
+        $stderr.puts( "Reby error: " + e.message )
+        $stderr.puts( e.backtrace.join( "\n" ) )
+    end
     raise
 end
