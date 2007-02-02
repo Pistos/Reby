@@ -9,8 +9,8 @@
 # (http://purepistos.net/eggdrop/reby).
 
 class RockPaperScissors25
-    ADMIN = 'Pistos'
-    CHANNEL = '#mathetes'
+    ADMIN = 'nvidhive'
+    CHANNEL = '#wordbattle'
     
     CHOICES = [
         'Gun',
