@@ -164,7 +164,7 @@ class WebSearch
                     File.open( "websearch.last", "w" ) { |f| f.puts text }
                     
                     counter = 0
-                    text.scan /<div class=g><h2 class=r><a class=l href="?([^>"]+).*?>(.+?)<\/a>/m do |match|
+                    text.scan /<div class=g><h2 class=r><a href="?([^"]+)" class=l.*?>(.+?)<\/a>/m do |match|
                         url, title = match
                         title.gsub!( /<.+?>/, "" )
                         $reby.putserv "PRIVMSG #{channel} :[#{unescaped_arg}]: #{url} - #{title}"
