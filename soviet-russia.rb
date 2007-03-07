@@ -167,13 +167,15 @@ class String
         begin
             open( "http://dictionary.reference.com/search?q=#{self_}" ) do |http|
                 text = http.read
-                if %r{.+American Heritage Dictionary.+?<table><tbody><tr><td><b>(.+?)</b>.+?<b>([^<]+)</b>\s*<br /}m =~ text
+                if %r{.+American Heritage Dictionary<.+?<table><tbody><tr><td><b>(.+?)</b>.+?<b>([^<]+)</b>\s*<br /}m =~ text
                     base_form = $1
                     habitual_form = $2
                     if not base_form.nil?
+                        base_form = base_form[ /^(.+?)(<|$)/, 1 ]
                         base_form.gsub!( '&#183;', '' )
                     end
                     if not habitual_form.nil?
+                        habitual_form = habitual_form[ /^(.+?)(<|$)/, 1 ]
                         habitual_form.gsub!( '&#183;', '' )
                     end
                 end
@@ -262,6 +264,7 @@ class SovietRussiaReby
             '#rendergods' => false,
             '#wordbattle' => true,
             '#chat-bots' => true,
+            '#ramaze' => true,
         }
         @last_time = @auto.dup
         @last_time.each_key do |k|
