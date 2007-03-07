@@ -1,11 +1,14 @@
+#!/usr/bin/env ruby
+#
 # sovietrussia.rb 
 
 # A Reby script which makes the bot spit out Soviet Russia jokes based on in-channel chat.
 
 # By Pistos - irc.freenode.net#mathetes
 
-# This is not a standalone Ruby script; it is meant to be run from Reby
+# This is script is meant to be run from Reby
 # (http://purepistos.net/eggdrop/reby).
+# But it can be run from the command line, as well.
 
 begin
     require 'active_support'
@@ -164,7 +167,7 @@ class String
         begin
             open( "http://dictionary.reference.com/search?q=#{self_}" ) do |http|
                 text = http.read
-                if /(?:\d+ results|1 result) for: <em>#{self_}<\/em>.+?American Heritage Dictionary.+?<TABLE><TR><TD><b>(.+?)<\/b>.+?<B> *(\S+) *<\/B><br \/>/m =~ text
+                if %r{.+American Heritage Dictionary.+?<table><tbody><tr><td><b>(.+?)</b>.+?<b>([^<]+)</b>\s*<br /}m =~ text
                     base_form = $1
                     habitual_form = $2
                     if not base_form.nil?
@@ -187,14 +190,68 @@ class String
     end
 end
 
-class SovietRussia
-    # Add bot names to this list, if you like.
-    IGNORED = [ "", "*" ]
+module SovietRussia
     PARSER_BIN = '/misc/src/link-4.1b/parse'
     PARSER_DATA_DIR = '/misc/src/link-4.1b/data'
     WORD_COUNT_MINIMUM = 3
-    MIN_SPACING = 30 * 60 # seconds
     MAX_NP_LENGTH = 40
+    
+    class NotInSovietRussiaException < Exception; end
+    
+    def process_in_sr( line )
+        stimulus_path = 'stimulus.txt'
+        File.open( stimulus_path, "w" ) do |f|
+            f.puts "!verbosity=0"
+            f.puts "!graphics"
+            f.puts "!constituents=2"
+            f.puts line
+        end
+    
+        parse_result = `#{PARSER_BIN} #{PARSER_DATA_DIR}/4.0.dict -pp #{PARSER_DATA_DIR}/4.0.knowledge -c #{PARSER_DATA_DIR}/4.0.constituent-knowledge -a #{PARSER_DATA_DIR}/4.0.affix < #{stimulus_path} 2>/dev/null`
+        parse_text = parse_result.split( "\n" )[ -1 ]
+        $stderr.puts "parse_text: #{parse_text}"
+        
+        parse = Constituent.new( parse_text.split )
+        
+        $stderr.puts "parse: #{parse.inspect}"
+        
+        # [VP eat [NP cabbage NP] VP]
+        agent, verb_phrase = parse.in_soviet_russia
+        
+        response = nil
+        if agent and verb_phrase
+            response = "HA!  In Soviet Russia, #{agent} #{verb_phrase} YOU!"
+        else
+            $stderr.puts "agent: #{agent}"
+            $stderr.puts "vp: #{verb_phrase}"
+            raise NotInSovietRussiaException.new( "That does not happen in Soviet Russia." )
+        end
+        
+        return response
+    end
+end
+
+class SovietRussiaProcessor
+    include SovietRussia
+    
+    def initialize
+    end
+    
+    def process( text )
+        begin
+            process_in_sr( text )
+        rescue NotInSovietRussiaException => e
+            e.message
+        end
+    end
+end
+
+class SovietRussiaReby
+    include SovietRussia
+    
+    # Add bot names to this list, if you like.
+    IGNORED = [ "", "*" ]
+    MIN_SPACING = 30 * 60 # seconds
     
     def initialize
         $reby.bind( "raw", "-", "PRIVMSG", "sawPRIVMSG", "$sovietrussia" )
@@ -228,46 +285,23 @@ class SovietRussia
                     speech.gsub!( /[\\{}()]/, '' )
                     if speech =~ /^\w/ and speech !~ /^mathetes/i
                         if speech.split.length >= WORD_COUNT_MINIMUM
-                            process( speech, channel, nick )
+                            begin
+                                send( "#{nick}: " + process_in_sr( speech ), channel )
+                                @last_time[ channel ] = Time.now
+                            rescue NotInSovietRussiaException => e
+                                if not @auto[ channel ]
+                                    send( "#{nick}: #{e.message}", channel )
+                                end
+                                #$reby.log "agent: #{agent}"
+                                #$reby.log "vp: #{verb_phrase}"
+                                #$reby.log parse.to_s
+                            end
                         end
                     end
                 end
             else
                 $reby.log "[soviet_russia] No nick?  '#{from}' !~ /^(.+?)!/"
             end
-        end
-    end
-    
-    def process( line, channel, target = nil )
-        stimulus_path = 'stimulus.txt'
-        File.open( stimulus_path, "w" ) do |f|
-            f.puts "!verbosity=0"
-            f.puts "!graphics"
-            f.puts "!constituents=2"
-            f.puts line
-        end
-    
-        parse_result = `#{PARSER_BIN} #{PARSER_DATA_DIR}/4.0.dict -pp #{PARSER_DATA_DIR}/4.0.knowledge -c #{PARSER_DATA_DIR}/4.0.constituent-knowledge -a #{PARSER_DATA_DIR}/4.0.affix < #{stimulus_path} 2>/dev/null`
-        parse_text = parse_result.split( "\n" )[ -1 ]
-        
-        parse = Constituent.new( parse_text.split )
-        
-        # [VP eat [NP cabbage NP] VP]
-        agent, verb_phrase = parse.in_soviet_russia
-        
-        if agent and verb_phrase
-            if target
-                target_str = target + ": "
-            end
-            send "#{target_str}HA!  In Soviet Russia, #{agent} #{verb_phrase} YOU!", channel
-            @last_time[ channel ] = Time.now
-        else
-            if not @auto[ channel ]
-                send "#{target_str}That doesn't happen in Soviet Russia.", channel
-            end
-            $reby.log "agent: #{agent}"
-            $reby.log "vp: #{verb_phrase}"
-            $reby.log parse.to_s
         end
     end
     
@@ -284,10 +318,25 @@ class SovietRussia
         else
             old_auto = @auto[ channel ]
             @auto[ channel ] = false
-            process( args.to_s, channel, nick )
+            
+            begin
+                send( "#{nick}: " + process_in_sr( args.to_s ), channel )
+            rescue NotInSovietRussiaException => e
+                send( "#{nick}: #{e.message}", channel )
+            end
+            
             @auto[ channel ] = old_auto
         end
     end
 end
 
-$sovietrussia = SovietRussia.new
+#if __FILE__ == $0
+    # Command line
+    processor = SovietRussiaProcessor.new
+    while line = gets
+        puts processor.process( line )
+    end
+#else
+    # Reby
+    #$sovietrussia = SovietRussiaReby.new
+#end
