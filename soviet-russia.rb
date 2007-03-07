@@ -330,13 +330,13 @@ class SovietRussiaReby
     end
 end
 
-#if __FILE__ == $0
+if __FILE__ == $0
     # Command line
     processor = SovietRussiaProcessor.new
     while line = gets
         puts processor.process( line )
     end
-#else
+else
     # Reby
-    #$sovietrussia = SovietRussiaReby.new
-#end
+    $sovietrussia = SovietRussiaReby.new
+end
