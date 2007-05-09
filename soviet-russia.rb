@@ -264,7 +264,7 @@ class SovietRussiaReby
             '#rendergods' => false,
             '#wordbattle' => true,
             '#chat-bots' => true,
-            '#ramaze' => true,
+            '#ramaze' => false,
         }
         @last_time = @auto.dup
         @last_time.each_key do |k|

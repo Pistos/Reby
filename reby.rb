@@ -4,7 +4,7 @@
 #
 # Ruby-Eggdrop Bridge Yes-this-letter-has-no-meaning-in-the-acronym
 # :title: Reby
-# Version:: 0.7.5 (November 10, 2006)
+# Version:: 0.7.5 (May 1, 2007)
 #
 # Author:: Pistos (irc.freenode.net)
 # http://purepistos.net/eggdrop/reby
@@ -56,6 +56,7 @@
 
 require "net/telnet"
 require "thread"
+require 'ostruct'
 
 # The Reby class contains wrappers methods for the eggdrop Tcl commands, as at
 # http://www.eggheads.org/support/egghtml/1.6.15/tcl-commands.html
@@ -80,7 +81,9 @@ class Reby
                 :pub_binds => Hash.new,
                 :msg_binds => Hash.new,
                 :nick => 'Pistos',
-                :queued_commands => Array.new
+                :queued_commands => Array.new,
+                :timers => Hash.new,
+                :utimers => Hash.new
             }
             if console_command_file
                 load_console_commands console_command_file
@@ -94,7 +97,7 @@ class Reby
         @REBY_PREFIX = "^\\[\\d+:\\d+\\] REBY"
 
         @VERSION = "0.7.5"
-        @LAST_MODIFIED = "November 10, 2006"
+        @LAST_MODIFIED = "May 1, 2007"
         @GOD_IS_GOOD = true
 
         @registered_methods = Array.new
@@ -500,29 +503,9 @@ class Reby
                             arglist.collect! do |arg|
                                 arg.toReby
                             end
-
+                            
                             full_method_name = getFullMethodName( instance, method_name )
-                            if @registered_methods.include?( full_method_name )
-                                ruby_code = "#{full_method_name}(#{ arglist.join( ',' ) })"
-                                #log "Reby call: #{ruby_code}"
-                                Thread.new( ruby_code ) do |code_to_evaluate|
-                                    code_to_evaluate = 
-                                        "begin\n" +
-                                            code_to_evaluate +
-                                        <<-EOS
-                                        
-                                            rescue Exception => e
-                                                putserv "PRIVMSG #{@debug_channel} :Eep!  A critical Reby error!"
-                                                log "Reby error: " + e.message
-                                                log e.backtrace.join( "\n" )
-                                            end
-                                        EOS
-                                            
-                                    eval code_to_evaluate
-                                end
-                            else
-                                log "No such method: #{full_method_name}"
-                            end
+                            call_method( full_method_name, arglist )
                         when /#{@REBY_PREFIX} return (\d+) (.+)/
                             return_id = $1.to_i
                             retval = $2
@@ -542,6 +525,29 @@ class Reby
         end
 
         logout
+    end
+    
+    def call_method( full_method_name, arglist )
+        if @registered_methods.include?( full_method_name )
+            ruby_code = "#{full_method_name}(#{ arglist.join( ',' ) })"
+            Thread.new( ruby_code ) do |code_to_evaluate|
+                code_to_evaluate = 
+                    "begin\n" +
+                        code_to_evaluate +
+                    <<-EOS
+                    
+                        rescue Exception => e
+                            putserv "PRIVMSG #{@debug_channel} :Eep!  A critical Reby error!"
+                            log "Reby error: " + e.message
+                            log e.backtrace.join( "\n" )
+                        end
+                    EOS
+                        
+                eval code_to_evaluate
+            end
+        else
+            log "No such method: #{full_method_name}"
+        end
     end
     
     def load_console_commands( file )
@@ -597,6 +603,13 @@ class Reby
                 end
             when /^reby$/
                 @console[ :target ] = nil
+            else
+                puts "Change target:"
+                puts "\t/pub [channel]"
+                puts "\t/msg [channel]"
+                puts "\t/reby"
+                puts "<any text> to send to target"
+                puts "^D to quit"
         end
     end
     
@@ -900,11 +913,21 @@ class Reby
     end
 
     def killtimer( id )
-        sendTcl "killtimer #{id}"
+        if @console_mode
+            @console[ :timers ][ id ].kill
+            @console[ :timers ].delete( id )
+        else
+            sendTcl "killtimer #{id}"
+        end
     end
 
     def killutimer( id )
-        sendTcl "killutimer #{id}"
+        if @console_mode
+            @console[ :utimers ][ id ].kill
+            @console[ :utimers ].delete( id )
+        else
+            sendTcl "killutimer #{id}"
+        end
     end
 
     def loadchannels
@@ -1031,17 +1054,44 @@ class Reby
         sendTcl "setuser #{handle} #{entry_type} #{extra_info}"
     end
 
-    def timer( seconds, method_name, instance = "nil" )
-        tcl_proc_name = registerMethod( method_name, instance )
-        sendTcl "proc #{tcl_proc_name} {} { " +
-            "rebyCall {#{instance}} #{method_name} " +
-            "}"
-        return_id = evalTcl( "timer #{seconds} #{tcl_proc_name}" )
-        return getReturnValue( return_id )
+    def timer( minutes, method_name, instance = "nil" )
+        if not @console_mode
+            tcl_proc_name = registerMethod( method_name, instance )
+            sendTcl "proc #{tcl_proc_name} {} { " +
+                "rebyCall {#{instance}} #{method_name} " +
+                "}"
+            return_id = evalTcl( "timer #{minutes} #{tcl_proc_name}" )
+            return getReturnValue( return_id )
+        else
+            duration = minutes * 60
+            t = OpenStruct.new
+            t.end_time = Time.now + duration
+            t.ident = t.start_time.to_f
+            t.full_method_name = getFullMethodName( instance, method_name )
+            registerMethod( method_name, instance )
+            t.thread = Thread.new( duration, t.full_method_name ) do |d,m|
+                sleep( d )
+                call_method( m, [] )
+            end
+            @console[ :timers ][ t.ident ] = t
+            return t.ident
+        end
     end
 
     def timers
-        return getListReturnValue( evalTcl( "timers" ) )
+        if @console_mode
+            @console[ :timers ].values.find_all { |t|
+                t.thread.alive?
+            }.map { |t|
+                [ 
+                    ( t.end_time.to_i - Time.now.to_i ) / 60.0,
+                    t.full_method_name,
+                    t.ident
+                ]
+            }
+        else
+            getListReturnValue( evalTcl( "timers" ) )
+        end
     end
 
     def topic( channel )
@@ -1058,12 +1108,27 @@ class Reby
     end
 
     def utimer( seconds, method_name, instance = "nil" )
-        tcl_proc_name = registerMethod( method_name, instance )
-        sendTcl "proc #{tcl_proc_name} {} { " +
-            "rebyCall {#{instance}} #{method_name} " +
-            "}"
-        return_id = evalTcl( "utimer #{seconds} #{tcl_proc_name}" )
-        return getReturnValue( return_id )
+        if not @console_mode
+            tcl_proc_name = registerMethod( method_name, instance )
+            sendTcl "proc #{tcl_proc_name} {} { " +
+                "rebyCall {#{instance}} #{method_name} " +
+                "}"
+            return_id = evalTcl( "utimer #{seconds} #{tcl_proc_name}" )
+            return getReturnValue( return_id )
+        else
+            duration = seconds
+            t = OpenStruct.new
+            t.end_time = Time.now + duration
+            t.ident = t.start_time.to_f
+            t.full_method_name = getFullMethodName( instance, method_name )
+            registerMethod( method_name, instance )
+            t.thread = Thread.new( duration, t.full_method_name ) do |d,m|
+                sleep( d )
+                call_method( m, [] )
+            end
+            @console[ :utimers ][ t.ident ] = t
+            return t.ident
+        end
     end
 
     def userlist( flags = "" )
@@ -1071,7 +1136,19 @@ class Reby
     end
 
     def utimers
-        return getListReturnValue( evalTcl( "utimers" ) )
+        if @console_mode
+            @console[ :utimers ].values.find_all { |t|
+                t.thread.alive?
+            }.map { |t|
+                [ 
+                    ( t.end_time.to_i - Time.now.to_i ),
+                    t.full_method_name,
+                    t.ident
+                ]
+            }
+        else
+            getListReturnValue( evalTcl( "utimers" ) )
+        end
     end
 
     def validchan( channel )
@@ -1189,6 +1266,13 @@ begin
                 when
                     '--console-commands'
                     console_command_file = args.shift
+                when '--help', '-h'
+                    $stderr.puts "#{$0} [options] <configuration file>"
+                    $stderr.puts "Options:"
+                    $stderr.puts "\t--console"
+                    $stderr.puts "\t--console-commands <command file>"
+                    $stderr.puts "\t--help"
+                    exit 1
                 else
                     conf_file = arg
             end
