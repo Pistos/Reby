@@ -235,6 +235,7 @@ class Reby
     # You may want to use String.changeBraces before calling this,
     # and String.restoreBraces afterward.
     def makeArray( list_text, how_many = -1, max_depth = 999 )
+        return nil if list_text.nil?
         remainder = list_text.strip
         if remainder !~ /(?:^| )\{|\}(?:$| )/
             # No braces: Just a single-level list.
@@ -601,6 +602,8 @@ class Reby
                 if rest
                     @console[ :channel ] = rest.strip
                 end
+            when /^nick +(\S+)$/
+                @console[ :nick ] = $1
             when /^reby$/
                 @console[ :target ] = nil
             else
