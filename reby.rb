@@ -4,7 +4,7 @@
 #
 # Ruby-Eggdrop Bridge Yes-this-letter-has-no-meaning-in-the-acronym
 # :title: Reby
-# Version:: 0.7.5 (May 1, 2007)
+# Version:: 0.7.5 (July 15, 2007)
 #
 # Author:: Pistos (irc.freenode.net)
 # http://purepistos.net/eggdrop/reby
@@ -97,7 +97,7 @@ class Reby
         @REBY_PREFIX = "^\\[\\d+:\\d+\\] REBY"
 
         @VERSION = "0.7.5"
-        @LAST_MODIFIED = "May 1, 2007"
+        @LAST_MODIFIED = "July 15, 2007"
         @GOD_IS_GOOD = true
 
         @registered_methods = Array.new
@@ -208,6 +208,10 @@ class Reby
         sendTcl "proc rebyTcl {return_id tcl_code} {" +
             " putlog \"REBY return $return_id [eval $tcl_code]\" " +
             "}"
+            
+        sendTcl "proc putnow { a } { " + 
+            "append a \"\\n\";  putdccraw 0 [string length $a] $a; " +
+        "}"
     end
     protected :defineRebyProcs
 
@@ -996,6 +1000,9 @@ class Reby
 
     def putcmdlog( text )
         sendTcl "putcmdlog #{ text }"
+    end
+    def putnow( text )
+        doPut( "putnow", text )
     end
     def puthelp( text, options = "" )
         doPut( "puthelp", text, options )
