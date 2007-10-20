@@ -12,8 +12,14 @@
 
 begin
     require 'active_support'
-rescue Exception
+rescue Exception => e
     #ignore
+    msg = "active_support problem: #{e.message}"
+    if $reby
+        $reby.log msg
+    else
+        $stderr.puts msg
+    end
 end
 require 'open-uri'
 
@@ -98,6 +104,7 @@ class Constituent < Array
         end
         if verb_phrase
             base_form, habitual_form = verb_phrase.inflect
+            #$stderr.puts "Getting forms for #{verb_phrase}: #{base_form}, #{habitual_form}"
             if base_form and habitual_form
                 if plural
                     verb_phrase = base_form
@@ -146,6 +153,20 @@ class Constituent < Array
 end
 
 class String
+    def escape_quotes
+        temp = ""
+        each_byte do |b|
+            if b == 39
+                temp << 39
+                temp << 92
+                temp << 39
+            end
+            temp << b
+        end
+        
+        return temp
+    end
+    
     def noun_adjust
         retval = self.strip
         plural = false
@@ -160,29 +181,53 @@ class String
         [ retval, plural ]
     end
     
-    def inflect
+    def old_inflect
         self_ = self.strip.downcase
         base_form = nil
         habitual_form = nil
         begin
             open( "http://dictionary.reference.com/search?q=#{self_}" ) do |http|
                 text = http.read
-                if %r{.+American Heritage Dictionary<.+?<table><tbody><tr><td><b>(.+?)</b>.+?<b>([^<]+)</b>\s*<br /}m =~ text
+                #if %r{.+American Heritage Dictionary<.+?<table><tbody><tr><td><b>(.+?)</b>.+?<b>([^<]+)</b>\s*<br /}m =~ text
+                if %r{^(?:<b>(.+?)</b>.*?,.*?){2}<b>(.+?)</b>$} =~ text
                     base_form = $1
                     habitual_form = $2
-                    if not base_form.nil?
+                    if base_form
                         base_form = base_form[ /^(.+?)(<|$)/, 1 ]
                         base_form.gsub!( '&#183;', '' )
                     end
-                    if not habitual_form.nil?
+                    if habitual_form
                         habitual_form = habitual_form[ /^(.+?)(<|$)/, 1 ]
                         habitual_form.gsub!( '&#183;', '' )
                     end
+                #else
+                    #$stderr.puts "inflections not found for #{self_}"
                 end
             end
         rescue Exception => e
-            $reby.log e.message
-            $reby.log e.backtrace.join( "\n\t" )
+            if $reby
+                $reby.log e.message
+                $reby.log e.backtrace.join( "\n\t" )
+            else
+                raise e
+            end
+        end
+        if base_form and habitual_form
+            [ base_form.strip, habitual_form.strip ]
+        else
+            [ nil, nil ]
+        end
+    end
+    
+    def inflect
+        wn = `wn '#{self.strip.escape_quotes}' -framv`
+        base_form = wn[ /Sample Sentences of verb (\w+)/, 1 ]
+        habitual_form = nil
+        if base_form
+            open( "http://www.verbix.com/cache/webverbix/20/#{base_form}.shtml" ) do |http|
+                html = http.read
+                habitual_form = html[ %r{he</span>(?:&nbsp;)*</font><span class="normal">(.+?)</span><br>}, 1 ]
+            end
         end
         if base_form and habitual_form
             [ base_form.strip, habitual_form.strip ]
@@ -339,7 +384,7 @@ if __FILE__ == $0
     while line = gets
         puts processor.process( line )
     end
-else
+elsif $reby
     # Reby
     $sovietrussia = SovietRussiaReby.new
 end
