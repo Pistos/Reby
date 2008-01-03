@@ -4,7 +4,7 @@
 #
 # Ruby-Eggdrop Bridge Yes-this-letter-has-no-meaning-in-the-acronym
 # :title: Reby
-# Version:: 0.7.5 (July 15, 2007)
+# Version:: 0.7.5 (January 3, 2008)
 #
 # Author:: Pistos (irc.freenode.net)
 # http://purepistos.net/eggdrop/reby
@@ -97,7 +97,7 @@ class Reby
         @REBY_PREFIX = "^\\[\\d+:\\d+\\] REBY"
 
         @VERSION = "0.7.5"
-        @LAST_MODIFIED = "July 15, 2007"
+        @LAST_MODIFIED = "January 3, 2008"
         @GOD_IS_GOOD = true
 
         @registered_methods = Array.new
@@ -130,9 +130,7 @@ class Reby
                         begin
                             load( fn )
                         rescue Exception => e
-                            putserv "PRIVMSG #{@debug_channel}: Eep!  A critical Reby error!"
-                            log "Reby error: " + e.message
-                            log e.backtrace.join( "\n" )
+                            log_exception e
                         end
                         log "... Loaded '#{filename}'"
                     end
@@ -416,6 +414,12 @@ class Reby
             puts message
         end
     end
+    
+    def log_exception( e )
+        putserv "PRIVMSG #{@debug_channel}: Eep!  A critical Reby error! #{e.class}"
+        log "Reby error: #{e.class} #{e.message}"
+        log e.backtrace.join( "\n" )
+    end
 
     # Don't put $ at the beginning of tcl_varname.
     def getTclGlobal( tcl_varname )
@@ -542,9 +546,7 @@ class Reby
                     <<-EOS
                     
                         rescue Exception => e
-                            putserv "PRIVMSG #{@debug_channel} :Eep!  A critical Reby error!"
-                            log "Reby error: " + e.message
-                            log e.backtrace.join( "\n" )
+                            log_exception e
                         end
                     EOS
                         
