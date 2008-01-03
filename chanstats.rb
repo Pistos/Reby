@@ -7,7 +7,8 @@
 # This is not a standalone Ruby script; it is meant to be run from Reby
 # (http://purepistos.net/eggdrop/reby).
 
-require 'stored-hash'
+require 'yaml'
+require 'pistos'
 
 class ChanStats
     DATA_FILE = 'chanstats.dat'
@@ -23,16 +24,27 @@ class ChanStats
         $reby.putserv "PRIVMSG #{destination} :#{message}"
     end
     
+    def load_data
+        if File.exist? DATA_FILE
+            @stats = YAML::load( File.read( DATA_FILE ) )
+        else
+            @stats = Hash.new
+            save_data
+        end
+    end
+    def save_data
+        File.open( DATA_FILE, 'w' ) do |f|
+            f.write @stats.to_yaml
+        end
+    end
+    
     def set_defaults( channel )
         @stats[ channel ] ||= Hash.new
         @stats[ channel ][ :size_record ] ||= 0
         @stats[ channel ][ :members ] ||= { 0 => [] }
         @stats[ channel ][ :date ] ||= { 0 => Time.now }
+        save_data
         @stats[ channel ]
-    end
-    
-    def load_data
-        @stats = StoredHash.new( DATA_FILE )
     end
     
     def on_join( nick, userhost, handle, channel )
@@ -45,25 +57,17 @@ class ChanStats
             cs[ :size_record ] = n
             cs[ :members ][ n ] = members
             cs[ :date ][ n ] = Time.now
-            
-            put "*** New size record for #{channel}!  #{n} members!", channel
-            
-            i = n - 1
-            num_reported = 0
-            while i >= 0 and num_reported < 2
-                if cs[ :members ][ i ]
-                    put "Previous record: #{i} set on #{cs[ :date ][ i ]}", channel
-                    num_reported += 1
-                end
-                i -= 1
-            end
+            save_data
+            put "*** New size record for #{channel}!  #{n} members!  Previous record: #{n-1} set on #{cs[ :date ][ n-1 ]}", channel
         end
     end
     
     def chanstats_command( nick, userhost, handle, channel, args )
         case args.to_s
-            when /^reload$/i
-                load_data
+            when /^rec/i
+                cs = set_defaults( channel )
+                n = cs[ :size_record ]
+                put "#{channel} had #{n} members on #{cs[:date][n]}."
         end
     end
 end
