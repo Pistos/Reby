@@ -7,6 +7,9 @@ class TimeIn
     
     def initialize
         @agent = WWW::Mechanize.new
+        if $reby
+            $reby.bind( "pub", "-", "!time", "time_in_bind", "$time_in" )
+        end
     end
     
     def time_in( place_ )
@@ -23,14 +26,28 @@ class TimeIn
             page.at( '#ct' ).inner_text
         end
     end
+    
+    def put( message, destination = ( @channel || 'Pistos' ) )
+        $reby.putserv "PRIVMSG #{destination} :#{message}"
+    end
+    
+    def time_in_bind( nick, userhost, handle, channel, args )
+        place = args.to_s
+        t = time_in( place )
+        if t
+            put "Local time in #{@place} is #{t}.", channel
+        else
+            put "Failed to determine local time in #{place}.", channel
+        end
+    end
 end
 
+$time_in = TimeIn.new
 if $0 == __FILE__
-    ti = TimeIn.new
     place = ARGV[ 0 ] || 'Manila'
-    t = ti.time_in( place )
+    t = $time_in.time_in( place )
     if t
-        puts "Time in #{ti.place} is: #{t}"
+        puts "Time in #{$time_in.place} is: #{t}"
     else
         $stderr.puts "Failed to fetch time for #{place}."
     end
