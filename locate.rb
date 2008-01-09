@@ -11,13 +11,14 @@
 
 require 'open-uri'
 require 'rubygems'
-require 'rubyful_soup'
-require 'net/http'
+require 'mechanize'
+require 'cgi'
 
 class GeoLocate
     def initialize
         $reby.bind( "pub", "-", "!locate", "locate", "$locate" )
         @requests = 0
+        @agent = WWW::Mechanize.new
     end
     
     def bindWhoisResponse
@@ -47,100 +48,31 @@ class GeoLocate
         city = ""
         timezone = ""
         
-        found = false
-        t = Thread.new do
-            begin
-                open( "http://www.geobytes.com/IpLocator.htm?GetLocation&ipaddress=#{ip_address}" ) do |html|
-                    soup = BeautifulSoup.new( html.read )
-                    itag = soup.find( 'input', :attrs => { 'name' => /ro-no_bots_pls13/ } )
-                    if itag != nil
-                        country = itag[ 'value' ]
-                    end
-                    itag = soup.find( 'input', :attrs => { 'name' => /ro-no_bots_pls15/ } )
-                    if itag != nil
-                        region = itag[ 'value' ]
-                    end
-                    itag = soup.find( 'input', :attrs => { 'name' => /ro-no_bots_pls17/ } )
-                    if itag != nil
-                        city = itag[ 'value' ]
-                    end
-                    itag = soup.find( 'input', :attrs => { 'name' => /ro-no_bots_pls9/ } )
-                    if itag != nil
-                        timezone = itag[ 'value' ]
-                    end
-                        
-                    found = ( not ( country.empty? or region.empty? or city.empty? or timezone.empty? ) )
-                end
-            rescue Exception => e
-                # ignore
-            end
-        end
-        threads << t
-        
-        country2 = ''
-        found2 = false
-        t = Thread.new do
-            begin
-                open( "http://www.dnsstuff.com/tools/whois.ch?ip=#{ip_address}" ) do |html|
-                    text = html.read
-                    
-                    if( text =~ /Country:\s+(.+?)\s\s/ )
-                        country2 = $1
-                        found2 = true
-                    end
-                end
-            rescue Exception => e
-                # ignore
-            end
-        end
-        threads.push t
-        
-        country3 = nil
-        city3 = nil
-        latitude = nil
-        longitude = nil
-        found3 = false
-        t = Thread.new do ||
-            begin
-                open( "http://hostip.info/api/get.html?ip=#{ip_address}&position=true" ) do |html|
-                    text = html.read
-                    
-                    country3 = text[ /Country: (.+?) \(/, 1 ]
-                    city3 = text[ /City: (.+)/, 1 ]
-                    latitude = text[ /Latitude: (.+)/, 1 ]
-                    longitude = text[ /Longitude: (.+)/, 1 ]
-                    
-                    found3 = ( country3 != nil and country3 !~ /Unknown/ )
-                end
-            rescue Exception => e
-                # ignore
-            end
-        end
-        threads.push t
-
-        threads.each do |t|
-            begin
-                t.join
-            rescue Timeout::Error
-                $stderr.puts "(timed out)"
-            end
+        begin
+            doc = Hpricot( open( "http://www.geobytes.com/IpLocator.htm?GetLocation&ipaddress=#{ip_address}" ) )
+            country = doc.at( "[@name='ro-no_bots_pls13']" )[ 'value' ]
+            region = doc.at( "[@name='ro-no_bots_pls15']" )[ 'value' ]
+            city = doc.at( "[@name='ro-no_bots_pls17']" )[ 'value' ]
+            timezone = doc.at( "[@name='ro-no_bots_pls9']" )[ 'value' ]
+        rescue Exception => e
+            $reby.log e.message
         end
         
-        location = ''
-        if found
-            location << "near #{city}, #{region}, #{country} (#{timezone})"
-            if found2 
-                location << " or perhaps just somewhere in #{country2}"
+        if not city.empty?
+            put "I estimate that #{@ip_nick} is somewhere near #{city}, #{region}, #{country}.", @ip_channel
+            t = time_in( city, country )
+            if t
+                put "Local time in #{@time_place} is #{t}.", @ip_channel
             end
-        elsif found2 
-            location << "in #{country2}"
-        end
-        
-        if not location.empty?
-            $reby.puthelp "PRIVMSG #{@ip_channel} :I estimate that #{@ip_nick} is somewhere #{location}."
+        elsif not country.empty?
+            put "I estimate that #{@ip_nick} is somewhere in #{country}.", @ip_channel
         else
-            $reby.puthelp "PRIVMSG #{@ip_channel} :Unable to !locate #{@ip_nick}."
+            put "Unable to !locate #{@ip_nick}.", @ip_channel
         end
+    end
+    
+    def put( message, destination = ( @channel || 'Pistos' ) )
+        $reby.putserv "PRIVMSG #{destination} :#{message}"
     end
     
     def locate( nick, userhost, handle, channel, args )
@@ -150,6 +82,28 @@ class GeoLocate
         @requests += 1
         bindWhoisResponse
         $reby.putserv "WHOIS #{@ip_nick}"
+    end
+    
+    def time_in( city, country )
+        @time_place = nil
+        place = CGI.escape( "#{city}, #{country}" )
+        search_results = @agent.get "http://www.timeanddate.com/search/results.html?query=#{place}"
+        links = search_results.links.find_all { |l| l.text =~ /Current local time in/ }
+        link = links.find { |l| l.text =~ /#{city}/i }
+        if not link
+            link = links.find { |l| l.text =~ /#{country}/i }
+            if not link
+                link = links.first
+            end
+        end
+        if link
+            page = @agent.click( link )
+            s = page.at( "h1[text()*='Current local time in']" ).inner_text
+            if s
+                @time_place = s[ /time in (.+)/, 1 ]
+            end
+            page.at( '#ct' ).inner_text
+        end
     end
 end
 
