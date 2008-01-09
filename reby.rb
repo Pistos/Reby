@@ -416,7 +416,7 @@ class Reby
     end
     
     def log_exception( e )
-        putserv "PRIVMSG #{@debug_channel}: Eep!  A critical Reby error! #{e.class}"
+        putserv "PRIVMSG #{@debug_channel} :Eep!  A critical Reby error! #{e.class}"
         log "Reby error: #{e.class} #{e.message}"
         log e.backtrace.join( "\n" )
     end
