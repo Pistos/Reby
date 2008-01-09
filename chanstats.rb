@@ -67,7 +67,7 @@ class ChanStats
             when /^rec/i
                 cs = set_defaults( channel )
                 n = cs[ :size_record ]
-                put "#{channel} had #{n} members on #{cs[:date][n]}."
+                put "#{channel} had #{n} members on #{cs[:date][n]}.", channel
         end
     end
 end
