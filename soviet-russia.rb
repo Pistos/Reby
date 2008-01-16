@@ -10,17 +10,8 @@
 # (http://purepistos.net/eggdrop/reby).
 # But it can be run from the command line, as well.
 
-begin
-    require 'active_support'
-rescue Exception => e
-    #ignore
-    msg = "active_support problem: #{e.message}"
-    if $reby
-        $reby.log msg
-    else
-        $stderr.puts msg
-    end
-end
+require 'rubygems'
+require 'activesupport'
 require 'open-uri'
 
 class Constituent < Array
