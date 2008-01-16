@@ -60,7 +60,7 @@ class GeoLocate
         
         if not city.empty?
             put "I estimate that #{@ip_nick} is somewhere near #{city}, #{region}, #{country}.", @ip_channel
-            t = time_in( city, country )
+            t = time_in( city, region, country )
             if t
                 put "Local time in #{@time_place} is #{t}.", @ip_channel
             end
@@ -84,9 +84,9 @@ class GeoLocate
         $reby.putserv "WHOIS #{@ip_nick}"
     end
     
-    def time_in( city, country )
+    def time_in( city, region, country )
         @time_place = nil
-        place = CGI.escape( "#{city}, #{country}" )
+        place = CGI.escape( "#{city}, #{region}, #{country}" )
         search_results = @agent.get "http://www.timeanddate.com/search/results.html?query=#{place}"
         links = search_results.links.find_all { |l| l.text =~ /Current local time in/ }
         link = links.find { |l| l.text =~ /#{city}/i }
