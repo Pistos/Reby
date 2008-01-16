@@ -15,6 +15,7 @@
 require "open-uri"
 require "cgi"
 require 'rubygems'
+require 'hpricot'
 begin
     require 'rubyful_soup'
 rescue Exception => e
@@ -22,8 +23,8 @@ rescue Exception => e
 end
     
 class WebSearch
-    VERSION = '1.0.1'
-    LAST_MODIFIED = '2006-05-19'
+    VERSION = '1.1.0'
+    LAST_MODIFIED = '2008-01-14'
     
     MAX_RESULTS = 5
     ENGINE_GOOGLE = 0
@@ -58,6 +59,7 @@ class WebSearch
         $reby.bind( "pub", "-", "!docs", "searchGeoShellDocs", "$websearch" )
         $reby.bind( "pub", "-", "!rubybook", "searchPickAxe", "$websearch" )
         $reby.bind( "pub", "-", "!rubydoc", "searchRubyDoc", "$websearch" )
+        $reby.bind( "pub", "-", "!rw", "search_ramaze_wiki", "$websearch" )
     end
 
     def searchSite( nick, userhost, handle, channel, args, site )
@@ -78,6 +80,9 @@ class WebSearch
     
     def google( nick, userhost, handle, channel, args )
         search( nick, channel, args, ENGINE_GOOGLE )
+    end
+    def search_ramaze_wiki( nick, userhost, handle, channel, args )
+        search( nick, channel, args + " site:ramaze.net", ENGINE_GOOGLE )
     end
 
     def searchGeoShellDocs( nick, uhost, handle, chan, args )
@@ -131,8 +136,13 @@ class WebSearch
         end
     end
     
+    def put( message, destination = @channel )
+        $reby.putserv "PRIVMSG #{destination} :#{message}"
+    end
+    
     def search( nick, channel, args, engine = ENGINE_GOOGLE )
         num_results = 1
+        @channel = channel
 
         args_array = args.split( /\s+/ )
         
@@ -154,11 +164,12 @@ class WebSearch
         end
         
         arg = CGI.escape( arg )
+        $reby.log "arg: #{arg}"
 
         case engine
             when ENGINE_GOOGLE
                 max_results = num_results
-                open( "http://www.google.com/search?q=#{ arg }&safe=active" ) do |html|
+                open( "http://www.google.com/search?q=#{ CGI.escape( args ) }&safe=active" ) do |html|
                     text = html.read
                     
                     File.open( "websearch.last", "w" ) { |f| f.puts text }
@@ -167,11 +178,15 @@ class WebSearch
                     text.scan /<div class=g><h2 class=r><a href="?([^"]+)" class=l.*?>(.+?)<\/a>/m do |match|
                         url, title = match
                         title.gsub!( /<.+?>/, "" )
-                        $reby.putserv "PRIVMSG #{channel} :[#{unescaped_arg}]: #{url} - #{title}"
+                        put "[#{unescaped_arg}]: #{url} - #{title}"
                         counter += 1
                         if counter >= max_results
                             break
                         end
+                    end
+                    
+                    if counter == 0
+                        put "(no results)"
                     end
                 end
                 
