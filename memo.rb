@@ -51,7 +51,16 @@ class MemoManager
         
         memos.each do |memo|
             t = memo[ 'time_sent' ].to_time.strftime( "%b %d %H:%M" )
-            splitput "#{nick}: [#{t}] <#{memo['sender']}> #{memo['message']}", dest
+            age = memo[ 'sent_age' ].gsub( /\.\d+$/, '' )
+            case age
+                when /^00:00:(\d+)/
+                    age = "#{$1} seconds"
+                when /^00:(\d+):(\d+)/
+                    age = "#{$1}m #{$2}s"
+                else
+                    age.gsub( /^(.*)(\d+):(\d+):(\d+)/, "\\1 \\2h \\3m \\4s" )
+            end
+            splitput "#{nick}: [#{age} ago] <#{memo['sender']}> #{memo['message']}", dest
             @dbh.do(
                 "UPDATE memos SET time_told = NOW() WHERE id = ?",
                 memo[ 'id' ]
@@ -75,6 +84,8 @@ class MemoManager
         @channel = channel
         command, args = args_.split( /\s+/, 2 )
         case command
+            when /^h/
+                put "!memo send <recipient> <message>"
             when /^(s|t)/
                 recipient, message = args.split( /\s+/, 2 )
                 if memos_for( nick ).size >= MAX_MEMOS_PER_PERSON
@@ -97,7 +108,16 @@ class MemoManager
     
     def memos_for( recipient )
         @dbh.select_all(
-            "SELECT * FROM memos WHERE recipient = ? AND time_told IS NULL",
+            %{
+                SELECT
+                    m.*,
+                    age( NOW(), m.time_sent )::TEXT AS sent_age
+                FROM
+                    memos m
+                WHERE
+                    m.recipient = ?
+                    AND m.time_told IS NULL
+            },
             recipient
         )
     end
