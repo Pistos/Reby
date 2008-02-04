@@ -1,4 +1,5 @@
 require '/misc/svn/reby/api_client.rb'
+require 'jcode'
 
 class LingrBridge
     IRC_CHANNEL = "#ramaze"
@@ -33,7 +34,7 @@ class LingrBridge
             nick = from[ 0...delimiter_index ]
             channel, speech = text.split( " :", 2 )
             if channel == IRC_CHANNEL and not IGNORED.include?( nick )
-                resp = @c.say( @ticket, "<#{nick}> #{speech}" )
+                resp = @c.say( @ticket, "<#{nick}> #{speech}" )#.toutf8 )
                 log "say failed : #{resp[:response].inspect}" if ! resp[ :succeeded ]
             end
         else
@@ -94,7 +95,7 @@ class LingrBridge
               if type == 'private'
                 log "PRIVATE MESSAGE from #{nickname}: #{text}"
               else
-                $reby.putserv "PRIVMSG #{IRC_CHANNEL} :[lingr] <#{nickname}> #{text}"
+                $reby.putserv "PRIVMSG #{IRC_CHANNEL} :[lingr] <#{nickname}> #{text}".toutf8
               end
             end
           elsif type.index('system:') == 0
