@@ -50,7 +50,6 @@ class MemoManager
         end
         
         memos.each do |memo|
-            t = memo[ 'time_sent' ].to_time.strftime( "%b %d %H:%M" )
             age = memo[ 'sent_age' ].gsub( /\.\d+$/, '' )
             case age
                 when /^00:00:(\d+)/
