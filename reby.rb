@@ -58,7 +58,9 @@ require "net/telnet"
 require "thread"
 require 'ostruct'
 
-# The Reby class contains wrappers methods for the eggdrop Tcl commands, as at
+#Thread::abort_on_exception = true
+
+# The Reby class contains wrapper methods for the eggdrop Tcl commands, as at
 # http://www.eggheads.org/support/egghtml/1.6.15/tcl-commands.html
 # Any commands not defined here can be called by using #evalTcl,
 # or even #sendTcl.
@@ -74,6 +76,7 @@ class Reby
         @config_file = config_file
         @debug_channel = '#mathetes'
         @console_mode = console_mode
+        @console_command_file = console_command_file
         
         if @console_mode
             puts "Running in console mode."
@@ -85,9 +88,6 @@ class Reby
                 :timers => Hash.new,
                 :utimers => Hash.new
             }
-            if console_command_file
-                load_console_commands console_command_file
-            end
         end
 
         # Most users won't need to change anything under here.
@@ -97,7 +97,7 @@ class Reby
         @REBY_PREFIX = "^\\[\\d+:\\d+\\] REBY"
 
         @VERSION = "0.7.5"
-        @LAST_MODIFIED = "January 3, 2008"
+        @LAST_MODIFIED = "January 24, 2008"
         @GOD_IS_GOOD = true
 
         @registered_methods = Array.new
@@ -118,6 +118,7 @@ class Reby
         if ( permissions & 04 ) == 1
             log "Warning: #{@config_file} is world readable! (#{'%o' % permissions})"
         end
+        threads = []
         IO.readlines( @config_file ).each do |line|
             case line
                 when /^host (.+)$/
@@ -126,14 +127,15 @@ class Reby
                     connect
                     filename = $1
                     log "Loading '#{filename}' ..."
-                    Thread.new( filename ) do |fn|
+                    #threads << Thread.new( filename ) do |fn|
                         begin
-                            load( fn )
+                            #load( fn )
+                            load filename
+                            log "... Loaded '#{filename}'"
                         rescue Exception => e
                             log_exception e
                         end
-                        log "... Loaded '#{filename}'"
-                    end
+                    #end
                 when /^log (.+)$/
                     @logfile = File.new( $1, "a" )
                 when /^password (.+)$/
@@ -149,6 +151,9 @@ class Reby
         if @logfile != $stdout
             $stderr.close
             $stderr = @logfile
+        end
+        if @console_command_file
+            load_console_commands @console_command_file
         end
         connect
     end
@@ -546,6 +551,7 @@ class Reby
                     <<-EOS
                     
                         rescue Exception => e
+                            log "call_method: \#\{ruby_code\}"
                             log_exception e
                         end
                     EOS
@@ -578,7 +584,7 @@ class Reby
             end
             $stdout.print "#{prompt} "; $stdout.flush
             if @console[ :queued_commands ].empty?
-                line = $stdin.gets
+                line = STDIN.gets
             else
                 line = @console[ :queued_commands ].shift.strip
                 puts line
