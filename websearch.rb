@@ -60,6 +60,7 @@ class WebSearch
         $reby.bind( "pub", "-", "!rubybook", "searchPickAxe", "$websearch" )
         $reby.bind( "pub", "-", "!rubydoc", "searchRubyDoc", "$websearch" )
         $reby.bind( "pub", "-", "!rw", "search_ramaze_wiki", "$websearch" )
+        $reby.bind( "pub", "-", "!ramaze", "search_ramaze_wiki", "$websearch" )
     end
 
     def searchSite( nick, userhost, handle, channel, args, site )
@@ -271,7 +272,7 @@ class WebSearch
                                 count = -2
                                 soup.find_all( 'a', :attrs => { 'href' => %r{^/wiki/} } ).each do |a|
                                     if count >= 0
-                                        $reby.putserv "PRIVMSG #{channel} :[#{arg}] http://en.wikipedia.org/#{a['href']}"
+                                        $reby.putserv "PRIVMSG #{channel} :[#{arg}] http://en.wikipedia.org#{a['href']}"
                                     end
                                     count += 1
                                     if count >= num_results
