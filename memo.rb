@@ -8,7 +8,7 @@
 # This is not a standalone Ruby script; it is meant to be run from Reby
 # (http://purepistos.net/eggdrop/reby).
 
-require 'dbi'
+require 'm4dbi'
 
 class MemoManager
     # Add bot names to this list, if you like.
@@ -25,18 +25,18 @@ class MemoManager
     
     def initialize
         $reby.bind( "raw", "-", "PRIVMSG", "saw_PRIVMSG", "$reby_memo" )
-        $reby.bind( "pub", "-", "!memo", "memo_command", "$reby_memo" )
+        $reby.bind( "pub", "-", "!memo", "record_memo", "$reby_memo" )
         @dbh = DBI.connect( "DBI:Pg:reby-memo", "memo", "memo" )
+    end
+    
+    def put( message, destination = @channel )
+        $reby.putserv "PRIVMSG #{destination} :#{message}"
     end
     
     def splitput( text, dest )
         text.scan( /.{1,400}/ ) do |text_part|
             put text_part, dest
         end
-    end
-    
-    def put( message, destination = @channel )
-        $reby.putserv "PRIVMSG #{destination} :#{message}"
     end
     
     def process_activity( nick, channel )
@@ -79,30 +79,37 @@ class MemoManager
         end
     end
     
-    def memo_command( nick, userhost, handle, channel, args_ )
+    def record_memo( nick, userhost, handle, channel, args )
         @channel = channel
-        command, args = args_.split( /\s+/, 2 )
-        case command
-            when /^h/
-                put "!memo send <recipient> <message>"
-            when /^(s|t)/
-                recipient, message = args.split( /\s+/, 2 )
-                if memos_for( nick ).size >= MAX_MEMOS_PER_PERSON
+        sender = nick
+        recipient, message = args.split( /\s+/, 2 )
+        
+        if sender and recipient and message and not recipient.empty? and not message.empty?
+            if recipient =~ %r{^/(.*)/$}
+                recipient_regexp = Regexp.new $1
+                @dbh.do(
+                    "INSERT INTO memos ( sender, recipient_regexp, message ) VALUES ( ?, ?, ? )",
+                    sender,
+                    recipient_regexp.source,
+                    message
+                )
+                put "#{nick}: Memo recorded for /#{recipient_regexp.source}/."
+            else
+                if memos_for( recipient ).size >= MAX_MEMOS_PER_PERSON
                     put "The inbox of #{recipient} is full."
                 else
-                    send_memo( nick, recipient, message )
-                    put "#{nick}: Memo sent to #{recipient}."
+                    @dbh.do(
+                        "INSERT INTO memos ( sender, recipient, message ) VALUES ( ?, ?, ? )",
+                        sender,
+                        recipient,
+                        message
+                    )
+                    put "#{nick}: Memo recorded for #{recipient}."
                 end
+            end
+        else
+            put "#{nick}: !memo <recipient> <message>"
         end
-    end
-    
-    def send_memo( sender, recipient, message )
-        @dbh.do(
-            "INSERT INTO memos ( sender, recipient, message ) VALUES ( ?, ?, ? )",
-            sender,
-            recipient,
-            message
-        )
     end
     
     def memos_for( recipient )
@@ -114,9 +121,13 @@ class MemoManager
                 FROM
                     memos m
                 WHERE
-                    m.recipient = ?
+                    (
+                        m.recipient = ?
+                        OR ? ~ m.recipient_regexp
+                    )
                     AND m.time_told IS NULL
             },
+            recipient,
             recipient
         )
     end
