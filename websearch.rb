@@ -23,8 +23,8 @@ rescue Exception => e
 end
     
 class WebSearch
-    VERSION = '1.1.0'
-    LAST_MODIFIED = '2008-01-14'
+    VERSION = '1.1.1'
+    LAST_MODIFIED = '2008-02-18'
     
     MAX_RESULTS = 5
     ENGINE_GOOGLE = 0
@@ -83,7 +83,7 @@ class WebSearch
         search( nick, channel, args, ENGINE_GOOGLE )
     end
     def search_ramaze_wiki( nick, userhost, handle, channel, args )
-        search( nick, channel, args + " site:ramaze.net", ENGINE_GOOGLE )
+        search( nick, channel, args + " site:ramaze.net -site:darcs.ramaze.net -site:hg.ramaze.net -site:p.ramaze.net", ENGINE_GOOGLE )
     end
 
     def searchGeoShellDocs( nick, uhost, handle, chan, args )
@@ -179,7 +179,8 @@ class WebSearch
                     text.scan /<div class=g><h2 class=r><a href="?([^"]+)" class=l.*?>(.+?)<\/a>/m do |match|
                         url, title = match
                         title.gsub!( /<.+?>/, "" )
-                        put "[#{unescaped_arg}]: #{url} - #{title}"
+                        ua = unescaped_arg.gsub( /-?site:\S+/, '' ).strip
+                        put "[#{ua}]: #{url} - #{title}"
                         counter += 1
                         if counter >= max_results
                             break
@@ -440,7 +441,8 @@ class WebSearch
                 while output.length > MAX_IRC_LINE_LENGTH
                     segment = output[ 0...MAX_IRC_LINE_LENGTH ]
                     output = output[ MAX_IRC_LINE_LENGTH..-1 ]
-                    $reby.puthelp "PRIVMSG #{channel} :[#{search_term}] #{segment}"
+                    st = search_term.gsub( /-?site:\S+/, '' )
+                    $reby.puthelp "PRIVMSG #{channel} :[#{st}] #{segment}"
                 end
                 $reby.puthelp "PRIVMSG #{channel} :#{output}"
                 counter += 1
@@ -450,7 +452,8 @@ class WebSearch
             end
             
             if counter == 0
-                $reby.puthelp "PRIVMSG #{channel} :[#{search_term}] No results found."
+                st = search_term.gsub( /-?site:\S+/, '' )
+                $reby.puthelp "PRIVMSG #{channel} :[#{st}] No results found."
             end
         end
     end
