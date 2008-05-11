@@ -122,8 +122,8 @@ class MemoManager
                     memos m
                 WHERE
                     (
-                        m.recipient = ?
-                        OR ? ~ m.recipient_regexp
+                        lower( m.recipient ) = lower( ? )
+                        OR ? ~* m.recipient_regexp
                     )
                     AND m.time_told IS NULL
             },
