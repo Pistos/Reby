@@ -10,16 +10,36 @@ require 'eventmachine'
 require 'json'
 
 module GitHubHookServer
+  
+  # Mapping of repo names to interested channels
+  REPOS = {
+    'github' => [ '#mathetes' ],
+    'linistrac' => [ '#mathetes', '#ramaze' ],
+    'ramaze' => [ '#mathetes', '#ramaze' ],
+  }
+  
   def say( message, destination = "#ramaze" )
     $reby.putserv "PRIVMSG #{destination} :#{message}"
   end
   
   def receive_data( data )
     hash = JSON.parse( data )
-    hash[ 'commits' ].each do |rev,data|
-      author = data[ 'author' ][ 'name' ]
-      message = data[ 'message' ]
-      say "[github] <#{author}> #{message}"
+    repo = hash[ 'repository' ][ 'name' ]
+    hash[ 'commits' ].each do |rev,cdata|
+      author = cdata[ 'author' ][ 'name' ]
+      message = cdata[ 'message' ]
+      text = "[github] <#{author}> #{message} [#{repo}]"
+      
+      channels = REPOS[ repo ]
+      
+      if channels.nil? or channels.empty?
+        say "Unknown repo: '#{repo}'", '#mathetes'
+        say text, '#mathetes'
+      else
+        channels.each do |channel|
+          say text, channel
+        end
+      end
     end
     close_connection
   end
