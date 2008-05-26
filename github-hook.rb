@@ -13,9 +13,14 @@ module GitHubHookServer
   
   # Mapping of repo names to interested channels
   REPOS = {
+    'better-benchmark' => [ '#mathetes' ],
+    'diakonos' => [ '#mathetes' ],
     'github' => [ '#mathetes' ],
     'linistrac' => [ '#mathetes', '#ramaze' ],
+    'm4dbi' => [ '#mathetes', '#ruby-dbi' ],
+    'nagoro' => [ '#mathetes', '#ramaze' ],
     'ramaze' => [ '#mathetes', '#ramaze' ],
+    'ramaze-book' => [ '#mathetes', '#ramaze' ],
   }
   
   def say( message, destination = "#ramaze" )
