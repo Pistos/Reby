@@ -28,6 +28,7 @@ module GitHubHookServer
   end
   
   def say_rev( rev, message, destination )
+    @seen = Hash.new
     s = ( @seen[ destination ] ||= Hash.new )
     if not s[ rev ]
       say( message, destination )
@@ -61,7 +62,6 @@ end
 
 class GitHubHookReceiver
   def initialize
-    @seen = Hash.new
     @thread = Thread.new do
       Thread.new do
         EventMachine::run do
