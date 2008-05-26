@@ -23,26 +23,35 @@ module GitHubHookServer
     'ramaze-book' => [ '#mathetes', '#ramaze' ],
   }
   
-  def say( message, destination = "#ramaze" )
+  def say( message, destination = "#mathetes" )
     $reby.putserv "PRIVMSG #{destination} :#{message}"
   end
   
+  def say_rev( rev, message, destination )
+    s = ( @seen[ destination ] ||= Hash.new )
+    if not s[ rev ]
+      say( message, destination )
+      s[ rev ] = true
+    end
+  end
+  
   def receive_data( data )
+    
     hash = JSON.parse( data )
     repo = hash[ 'repository' ][ 'name' ]
+    channels = REPOS[ repo ]
+      
     hash[ 'commits' ].each do |rev,cdata|
       author = cdata[ 'author' ][ 'name' ]
       message = cdata[ 'message' ]
       text = "[github] <#{author}> #{message} [#{repo}]"
-      
-      channels = REPOS[ repo ]
       
       if channels.nil? or channels.empty?
         say "Unknown repo: '#{repo}'", '#mathetes'
         say text, '#mathetes'
       else
         channels.each do |channel|
-          say text, channel
+          say_rev rev, text, channel
         end
       end
     end
@@ -52,6 +61,7 @@ end
 
 class GitHubHookReceiver
   def initialize
+    @seen = Hash.new
     @thread = Thread.new do
       Thread.new do
         EventMachine::run do
