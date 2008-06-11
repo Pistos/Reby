@@ -58,7 +58,7 @@ require "net/telnet"
 require "thread"
 require 'ostruct'
 
-#Thread::abort_on_exception = true
+Thread::abort_on_exception = true
 
 # The Reby class contains wrapper methods for the eggdrop Tcl commands, as at
 # http://www.eggheads.org/support/egghtml/1.6.15/tcl-commands.html
@@ -414,6 +414,7 @@ class Reby
         message = "#{Time.new.strftime( @log_timestamp_format )} #{text}"
         if not @console_mode
             @logfile.puts message
+            #@logfile.puts caller.join( "\n\t" )
             @logfile.flush
         else
             puts message

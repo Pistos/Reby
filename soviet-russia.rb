@@ -10,9 +10,9 @@
 # (http://purepistos.net/eggdrop/reby).
 # But it can be run from the command line, as well.
 
-require 'rubygems'
-require 'activesupport'
 require 'open-uri'
+require 'linguistics'
+Linguistics::use( :en )
 
 class Constituent < Array
     attr_reader :kind, :remainder
@@ -162,10 +162,10 @@ class String
         retval = self.strip
         plural = false
         if /^(?:an?|some|several|many|one|my|your|their|his|her|our) (.+)$/i =~ retval
-            retval = $1.strip.pluralize
+            retval = $1.strip.en.plural
             plural = true
         else
-            if retval.pluralize == retval
+            if retval.en.plural == retval
                 plural = true
             end
         end
@@ -288,19 +288,20 @@ class SovietRussiaReby
     include SovietRussia
     
     # Add bot names to this list, if you like.
-    IGNORED = [ "", "*" ]
+    IGNORED = [ "", "*",  ]
     MIN_SPACING = 30 * 60 # seconds
     
     def initialize
         $reby.bind( "raw", "-", "PRIVMSG", "sawPRIVMSG", "$sovietrussia" )
         $reby.bind( "pub", "-", "!sr", "soviet_russia", "$sovietrussia" )
         @auto = {
-            '#mathetes' => true,
+            '#mathetes' => false,
             '#mathetes-dev' => true,
             '#rendergods' => false,
             '#wordbattle' => true,
             '#chat-bots' => true,
             '#ramaze' => false,
+            '#ruby-dbi' => false,
         }
         @last_time = @auto.dup
         @last_time.each_key do |k|
@@ -320,7 +321,7 @@ class SovietRussiaReby
             if @last_time[ channel ].nil? or ( 
                 Time.now - @last_time[ channel ] > MIN_SPACING
             )
-                if not IGNORED.include?( nick ) and @auto[ channel ]
+                if not IGNORED.include?( nick ) and nick !~ /^CIA/ and @auto[ channel ]
                     speech.gsub!( /[\\{}()]/, '' )
                     if speech =~ /^\w/ and speech !~ /^mathetes/i
                         if speech.split.length >= WORD_COUNT_MINIMUM

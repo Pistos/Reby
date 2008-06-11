@@ -9,10 +9,11 @@
 
 require 'yaml'
 require 'pistos'
+require 'fileutils'
 
 class ChanStats
     DATA_FILE = 'chanstats.dat'
-    EXCLUDED_CHANNELS = [ '#sequel' ]
+    EXCLUDED_CHANNELS = [ '#sequel', '#ruby-pro' ]
     
     def initialize
         $reby.bind( "join", "-", "*", "on_join", "$chanstats" )
@@ -27,6 +28,9 @@ class ChanStats
     def load_data
         if File.exist? DATA_FILE
             @stats = YAML::load( File.read( DATA_FILE ) )
+            if not @stats
+                $reby.log "Failed to load stats file!"
+            end
         else
             @stats = Hash.new
             save_data
@@ -48,8 +52,6 @@ class ChanStats
     end
     
     def on_join( nick, userhost, handle, channel )
-        return if EXCLUDED_CHANNELS.include?( channel )
-        
         members = $reby.chanlist( channel )
         n = members.size
         cs = set_defaults( channel )
@@ -58,7 +60,9 @@ class ChanStats
             cs[ :members ][ n ] = members
             cs[ :date ][ n ] = Time.now
             save_data
-            put "*** New size record for #{channel}!  #{n} members!  Previous record: #{n-1} set on #{cs[ :date ][ n-1 ]}", channel
+            if not EXCLUDED_CHANNELS.include?( channel )
+              put "*** New size record for #{channel}!  #{n} members!  Previous record: #{n-1} set on #{cs[ :date ][ n-1 ]}", channel
+            end
         end
     end
     
