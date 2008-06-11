@@ -21,6 +21,8 @@ module GitHubHookServer
     'nagoro' => [ '#mathetes', '#ramaze' ],
     'ramaze' => [ '#mathetes', '#ramaze' ],
     'ramaze-book' => [ '#mathetes', '#ramaze' ],
+    'sociar' => [ '#ramaze' ],
+    'weewar-ai' => [ '#mathetes' ],
   }
   
   def say( message, destination = "#mathetes" )
@@ -37,25 +39,29 @@ module GitHubHookServer
   end
   
   def receive_data( data )
-    
     hash = JSON.parse( data )
-    repo = hash[ 'repository' ][ 'name' ]
-    channels = REPOS[ repo ]
-      
-    hash[ 'commits' ].each do |rev,cdata|
-      author = cdata[ 'author' ][ 'name' ]
-      message = cdata[ 'message' ]
-      text = "[github] <#{author}> #{message} [#{repo}]"
-      
-      if channels.nil? or channels.empty?
-        say "Unknown repo: '#{repo}'", '#mathetes'
-        say text, '#mathetes'
-      else
-        channels.each do |channel|
-          say_rev rev, text, channel
+    
+    if hash[ 'ref' ] =~ %r{/master$}
+      repo = hash[ 'repository' ][ 'name' ]
+      owner = hash[ 'repository' ][ 'owner' ][ 'name' ]
+      channels = REPOS[ repo ]
+        
+      hash[ 'commits' ].each do |rev,cdata|
+        author = cdata[ 'author' ][ 'name' ]
+        message = cdata[ 'message' ].gsub( /\s+/, ' ' )[ 0..384 ]
+        text = "[github] <#{author}> #{message} [#{owner}/#{repo}]"
+        
+        if channels.nil? or channels.empty?
+          say "Unknown repo: '#{repo}'", '#mathetes'
+          say text, '#mathetes'
+        else
+          channels.each do |channel|
+            say_rev rev, text, channel
+          end
         end
       end
     end
+    
     close_connection
   end
 end
