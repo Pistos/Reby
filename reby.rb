@@ -58,7 +58,7 @@ require "net/telnet"
 require "thread"
 require 'ostruct'
 
-Thread::abort_on_exception = true
+#Thread::abort_on_exception = true
 
 # The Reby class contains wrapper methods for the eggdrop Tcl commands, as at
 # http://www.eggheads.org/support/egghtml/1.6.15/tcl-commands.html

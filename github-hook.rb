@@ -8,6 +8,7 @@
 
 require 'eventmachine'
 require 'json'
+require 'nice-inspect'
 
 module GitHubHookServer
   
@@ -41,22 +42,25 @@ module GitHubHookServer
   def receive_data( data )
     hash = JSON.parse( data )
     
+    $reby.log "HASH: #{hash.nice_inspect}"
+    
     if hash[ 'ref' ] =~ %r{/master$}
       repo = hash[ 'repository' ][ 'name' ]
       owner = hash[ 'repository' ][ 'owner' ][ 'name' ]
       channels = REPOS[ repo ]
         
-      hash[ 'commits' ].each do |rev,cdata|
+      hash[ 'commits' ].each do |cdata|
         author = cdata[ 'author' ][ 'name' ]
         message = cdata[ 'message' ].gsub( /\s+/, ' ' )[ 0..384 ]
-        text = "[github] <#{author}> #{message} [#{owner}/#{repo}]"
+        url = cdata[ 'url' ]
+        text = "[github] <#{author}> #{message} [#{url}]"
         
         if channels.nil? or channels.empty?
           say "Unknown repo: '#{repo}'", '#mathetes'
           say text, '#mathetes'
         else
           channels.each do |channel|
-            say_rev rev, text, channel
+            say_rev cdata[ 'id' ], text, channel
           end
         end
       end
