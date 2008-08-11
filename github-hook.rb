@@ -9,6 +9,8 @@
 require 'eventmachine'
 require 'json'
 require 'nice-inspect'
+require 'open-uri'
+require 'cgi'
 
 module GitHubHookServer
   
@@ -52,7 +54,7 @@ module GitHubHookServer
       hash[ 'commits' ].each do |cdata|
         author = cdata[ 'author' ][ 'name' ]
         message = cdata[ 'message' ].gsub( /\s+/, ' ' )[ 0..384 ]
-        url = cdata[ 'url' ]
+        url = URI.parse( 'http://zep.purepistos.net/zep/1?uri=' + CGI.escape( cdata[ 'url' ] ) ).read
         text = "[github] <#{author}> #{message} [#{url}]"
         
         if channels.nil? or channels.empty?
@@ -73,10 +75,8 @@ end
 class GitHubHookReceiver
   def initialize
     @thread = Thread.new do
-      Thread.new do
-        EventMachine::run do
-          EventMachine::start_server '127.0.0.1', 9005, GitHubHookServer
-        end
+      EventMachine::run do
+        EventMachine::start_server '127.0.0.1', 9005, GitHubHookServer
       end
     end
   end
