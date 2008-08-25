@@ -16,16 +16,18 @@ module GitHubHookServer
   
   # Mapping of repo names to interested channels
   REPOS = {
-    'better-benchmark' => [ '#mathetes' ],
-    'diakonos' => [ '#mathetes' ],
+    'better-benchmark' => [ '#mathetes', '#ruby-pro' ],
+    'diakonos' => [ '#mathetes', '#ruby-pro' ],
     'github' => [ '#mathetes' ],
-    'linistrac' => [ '#mathetes', '#ramaze' ],
-    'm4dbi' => [ '#mathetes', '#ruby-dbi' ],
+    'linistrac' => [ '#mathetes', '#ramaze', '#ruby-pro' ],
+    'm4dbi' => [ '#mathetes', '#ruby-dbi', '#ruby-pro' ],
     'nagoro' => [ '#mathetes', '#ramaze' ],
-    'ramaze' => [ '#mathetes', '#ramaze' ],
+    'ramaze' => [ '#mathetes', '#ramaze', '#ruby-pro' ],
     'ramaze-book' => [ '#mathetes', '#ramaze' ],
+    'ruby-dbi' => [ '#mathetes', '#ruby-dbi', '#ruby-pro' ],
     'sociar' => [ '#ramaze' ],
     'weewar-ai' => [ '#mathetes' ],
+    'zepto-url' => [ '#mathetes', '#ramaze', '#ruby-pro' ],
   }
   
   def say( message, destination = "#mathetes" )
@@ -44,9 +46,7 @@ module GitHubHookServer
   def receive_data( data )
     hash = JSON.parse( data )
     
-    $reby.log "HASH: #{hash.nice_inspect}"
-    
-    if hash[ 'ref' ] =~ %r{/master$}
+    if hash[ 'ref' ] =~ %r{/(master|development)$}
       repo = hash[ 'repository' ][ 'name' ]
       owner = hash[ 'repository' ][ 'owner' ][ 'name' ]
       channels = REPOS[ repo ]
@@ -55,7 +55,7 @@ module GitHubHookServer
         author = cdata[ 'author' ][ 'name' ]
         message = cdata[ 'message' ].gsub( /\s+/, ' ' )[ 0..384 ]
         url = URI.parse( 'http://zep.purepistos.net/zep/1?uri=' + CGI.escape( cdata[ 'url' ] ) ).read
-        text = "[github] <#{author}> #{message} [#{url}]"
+        text = "[github] <#{author}> #{message} [#{repo}] #{url}"
         
         if channels.nil? or channels.empty?
           say "Unknown repo: '#{repo}'", '#mathetes'
