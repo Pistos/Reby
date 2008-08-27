@@ -35,7 +35,7 @@ module GitHubHookServer
   end
   
   def say_rev( rev, message, destination )
-    @seen = Hash.new
+    @seen ||= Hash.new
     s = ( @seen[ destination ] ||= Hash.new )
     if not s[ rev ]
       say( message, destination )
@@ -43,18 +43,27 @@ module GitHubHookServer
     end
   end
   
+  def zepto_url( url )
+    URI.parse( 'http://zep.purepistos.net/zep/1?uri=' + CGI.escape( url ) ).read
+  end
+  
   def receive_data( data )
     hash = JSON.parse( data )
     
-    if hash[ 'ref' ] =~ %r{/(master|development)$}
-      repo = hash[ 'repository' ][ 'name' ]
-      owner = hash[ 'repository' ][ 'owner' ][ 'name' ]
-      channels = REPOS[ repo ]
-        
-      hash[ 'commits' ].each do |cdata|
+    repo = hash[ 'repository' ][ 'name' ]
+    owner = hash[ 'repository' ][ 'owner' ][ 'name' ]
+    channels = REPOS[ repo ]
+    
+    commits = hash[ 'commits' ]
+    
+    if commits.size < 7
+      
+      # Announce each individual commit
+      
+      commits.each do |cdata|
         author = cdata[ 'author' ][ 'name' ]
         message = cdata[ 'message' ].gsub( /\s+/, ' ' )[ 0..384 ]
-        url = URI.parse( 'http://zep.purepistos.net/zep/1?uri=' + CGI.escape( cdata[ 'url' ] ) ).read
+        url = zepto_url( cdata[ 'url' ] )
         text = "[github] <#{author}> #{message} [#{repo}] #{url}"
         
         if channels.nil? or channels.empty?
@@ -66,6 +75,25 @@ module GitHubHookServer
           end
         end
       end
+      
+    else
+      
+      # Too many commits; say a summary only
+      
+      authors = commits.map { |c| c[ 'author' ][ 'name' ] }.uniq
+      shas = commits.map { |c| c[ 'id' ] }
+      first_url = zepto_url( commits[ 0 ][ 'url' ] )
+      if channels and not channels.empty?
+        channels.each do |channel|
+          @seen ||= Hash.new
+          s = ( @seen[ channel ] ||= Hash.new )
+          shas.each do |sha|
+            s[ sha ] = true
+          end
+          say "[github] #{commits.size} commits to #{repo} by: #{authors.join( ', ' )}  #{first_url}"
+        end
+      end
+      
     end
     
     close_connection
