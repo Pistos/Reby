@@ -23,8 +23,8 @@ rescue Exception => e
 end
     
 class WebSearch
-    VERSION = '1.1.1'
-    LAST_MODIFIED = '2008-02-18'
+    VERSION = '1.1.2'
+    LAST_MODIFIED = '2008-09-04'
     
     MAX_RESULTS = 5
     ENGINE_GOOGLE = 0
@@ -176,7 +176,7 @@ class WebSearch
                     File.open( "websearch.last", "w" ) { |f| f.puts text }
                     
                     counter = 0
-                    text.scan /<div class=g><h2 class=r><a href="?([^"]+)" class=l.*?>(.+?)<\/a>/m do |match|
+                    text.scan /<a href="?([^"]+)" class=l.*?>(.+?)<\/a>/m do |match|
                         url, title = match
                         title.gsub!( /<.+?>/, "" )
                         ua = unescaped_arg.gsub( /-?site:\S+/, '' ).strip
