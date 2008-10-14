@@ -16,18 +16,23 @@ module GitHubHookServer
   
   # Mapping of repo names to interested channels
   REPOS = {
-    'better-benchmark' => [ '#mathetes', '#ruby-pro' ],
-    'diakonos' => [ '#mathetes', '#ruby-pro' ],
+    'better-benchmark' => [ '#mathetes', ],
+    'diakonos' => [ '#mathetes', ],
+    'firewatir-enhancements' => [ '#mathetes', '#watir' ],
     'github' => [ '#mathetes' ],
-    'linistrac' => [ '#mathetes', '#ramaze', '#ruby-pro' ],
-    'm4dbi' => [ '#mathetes', '#ruby-dbi', '#ruby-pro' ],
+    'hoptoad-notifier-ramaze' =>[ '#mathetes', '#ramaze' ],
+    'innate' => [ '#mathetes', '#ramaze', ],
+    'linistrac' => [ '#mathetes', '#ramaze', ],
+    'm4dbi' => [ '#mathetes', '#ruby-dbi', ],
     'nagoro' => [ '#mathetes', '#ramaze' ],
-    'ramaze' => [ '#mathetes', '#ramaze', '#ruby-pro' ],
+    'ramaze' => [ '#mathetes', '#ramaze', ],
     'ramaze-book' => [ '#mathetes', '#ramaze' ],
-    'ruby-dbi' => [ '#mathetes', '#ruby-dbi', '#ruby-pro' ],
+    'ramaze-wiki-pages' => [ '#mathetes', '#ramaze' ],
+    'ruby-dbi' => [ '#mathetes', '#ruby-dbi', ],
     'sociar' => [ '#ramaze' ],
+    'watir-mirror' => [ '#mathetes', '#watir' ],
     'weewar-ai' => [ '#mathetes' ],
-    'zepto-url' => [ '#mathetes', '#ramaze', '#ruby-pro' ],
+    'zepto-url' => [ '#mathetes', '#ramaze', ],
   }
   
   def say( message, destination = "#mathetes" )
@@ -90,7 +95,7 @@ module GitHubHookServer
           shas.each do |sha|
             s[ sha ] = true
           end
-          say "[github] #{commits.size} commits to #{repo} by: #{authors.join( ', ' )}  #{first_url}"
+          say "[github] #{commits.size} commits to #{repo} by: #{authors.join( ', ' )}  #{first_url}", channel
         end
       end
       
