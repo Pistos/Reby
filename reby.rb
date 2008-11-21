@@ -57,6 +57,7 @@
 require "net/telnet"
 require "thread"
 require 'ostruct'
+require 'eventmachine'
 
 #Thread::abort_on_exception = true
 

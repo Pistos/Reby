@@ -6,7 +6,6 @@
 # This is not a standalone Ruby script; it is meant to be run from Reby
 # (http://purepistos.net/eggdrop/reby).
 
-require 'eventmachine'
 require 'json'
 require 'nice-inspect'
 require 'open-uri'
@@ -16,23 +15,23 @@ module GitHubHookServer
   
   # Mapping of repo names to interested channels
   REPOS = {
-    'better-benchmark' => [ '#mathetes', ],
-    'diakonos' => [ '#mathetes', ],
-    'firewatir-enhancements' => [ '#mathetes', '#watir' ],
-    'github' => [ '#mathetes' ],
-    'hoptoad-notifier-ramaze' =>[ '#mathetes', '#ramaze' ],
-    'innate' => [ '#mathetes', '#ramaze', ],
-    'linistrac' => [ '#mathetes', '#ramaze', ],
-    'm4dbi' => [ '#mathetes', '#ruby-dbi', ],
-    'nagoro' => [ '#mathetes', '#ramaze' ],
-    'ramaze' => [ '#mathetes', '#ramaze', ],
-    'ramaze-book' => [ '#mathetes', '#ramaze' ],
-    'ramaze-wiki-pages' => [ '#mathetes', '#ramaze' ],
-    'ruby-dbi' => [ '#mathetes', '#ruby-dbi', ],
-    'sociar' => [ '#ramaze' ],
-    'watir-mirror' => [ '#mathetes', '#watir' ],
-    'weewar-ai' => [ '#mathetes' ],
-    'zepto-url' => [ '#mathetes', '#ramaze', ],
+    'better-benchmark'        => [ '#mathetes', ],
+    'diakonos'                => [ '#mathetes', ],
+    'firewatir-enhancements'  => [ '#mathetes', '#watir' ],
+    'github'                  => [ '#mathetes' ],
+    'hoptoad-notifier-ramaze' => [ '#mathetes', '#ramaze' ],
+    'innate'                  => [ '#mathetes', '#ramaze', ],
+    'linistrac'               => [ '#mathetes', '#ramaze', ],
+    'm4dbi'                   => [ '#mathetes', '#ruby-dbi', ],
+    'nagoro'                  => [ '#mathetes', '#ramaze' ],
+    'ramaze'                  => [ '#mathetes', '#ramaze', ],
+    'ramaze-book'             => [ '#mathetes', '#ramaze' ],
+    'ramaze-wiki-pages'       => [ '#mathetes', '#ramaze' ],
+    'ruby-dbi'                => [ '#mathetes', '#ruby-dbi', ],
+    'sociar'                  => [ '#ramaze' ],
+    'watir-mirror'            => [ '#mathetes', '#watir' ],
+    'weewar-ai'               => [ '#mathetes' ],
+    'zepto-url'               => [ '#mathetes', '#ramaze', ],
   }
   
   def say( message, destination = "#mathetes" )
@@ -53,6 +52,7 @@ module GitHubHookServer
   end
   
   def receive_data( data )
+    $reby.log "DATA RECEIVED"
     hash = JSON.parse( data )
     
     repo = hash[ 'repository' ][ 'name' ]

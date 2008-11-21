@@ -23,8 +23,8 @@ rescue Exception => e
 end
     
 class WebSearch
-    VERSION = '1.1.2'
-    LAST_MODIFIED = '2008-09-04'
+    VERSION = '1.1.3'
+    LAST_MODIFIED = '2008-11-21'
     
     MAX_RESULTS = 5
     ENGINE_GOOGLE = 0
@@ -55,6 +55,14 @@ class WebSearch
         $reby.bind( 'pub', '-', '!gloss', 'gloss', '$websearch' )
         $reby.bind( 'pub', '-', '!define', 'gloss', '$websearch' )
         $reby.bind( 'pub', '-', '!dict', 'wordsmyth', '$websearch' )
+        $reby.bind( 'pub', '-', '?down', 'downforme', '$websearch' )
+        $reby.bind( 'pub', '-', 'down?', 'downforme', '$websearch' )
+        $reby.bind( 'pub', '-', '!down', 'downforme', '$websearch' )
+        $reby.bind( 'pub', '-', '!down?', 'downforme', '$websearch' )
+        $reby.bind( 'pub', '-', '?up', 'downforme', '$websearch' )
+        $reby.bind( 'pub', '-', 'up?', 'downforme', '$websearch' )
+        $reby.bind( 'pub', '-', '!up', 'downforme', '$websearch' )
+        $reby.bind( 'pub', '-', '!up?', 'downforme', '$websearch' )
         
         $reby.bind( "pub", "-", "!docs", "searchGeoShellDocs", "$websearch" )
         $reby.bind( "pub", "-", "!rubybook", "searchPickAxe", "$websearch" )
@@ -129,6 +137,12 @@ class WebSearch
     
     def wordsmyth( nick, userhost, handle, channel, args )
         search( nick, channel, args, :search_wordsmyth )
+    end
+    
+    def downforme( nick, userhost, handle, channel, args )
+      site = args.to_s.downcase[ /([a-z0-9-.]+)($|\/)/, 1 ]
+      doc = Hpricot( open( "http://downforeveryoneorjustme.com/#{site}" ) )
+      put( "#{site}: " + doc.at( 'div#container' ).children.select{ |e| e.text? }.join( ' ' ).gsub( /\s+/, ' ' ).strip, channel )
     end
     
     def splitput( channel, text )
