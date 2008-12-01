@@ -12,6 +12,12 @@ require 'yaml'
 
 class RebyTwitter
   
+  CHANNELS = {
+    'webbynode' => [ '#webbynode', '#mathetes', ],
+    #'Pistos' => [ '#mathetes', ],
+    'manveru' => [ '#ramaze', '#mathetes', ],
+  }
+  
   def initialize
     config = YAML.load_file 'reby-twitter.yaml'
     @twitter = Twitter::Base.new( config[ 'username' ], config[ 'password' ] )
@@ -41,7 +47,13 @@ class RebyTwitter
   end
   
   def say_tweet tweet
-    say "[twitter] <#{tweet.user.name}> #{tweet.text}"
+    src = tweet.user.screen_name
+    text = tweet.text.gsub( /[a-zA-Z0-9,.;:!? _-]/, '' )
+    alert = "[twitter] <#{src}> #{text}"
+    channels = CHANNELS[ src ] || [ '#mathetes' ]
+    channels.each do |channel|
+      say alert, channel
+    end
   end
 end
 
