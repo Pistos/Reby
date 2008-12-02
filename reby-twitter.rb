@@ -16,6 +16,7 @@ class RebyTwitter
     'webbynode' => [ '#webbynode', '#mathetes', ],
     #'Pistos' => [ '#mathetes', ],
     'manveru' => [ '#ramaze', '#mathetes', ],
+    '_why' => [ '#ramaze', '#mathetes', ],
   }
   
   def initialize
@@ -48,7 +49,7 @@ class RebyTwitter
   
   def say_tweet tweet
     src = tweet.user.screen_name
-    text = tweet.text.gsub( /[a-zA-Z0-9,.;:!? _-]/, '' )
+    text = tweet.text.gsub( /[^a-zA-Z0-9,.;:!? _-]/, '' )
     alert = "[twitter] <#{src}> #{text}"
     channels = CHANNELS[ src ] || [ '#mathetes' ]
     channels.each do |channel|
