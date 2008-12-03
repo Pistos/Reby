@@ -14,16 +14,14 @@ class RebyTwitter
   
   CHANNELS = {
     'webbynode' => [ '#webbynode', '#mathetes', ],
-    #'Pistos' => [ '#mathetes', ],
     'manveru' => [ '#ramaze', '#mathetes', ],
     '_why' => [ '#ramaze', '#mathetes', ],
   }
   SEARCHES = {
-    #'ramaze' => [ '#ramaze' ],
-    'ramaze' => [ '#mathetes' ],
+    'ramaze' => [ '#ramaze' ],
     'purepistos' => [ '#mathetes' ],
     'm4dbi' => [ '#mathetes' ],
-    #'webbynode' => [ '#webbynode' ],
+    'webbynode' => [ '#webbynode' ],
   }
   
   def initialize
@@ -35,7 +33,7 @@ class RebyTwitter
     SEARCHES.each do |search_term,channels|
       search = Twitter::Search.new( search_term )
       fetched = search.fetch
-      @last_search_id[ search_term ] = fetched[ 'max_id' ]
+      @last_search_id[ search_term ] = fetched[ 'max_id' ].to_i
     end
     
     @thread = Thread.new do
@@ -73,8 +71,8 @@ class RebyTwitter
       last_id = @last_search_id[ search_term ] 
       search.since( last_id )
       fetched = search.fetch
-      if fetched[ 'max_id' ] > last_id
-        @last_search_id[ search_term ] = fetched[ 'max_id' ]
+      if fetched[ 'max_id' ].to_i > last_id
+        @last_search_id[ search_term ] = fetched[ 'max_id' ].to_i
         fetched[ 'results' ].each do |tweet|
           say_search_tweet tweet, channels
         end
@@ -86,7 +84,8 @@ class RebyTwitter
   end
   
   def say_tweet tweet
-    if @echoed_ids.include? tweet.id
+    tweet_id = tweet.id.to_i
+    if @echoed_ids.include? tweet_id
       return
     end
     src = tweet.user.screen_name
@@ -96,11 +95,12 @@ class RebyTwitter
     channels.each do |channel|
       say alert, channel
     end
-    @echoed_ids << tweet.id
+    @echoed_ids << tweet_id
   end
-  
+
   def say_search_tweet( tweet, channels = [ '#mathetes' ] )
-    if @echoed_ids.include? tweet[ 'id' ]
+    tweet_id = tweet[ 'id' ].to_i
+    if @echoed_ids.include? tweet_id
       return
     end
     src = tweet[ 'from_user' ]
@@ -109,7 +109,7 @@ class RebyTwitter
     channels.each do |channel|
       say alert, channel
     end
-    @echoed_ids << tweet[ 'id' ]
+    @echoed_ids << tweet_id
   end
 end
 
