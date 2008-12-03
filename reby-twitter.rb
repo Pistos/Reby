@@ -29,16 +29,20 @@ class RebyTwitter
     @twitter = Twitter::Base.new( config[ 'username' ], config[ 'password' ] )
     @last_timestamp = Time.now
     @last_search_id = Hash.new
+    @seen = Hash.new { |hash,key| hash[ key ] = Array.new }
     
     SEARCHES.each do |search_term,channels|
       search = Twitter::Search.new( search_term )
       fetched = search.fetch
-      @last_search_id[ search_term ] = fetched[ 'max_id' ].to_i
+      max_id = fetched[ 'max_id' ].to_i
+      @last_search_id[ search_term ] = max_id
+      channels.each do |channel|
+        @seen[ channel ] << max_id
+      end
     end
     
     @thread = Thread.new do
       loop do
-        @echoed_ids = []
         poll_timeline
         poll_searches
         sleep 30
@@ -85,31 +89,29 @@ class RebyTwitter
   
   def say_tweet tweet
     tweet_id = tweet.id.to_i
-    if @echoed_ids.include? tweet_id
-      return
-    end
     src = tweet.user.screen_name
     text = tweet.text.gsub( /[^a-zA-Z0-9,.;:'!?\/ _-]/, '' )
     alert = "[twitter] <#{src}> #{text}"
     channels = CHANNELS[ src ] || [ '#mathetes' ]
     channels.each do |channel|
-      say alert, channel
+      if not @seen[ channel ].include?( tweet_id )
+        say alert, channel
+        @seen[ channel ] << tweet_id
+      end
     end
-    @echoed_ids << tweet_id
   end
 
   def say_search_tweet( tweet, channels = [ '#mathetes' ] )
     tweet_id = tweet[ 'id' ].to_i
-    if @echoed_ids.include? tweet_id
-      return
-    end
     src = tweet[ 'from_user' ]
     text = tweet[ 'text' ].gsub( /[^a-zA-Z0-9,.;:'!?\/ _-]/, '' )
     alert = "[twitter] <#{src}> #{text}"
     channels.each do |channel|
-      say alert, channel
+      if not @seen[ channel ].include?( tweet_id )
+        say alert, channel
+        @seen[ channel ] << tweet_id
+      end
     end
-    @echoed_ids << tweet_id
   end
 end
 
