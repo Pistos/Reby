@@ -142,7 +142,7 @@ class WebSearch
     def downforme( nick, userhost, handle, channel, args )
       site = args.to_s.downcase[ /([a-z0-9-.]+)($|\/)/, 1 ]
       doc = Hpricot( open( "http://downforeveryoneorjustme.com/#{site}" ) )
-      put( "#{site}: " + doc.at( 'div#container' ).children.select{ |e| e.text? }.join( ' ' ).gsub( /\s+/, ' ' ).strip, channel )
+      put( "#{nick}: [#{site}] " + doc.at( 'div#container' ).children.select{ |e| e.text? }.join( ' ' ).gsub( /\s+/, ' ' ).strip, channel )
     end
     
     def splitput( channel, text )
