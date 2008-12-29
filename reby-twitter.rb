@@ -9,6 +9,7 @@ require 'twitter'
 require 'time'
 require 'nice-inspect'
 require 'yaml'
+require 'rexml/document'
 
 class RebyTwitter
 
@@ -94,7 +95,7 @@ class RebyTwitter
   def say_tweet tweet
     tweet_id = tweet.id.to_i
     src = tweet.user.screen_name
-    text = tweet.text.gsub( /[^a-zA-Z0-9,.;:@'!?\/ _-]/, '' )
+    text = REXML::Text::unnormalize( tweet.text ).gsub( /[^a-zA-Z0-9,.;:&@'!?\/ ()_-]/, '' )
     alert = "[twitter] <#{src}> #{text}"
     channels = CHANNELS[ src ] || [ 'Pistos' ]
     channels.each do |channel|
@@ -108,7 +109,7 @@ class RebyTwitter
   def say_search_tweet( tweet, channels = [ 'Pistos' ] )
     tweet_id = tweet[ 'id' ].to_i
     src = tweet[ 'from_user' ]
-    text = tweet[ 'text' ].gsub( /[^a-zA-Z0-9,.;:@'!?\/ _-]/, '' )
+    text = REXML::Text::unnormalize( tweet[ 'text' ] ).gsub( /[^a-zA-Z0-9,.;:&@'!?\/ ()_-]/, '' )
     alert = "[twitter] <#{src}> #{text}"
     channels.each do |channel|
       if not @seen[ channel ].include?( tweet_id )
