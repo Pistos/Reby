@@ -8,7 +8,7 @@
 require 'mvfeed'
 require 'nice-inspect'
 
-class RebyTwitter
+class RebyRSS
 
   FEEDS = {
     'http://forum.webbynode.com/syndication.php?limit=10' => [ '#webbynode', ],
@@ -65,4 +65,4 @@ class RebyTwitter
   end
 end
 
-RebyTwitter.new
+RebyRSS.new
