@@ -15,6 +15,10 @@ class RebyRSS
       :channels => [ '#webbynode', ],
       :interval => 60,
     },
+    'http://feeds.feedburner.com/webbyblog' => {
+      :channels => [ '#webbynode', ],
+      :interval => 60 * 60,
+    },
     'http://groups.google.com/group/ramaze/feed/rss_v2_0_msgs.xml' => {
       :channels => [ '#ramaze', ],
       :interval => 60 * 60,
@@ -23,10 +27,10 @@ class RebyRSS
       :channels => [ 'Pistos', ],
       :interval => 60 * 60,
     },
-    'http://linis.purepistos.net/ticket/rss/124' => {
-      :channels => [ 'Pistos', ],
-      :interval => 20,
-    },
+    # 'http://linis.purepistos.net/ticket/rss/124' => {
+      # :channels => [ 'Pistos', ],
+      # :interval => 20,
+    # },
   }
 
   def initialize
@@ -59,11 +63,21 @@ class RebyRSS
     #$reby.log e.backtrace.join( "\t\n" )
   end
 
+  def zepto_url( url )
+    URI.parse( 'http://zep.purepistos.net/zep/1?uri=' + CGI.escape( url ) ).read
+  end
+
   def say_item( uri, item, channels )
     if item.author
       author = "<#{item.author}> "
     end
-    alert = "[rss] #{author}#{item.title} - #{item.link}"
+
+    url = item.link
+    if url.length > 28
+      url = zepto_url( item.link )
+    end
+
+    alert = "[rss] #{author}#{item.title} - #{url}"
     channels.each do |channel|
       id = item.link
       if not @seen[ channel ][ id ]
