@@ -11,44 +11,55 @@ require 'nice-inspect'
 class RebyRSS
 
   FEEDS = {
-    'http://forum.webbynode.com/syndication.php?limit=10' => [ '#webbynode', ],
-    'http://groups.google.com/group/ramaze/feed/rss_v2_0_msgs.xml' => [ '#ramaze', ],
-    #'http://linis.purepistos.net/ticket/rss/124' => [ 'Pistos', ],
+    'http://forum.webbynode.com/syndication.php?limit=10' => {
+      :channels => [ '#webbynode', ],
+      :interval => 60,
+    },
+    'http://groups.google.com/group/ramaze/feed/rss_v2_0_msgs.xml' => {
+      :channels => [ '#ramaze', ],
+      :interval => 60 * 60,
+    },
+    'http://github.com/Pistos.private.atom?token=38fc2012cf93a2bf29be69409ad1272b' => {
+      :channels => [ 'Pistos', ],
+      :interval => 60 * 60,
+    },
+    'http://linis.purepistos.net/ticket/rss/124' => {
+      :channels => [ 'Pistos', ],
+      :interval => 20,
+    },
   }
 
   def initialize
     @seen = Hash.new { |hash,key| hash[ key ] = Hash.new }
-    @first = true
+    @first = Hash.new { |hash,key| hash[ key ] = true }
 
-    @thread = Thread.new do
-      loop do
-        poll_feeds
-        sleep 60
+    FEEDS.each do |uri, data|
+      thread = Thread.new do
+        loop do
+          poll_feed( uri, data )
+          sleep data[ :interval ]
+        end
       end
+      $reby.registerThread thread
     end
-    $reby.registerThread @thread
   end
 
   def say( message, destination = "#mathetes" )
     $reby.putserv "PRIVMSG #{destination} :#{message}"
   end
 
-  def poll_feeds
-    FEEDS.each do |uri, channels|
-      feed = Feed.parse( uri )
-      feed.children.each do |item|
-        channels.each do |channel|
-          say_item item, channels
-        end
-      end
+  def poll_feed( uri, data )
+    feed = Feed.parse( uri )
+    feed.children.each do |item|
+      say_item uri, item, data[ :channels ]
     end
-    @first = false
+    @first[ uri ] = false
   rescue Exception => e
     $reby.log "RebyRSS exception: #{e.message}"
     #$reby.log e.backtrace.join( "\t\n" )
   end
 
-  def say_item( item, channels )
+  def say_item( uri, item, channels )
     if item.author
       author = "<#{item.author}> "
     end
@@ -56,7 +67,7 @@ class RebyRSS
     channels.each do |channel|
       id = item.link
       if not @seen[ channel ][ id ]
-        if not @first
+        if not @first[ uri ]
           say alert, channel
         end
         @seen[ channel ][ id ] = true
