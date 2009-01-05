@@ -78,7 +78,7 @@ class Reby
         @debug_channel = '#mathetes'
         @console_mode = console_mode
         @console_command_file = console_command_file
-        
+
         if @console_mode
             puts "Running in console mode."
             @console = {
@@ -177,20 +177,20 @@ class Reby
             begin
                 @con.puts( ".rehash" )
                 defineRebyProcs
-                
+
                 # Clear extant Reby-originated binds.
-                
+
                 sendTcl "set old_binds [binds \"rebybind__*\"]"
                 sendTcl "foreach b $old_binds { " +
                     "putlog \"Unbinding [lindex $b 0] [lindex $b 1] [lindex $b 2] [lindex $b 4]\"; " +
                     "unbind [lindex $b 0] [lindex $b 1] [lindex $b 2] [lindex $b 4]" +
                     "}"
-                    
+
                 # Clear extant Reby-originated timers.
-                
+
                 sendTcl "set old_timers [timers]"
                 sendTcl "foreach t $old_timers { " +
-                    "if {[string match {*rebybind*} [lindex $t 1]]} { " + 
+                    "if {[string match {*rebybind*} [lindex $t 1]]} { " +
                         "putlog \"Killing timer [lindex $t 1] [lindex $t 2]\"; " +
                         "killtimer [lindex $t 2] " +
                     "} " +
@@ -212,8 +212,8 @@ class Reby
         sendTcl "proc rebyTcl {return_id tcl_code} {" +
             " putlog \"REBY return $return_id [eval $tcl_code]\" " +
             "}"
-            
-        sendTcl "proc putnow { a } { " + 
+
+        sendTcl "proc putnow { a } { " +
             "append a \"\\n\";  putdccraw 0 [string length $a] $a; " +
         "}"
     end
@@ -348,7 +348,7 @@ class Reby
     # methods to get the return value in other forms.
     def getReturnValue( return_id )
         return nil if @console_mode
-        
+
         num_loops = 0
         printed_stack = false
         while @return_values[ return_id ] == nil
@@ -400,7 +400,7 @@ class Reby
         return tcl_proc_name
     end
     protected :registerMethod
-    
+
     # Scripts that run independent threads should use this method to register
     # their thread(s) with Reby, so that the threads are cleanly terminated
     # when Reby is reset.  If a thread is not registered, it will continue to
@@ -421,7 +421,7 @@ class Reby
             puts message
         end
     end
-    
+
     def log_exception( e )
         putserv "PRIVMSG #{@debug_channel} :Eep!  A critical Reby error! #{e.class}"
         log "Reby error: #{e.class} #{e.message}"
@@ -493,17 +493,17 @@ class Reby
         f.close
 
         log "Reby #{@VERSION} (#{@LAST_MODIFIED}) started."
-        
+
         if not @console_mode
             normal_start
         else
             console_start
         end
     end
-        
+
     def normal_start
         bind( "notc", "-", "*ickname*", "nicknameNotice", "$reby" )
-        
+
         while $reby_signal == nil
             begin
                 while $reby_signal == nil
@@ -519,7 +519,7 @@ class Reby
                             arglist.collect! do |arg|
                                 arg.toReby
                             end
-                            
+
                             full_method_name = getFullMethodName( instance, method_name )
                             call_method( full_method_name, arglist )
                         when /#{@REBY_PREFIX} return (\d+) (.+)/
@@ -531,7 +531,7 @@ class Reby
                             log "*** UNKNOWN REBY MESSAGE ***"
                             log line
                         #when /^Tcl error: (.+)$/
-                            
+
                     end
                 end
             rescue EOFError
@@ -542,39 +542,39 @@ class Reby
 
         logout
     end
-    
+
     def call_method( full_method_name, arglist )
         if @registered_methods.include?( full_method_name )
             ruby_code = "#{full_method_name}(#{ arglist.join( ',' ) })"
             Thread.new( ruby_code ) do |code_to_evaluate|
-                code_to_evaluate = 
+                code_to_evaluate =
                     "begin\n" +
                         code_to_evaluate +
                     <<-EOS
-                    
+
                         rescue Exception => e
                             log "call_method: \#\{ruby_code\}"
                             log_exception e
                         end
                     EOS
-                        
+
                 eval code_to_evaluate
             end
         else
             log "No such method: #{full_method_name}"
         end
     end
-    
+
     def load_console_commands( file )
         return if not @console
-        
+
         File.open( file ) do |f|
             f.each_line do |line|
                 @console[ :queued_commands ] << line
             end
         end
     end
-    
+
     def console_start
         loop do
             prompt = 'reby>'
@@ -601,13 +601,13 @@ class Reby
             end
         end
     end
-    
+
     def cleanup
         @script_threads.each do |thread|
             thread.exit
         end
     end
-    
+
     def process_console_command( command )
         case command
             when /^(pub|msg)(.*)/
@@ -629,7 +629,7 @@ class Reby
                 puts "^D to quit"
         end
     end
-    
+
     def bind_for( bindset, line )
         /^(\S+)(?:\s+(.*))?$/ =~ line
         line_command = $1
@@ -639,7 +639,7 @@ class Reby
         }
         [ bind_specs, line_args ]
     end
-    
+
     def process_console_line( line )
         case @console[ :target ]
             when :pub
@@ -684,18 +684,18 @@ class Reby
             else
                 # Evaluate as Reby (Ruby) code.
                 Thread.new( line ) do |code_to_evaluate|
-                    code_to_evaluate = 
+                    code_to_evaluate =
                         "begin\n" +
                             code_to_evaluate +
                         <<-EOS
-                        
+
                             rescue Exception => e
                                 $stderr.puts "Eep!  A critical Reby error!"
                                 log "Reby error: " + e.message
                                 log e.backtrace.join( "\n" )
                             end
                         EOS
-                            
+
                     eval code_to_evaluate
                 end
         end
@@ -966,7 +966,7 @@ class Reby
     def myip
         return getReturnValue( evalTcl( "myip" ) )
     end
-    
+
     def newban( target, creator, comment = "Ban set at #{Time.now}", lifetime = nil, options = nil )
         command = "newban #{target.toTclString} #{creator.toTclString} {#{comment}} "
         if lifetime
@@ -1103,7 +1103,7 @@ class Reby
             @console[ :timers ].values.find_all { |t|
                 t.thread.alive?
             }.map { |t|
-                [ 
+                [
                     ( t.end_time.to_i - Time.now.to_i ) / 60.0,
                     t.full_method_name,
                     t.ident
@@ -1160,7 +1160,7 @@ class Reby
             @console[ :utimers ].values.find_all { |t|
                 t.thread.alive?
             }.map { |t|
-                [ 
+                [
                     ( t.end_time.to_i - Time.now.to_i ),
                     t.full_method_name,
                     t.ident
@@ -1217,7 +1217,7 @@ class String
     def join( joinstr = " " )
         return self
     end
-    
+
     # Surrounds with curly braces if needed.
     def toTclString
         retval = to_s
@@ -1277,7 +1277,7 @@ begin
         console_mode = false
         conf_file = 'reby.conf'
         console_command_file = nil
-        
+
         while args.length > 0
             arg = args.shift
             case arg
@@ -1297,7 +1297,7 @@ begin
                     conf_file = arg
             end
         end
-        
+
         $reby = Reby.new( conf_file, console_mode, console_command_file )
         $reby.loadConfiguration
         $reby.start

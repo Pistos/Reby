@@ -14,19 +14,19 @@ require 'rexml/document'
 class RebyTwitter
 
   CHANNELS = {
-    'webbynode' => [ '#webbynode', 'Pistos', ],
-    'manveru' => [ '#ramaze', 'Pistos', ],
-    '_why' => [ '#ramaze', 'Pistos', ],
+    'webbynode' => [ '#webbynode', ],
+    'manveru' => [ '#ramaze', ],
+    '_why' => [ '#ramaze', ],
   }
   SEARCHES = {
-    'm4dbi' => [ 'Pistos' ],
-    'better-benchmark' => [ 'Pistos' ],
-    'diakonos' => [ 'Pistos' ],
-    'linistrac' => [ 'Pistos' ],
-    'purepistos' => [ 'Pistos' ],
-    'ramaze' => [ '#ramaze' ],
-    'ruby dbi' => [ '#ruby-dbi' ],
-    'webbynode' => [ '#webbynode' ],
+    'm4dbi' => [ 'Pistos', 'Pistos|work|afk', 'Pistos|home|afk', ],
+    'better-benchmark' => [ 'Pistos', 'Pistos|work|afk', 'Pistos|home|afk', ],
+    'diakonos' => [ 'Pistos', 'Pistos|work|afk', 'Pistos|home|afk', ],
+    'linistrac' => [ 'Pistos', 'Pistos|work|afk', 'Pistos|home|afk', ],
+    'purepistos' => [ 'Pistos', 'Pistos|work|afk', 'Pistos|home|afk', ],
+    'ramaze' => [ '#ramaze', ],
+    'ruby dbi' => [ '#ruby-dbi', ],
+    'webbynode' => [ '#webbynode', ],
   }
 
   def initialize
