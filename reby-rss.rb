@@ -27,6 +27,10 @@ class RebyRSS
       :channels => [ 'Pistos', ],
       :interval => 60 * 60,
     },
+    'http://www.google.com/alerts/feeds/13535865067391668311/1085272382843306248' => {
+      :channels => [ '#ramaze', ],
+      :interval => 60 * 60,
+    },
     # 'http://linis.purepistos.net/ticket/rss/124' => {
       # :channels => [ 'Pistos', ],
       # :interval => 20,
