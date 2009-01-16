@@ -72,16 +72,19 @@ class RebyRSS
       author = "<#{item.author}> "
     end
 
-    url = item.link
-    if url.length > 28
-      url = zepto_url( item.link )
-    end
+    alert = nil
 
-    alert = "[rss] #{author}#{item.title} - #{url}"
     channels.each do |channel|
       id = item.link
       if not @seen[ channel ][ id ]
         if not @first[ uri ]
+          if alert.nil?
+            url = item.link
+            if url.length > 28
+              url = zepto_url( item.link )
+            end
+            alert = "[rss] #{author}#{item.title} - #{url}"
+          end
           say alert, channel
         end
         @seen[ channel ][ id ] = true
