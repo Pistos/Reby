@@ -12,7 +12,7 @@ require 'open-uri'
 require 'cgi'
 
 module GitHubHookServer
-  
+
   # Mapping of repo names to interested channels
   REPOS = {
     'better-benchmark'        => [ '#mathetes', ],
@@ -26,6 +26,7 @@ module GitHubHookServer
     'nagoro'                  => [ '#mathetes', '#ramaze' ],
     'ramaze'                  => [ '#mathetes', '#ramaze', ],
     'ramaze-book'             => [ '#mathetes', '#ramaze' ],
+    'ramaze.net'              => [ '#ramaze', ],
     'ramaze-wiki-pages'       => [ '#mathetes', '#ramaze' ],
     'ruby-dbi'                => [ '#mathetes', '#ruby-dbi', ],
     'sociar'                  => [ '#ramaze' ],
@@ -33,11 +34,11 @@ module GitHubHookServer
     'weewar-ai'               => [ '#mathetes' ],
     'zepto-url'               => [ '#mathetes', '#ramaze', ],
   }
-  
+
   def say( message, destination = "#mathetes" )
     $reby.putserv "PRIVMSG #{destination} :#{message}"
   end
-  
+
   def say_rev( rev, message, destination )
     @seen ||= Hash.new
     s = ( @seen[ destination ] ||= Hash.new )
@@ -46,31 +47,31 @@ module GitHubHookServer
       s[ rev ] = true
     end
   end
-  
+
   def zepto_url( url )
     URI.parse( 'http://zep.purepistos.net/zep/1?uri=' + CGI.escape( url ) ).read
   end
-  
+
   def receive_data( data )
     $reby.log "DATA RECEIVED"
     hash = JSON.parse( data )
-    
+
     repo = hash[ 'repository' ][ 'name' ]
     owner = hash[ 'repository' ][ 'owner' ][ 'name' ]
     channels = REPOS[ repo ]
-    
+
     commits = hash[ 'commits' ]
-    
+
     if commits.size < 7
-      
+
       # Announce each individual commit
-      
+
       commits.each do |cdata|
         author = cdata[ 'author' ][ 'name' ]
         message = cdata[ 'message' ].gsub( /\s+/, ' ' )[ 0..384 ]
         url = zepto_url( cdata[ 'url' ] )
         text = "[github] <#{author}> #{message} [#{repo}] #{url}"
-        
+
         if channels.nil? or channels.empty?
           say "Unknown repo: '#{repo}'", '#mathetes'
           say text, '#mathetes'
@@ -80,11 +81,11 @@ module GitHubHookServer
           end
         end
       end
-      
+
     else
-      
+
       # Too many commits; say a summary only
-      
+
       authors = commits.map { |c| c[ 'author' ][ 'name' ] }.uniq
       shas = commits.map { |c| c[ 'id' ] }
       first_url = zepto_url( commits[ 0 ][ 'url' ] )
@@ -98,9 +99,9 @@ module GitHubHookServer
           say "[github] #{commits.size} commits to #{repo} by: #{authors.join( ', ' )}  #{first_url}", channel
         end
       end
-      
+
     end
-    
+
     close_connection
   end
 end
