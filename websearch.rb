@@ -21,11 +21,11 @@ begin
 rescue Exception => e
     require_gem 'rubyful_soup'
 end
-    
+
 class WebSearch
-    VERSION = '1.1.3'
-    LAST_MODIFIED = '2008-11-21'
-    
+    VERSION = '1.1.4'
+    LAST_MODIFIED = '2009-01-21'
+
     MAX_RESULTS = 5
     ENGINE_GOOGLE = 0
     ENGINE_TEOMA = 1
@@ -37,7 +37,17 @@ class WebSearch
     ENGINE_SYNONYM_COM = 7
     ENGINE_BADPUNS_COM = 8
     MAX_IRC_LINE_LENGTH = 400
-    
+    GOOGLEFIGHT_VERBS = [
+      [ 1000.0, "completely DEMOLISHES" ],
+      [ 100.0, "utterly destroys" ],
+      [ 10.0, "destroys" ],
+      [ 5.0, "demolishes" ],
+      [ 3.0, "crushes" ],
+      [ 2.0, "shames" ],
+      [ 1.2, "beats" ],
+      [ 1.0, "barely beats" ],
+    ]
+
     def initialize
         $reby.bind( "pub", "-", "!google", "google", "$websearch" )
         $reby.bind( "pub", "-", "!teoma", "teoma", "$websearch" )
@@ -52,6 +62,7 @@ class WebSearch
         $reby.bind( "pub", "-", "!etym", "etymOnline", "$websearch" )
         $reby.bind( "pub", "-", "!syn", "synonym", "$websearch" )
         $reby.bind( "pub", "-", "!pun", "badPuns", "$websearch" )
+        $reby.bind( "pub", "-", "!googlefight", "googlefight", "$websearch" )
         $reby.bind( 'pub', '-', '!gloss', 'gloss', '$websearch' )
         $reby.bind( 'pub', '-', '!define', 'gloss', '$websearch' )
         $reby.bind( 'pub', '-', '!dict', 'wordsmyth', '$websearch' )
@@ -63,7 +74,7 @@ class WebSearch
         $reby.bind( 'pub', '-', 'up?', 'downforme', '$websearch' )
         $reby.bind( 'pub', '-', '!up', 'downforme', '$websearch' )
         $reby.bind( 'pub', '-', '!up?', 'downforme', '$websearch' )
-        
+
         $reby.bind( "pub", "-", "!docs", "searchGeoShellDocs", "$websearch" )
         $reby.bind( "pub", "-", "!rubybook", "searchPickAxe", "$websearch" )
         $reby.bind( "pub", "-", "!rubydoc", "searchRubyDoc", "$websearch" )
@@ -84,9 +95,9 @@ class WebSearch
     def searchRubyDoc( nick, uhost, handle, chan, arg )
         searchSite( nick, uhost, handle, chan, arg, "www.ruby-doc.org" )
     end
-    
+
     # -----------
-    
+
     def google( nick, userhost, handle, channel, args )
         search( nick, channel, args, ENGINE_GOOGLE )
     end
@@ -97,7 +108,7 @@ class WebSearch
     def searchGeoShellDocs( nick, uhost, handle, chan, args )
         search( nick, chan, args, ENGINE_GEOSHELL_WIKI )
     end
-    
+
     def teoma( nick, userhost, handle, channel, args )
         search( nick, channel, args, ENGINE_TEOMA )
     end
@@ -109,7 +120,7 @@ class WebSearch
     def altaVista( nick, userhost, handle, channel, args )
         search( nick, channel, args, ENGINE_ALTAVISTA )
     end
-    
+
     def wikipedia( nick, userhost, handle, channel, args )
         search( nick, channel, args, ENGINE_WIKIPEDIA )
     end
@@ -117,11 +128,11 @@ class WebSearch
     def etymOnline( nick, userhost, handle, channel, args )
         search( nick, channel, args, ENGINE_ETYMONLINE )
     end
-    
+
     def synonym( nick, userhost, handle, channel, args )
         search( nick, channel, args, ENGINE_SYNONYM_COM )
     end
-    
+
     def badPuns( nick, userhost, handle, channel, args )
         getResults(
             "http://www.badpuns.com/jokes.php?section=oneline&pos=random",
@@ -130,37 +141,72 @@ class WebSearch
             1
         )
     end
-    
+
     def gloss( nick, userhost, handle, channel, args )
         search( nick, channel, args, :search_glossary )
     end
-    
+
     def wordsmyth( nick, userhost, handle, channel, args )
         search( nick, channel, args, :search_wordsmyth )
     end
-    
+
+    def google_count( term_array )
+      terms = CGI.escape( term_array.join( ' ' ) )
+      doc = Hpricot( open( "http://www.google.com/search?q=#{terms}" ) )
+      doc.at( '#ssb//b[3]' ).inner_text.gsub( ',', '' ).to_i
+    end
+
+    def googlefight( nick, userhost, handle, channel, args )
+      a = args.split( /,/ )
+      if a.size != 2
+        a = args.split( /vs\.?/ )
+        if a.size != 2
+          a = args.split( /\s+/, 2 )
+        end
+      end
+
+      if a.size != 2
+        put( "#{nick}: !googlefight <term(s)> [vs | ,] <term(s)>", channel )
+      else
+        a.collect! { |t| t.strip }
+        count1 = google_count( a[ 0 ] )
+        count2 = google_count( a[ 1 ] )
+        ratio1 = ( count2 != 0 ) ? count1.to_f / count2 : 99
+        ratio2 = ( count1 != 0 ) ? count2.to_f / count1 : 99
+        ratio = [ ratio1, ratio2 ].max
+        verb = GOOGLEFIGHT_VERBS.find { |x| ratio > x[ 0 ] }[ 1 ]
+
+        if count1 > count2
+          msg = "#{a[0]} #{verb} #{a[1]}! (#{count1} to #{count2})"
+        else
+          msg = "#{a[1]} #{verb} #{a[0]}! (#{count2} to #{count1})"
+        end
+        put( "#{nick}: #{msg}", channel )
+      end
+    end
+
     def downforme( nick, userhost, handle, channel, args )
       site = args.to_s.downcase[ /([a-z0-9-.]+)($|\/)/, 1 ]
       doc = Hpricot( open( "http://downforeveryoneorjustme.com/#{site}" ) )
       put( "#{nick}: [#{site}] " + doc.at( 'div#container' ).children.select{ |e| e.text? }.join( ' ' ).gsub( /\s+/, ' ' ).strip, channel )
     end
-    
+
     def splitput( channel, text )
         text.scan( /.{1,400}/ ) do |text_part|
             $reby.putserv "PRIVMSG #{channel} :#{text_part}"
         end
     end
-    
+
     def put( message, destination = @channel )
         $reby.putserv "PRIVMSG #{destination} :#{message}"
     end
-    
+
     def search( nick, channel, args, engine = ENGINE_GOOGLE )
         num_results = 1
         @channel = channel
 
         args_array = args.split( /\s+/ )
-        
+
         if args_array.length < 1
             $reby.putserv "PRIVMSG #{channel} :!google [number of results] <search terms>"
             return
@@ -177,7 +223,7 @@ class WebSearch
             arg = args_array.join( "+" )
             unescaped_arg = args_array.join( " " )
         end
-        
+
         arg = CGI.escape( arg )
         $reby.log "arg: #{arg}"
 
@@ -186,9 +232,9 @@ class WebSearch
                 max_results = num_results
                 open( "http://www.google.com/search?q=#{ CGI.escape( args ) }&safe=active" ) do |html|
                     text = html.read
-                    
+
                     File.open( "websearch.last", "w" ) { |f| f.puts text }
-                    
+
                     counter = 0
                     text.scan /<a href="?([^"]+)" class=l.*?>(.+?)<\/a>/m do |match|
                         url, title = match
@@ -200,12 +246,12 @@ class WebSearch
                             break
                         end
                     end
-                    
+
                     if counter == 0
                         put "(no results)"
                     end
                 end
-                
+
             when ENGINE_TEOMA
                 getResults(
                     "http://s.teoma.com/search?q=#{ arg }",
@@ -257,7 +303,7 @@ class WebSearch
                                             $reby.putserv "PRIVMSG #{channel} :(more results given in private to #{nick})"
                                         end
                                     end
-                                        
+
                                     $reby.putserv "#{dest} :[#{unescaped_arg}] #{definition} - #{syns}"
                                     num_printed += 1
                                 end
@@ -276,7 +322,7 @@ class WebSearch
             when ENGINE_WIKIPEDIA
                 open( "http://en.wikipedia.org/w/wiki.phtml?search=#{ arg }" ) do |html|
                     soup = BeautifulSoup.new( html.read )
-                    
+
                     heading_tag = soup.find( 'h1', :attrs => { 'class' => 'firstHeading' } )
                     if heading_tag
                         title = heading_tag.string
@@ -323,7 +369,7 @@ class WebSearch
                         $reby.putserv "PRIVMSG #{channel} :No definitions found for #{arg}."
                     else
                         definition_text = text[ /<ul.*?>(.+)<\/ul>/m, 1 ]
-                        
+
                         if definition_text != nil
                             definitions = definition_text.scan( /li>\s*([^<>]+?)</ )
                             counter = 1
@@ -344,10 +390,10 @@ class WebSearch
         end
 
     end
-    
+
     def parse_wordsmyth( text, channel )
         soup = BeautifulSoup.new( text )
-        
+
         not_found_p = soup.find( Proc.new { |el|
             el.respond_to?( :name ) &&
             el.name == 'p' &&
@@ -358,34 +404,34 @@ class WebSearch
             not_found_p.find_all( 'a' ).each do |a|
                 suggestions << a.string
             end
-            
+
             output = '(no results)'
             if not suggestions.empty?
                 output << " Close matches: #{suggestions.join( ', ' )}"
             end
-            
+
             splitput channel, output
-            
+
             return
         end
-        
+
         maintable = soup.find( 'table', :attrs => { 'cellspacing'=>'0', 'border'=>"0", 'cellpadding'=>"2", 'width'=>"100%", 'bgcolor' => nil } )
-        
+
         wordtag = maintable.find( 'div', { :attrs => { 'class' => 'headword' } } )
         if wordtag
             word = wordtag.contents[ 0 ]
         end
-        
+
         # Iterate through all <tr>s, find relevant bits.
         output = ""
         maintable.next_parsed_items do |tr|
             next if not tr.respond_to?( :name ) or tr.name != 'tr'
-            
+
             main_td = tr.find( 'td', :attrs => { 'width' => '70%' } )
             middle_td = tr.find( 'td', :attrs => { 'width' => '5%', 'valign' => 'baseline' } )
-            
+
             # Part of Speech
-            
+
             if tr[ 'bgcolor' ] == '#DDDDFF'
                 pos = main_td.span.string
                 if not output.empty?
@@ -393,10 +439,10 @@ class WebSearch
                 end
                 output = "#{word} - [#{pos}]"
             end
-            
+
             if tr[ 'bgcolor' ] == '#FFFFFF'
                 # Pronunciation
-                
+
                 prontag = tr.find( 'div', :attrs => { 'class' => 'pron' } )
                 if prontag
                     syllabification = []
@@ -421,9 +467,9 @@ class WebSearch
                     end
                     output << " (" + syllabification.join( ' ' ) + ")"
                 end
-                
+
                 # Definition
-                
+
                 if main_td
                     def_span = main_td.find( 'span', :attrs => { 'style' => 'font-weight: normal;' } )
                     if def_span
@@ -436,7 +482,7 @@ class WebSearch
             splitput channel, output
         end
     end
-    
+
     def getResults( search_url, regexp, channel, max_results, search_term = "" )
         open( search_url ) do |html|
             text = html.read
@@ -464,7 +510,7 @@ class WebSearch
                     break
                 end
             end
-            
+
             if counter == 0
                 st = search_term.gsub( /-?site:\S+/, '' )
                 $reby.puthelp "PRIVMSG #{channel} :[#{st}] No results found."
