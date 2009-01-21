@@ -156,10 +156,14 @@ class WebSearch
       doc.at( '#ssb//b[3]' ).inner_text.gsub( ',', '' ).to_i
     end
 
+    def number_with_delimiter( number, delimiter="," )
+      number.to_s.gsub(/(\d)(?=(\d\d\d)+(?!\d))/, "\\1#{delimiter}")
+    end
+
     def googlefight( nick, userhost, handle, channel, args )
       a = args.split( /,/ )
       if a.size != 2
-        a = args.split( /vs\.?/ )
+        a = args.split( /v(?:ersu)?s\.?/ )
         if a.size != 2
           a = args.split( /\s+/, 2 )
         end
@@ -175,11 +179,13 @@ class WebSearch
         ratio2 = ( count1 != 0 ) ? count2.to_f / count1 : 99
         ratio = [ ratio1, ratio2 ].max
         verb = GOOGLEFIGHT_VERBS.find { |x| ratio > x[ 0 ] }[ 1 ]
+        c1 = number_with_delimiter( count1 )
+        c2 = number_with_delimiter( count2 )
 
         if count1 > count2
-          msg = "#{a[0]} #{verb} #{a[1]}! (#{count1} to #{count2})"
+          msg = "#{a[0]} #{verb} #{a[1]}! (#{c1} to #{c2})"
         else
-          msg = "#{a[1]} #{verb} #{a[0]}! (#{count2} to #{count1})"
+          msg = "#{a[1]} #{verb} #{a[0]}! (#{c2} to #{c1})"
         end
         put( "#{nick}: #{msg}", channel )
       end
