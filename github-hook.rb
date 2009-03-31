@@ -16,7 +16,9 @@ module GitHubHookServer
   # Mapping of repo names to interested channels
   REPOS = {
     'better-benchmark'        => [ '#mathetes', ],
+    'buildmybike'             => [ '#ramaze', ],
     'diakonos'                => [ '#mathetes', ],
+    'emerge-gem'              => [ '#mathetes', '#gentoo-ruby', ],
     'firewatir-enhancements'  => [ '#mathetes', '#watir' ],
     'github'                  => [ '#mathetes' ],
     'hoptoad-notifier-ramaze' => [ '#mathetes', '#ramaze' ],
@@ -29,6 +31,7 @@ module GitHubHookServer
     'ramaze.net'              => [ '#ramaze', ],
     'ramaze-wiki-pages'       => [ '#mathetes', '#ramaze' ],
     'ruby-dbi'                => [ '#mathetes', '#ruby-dbi', ],
+    'selfmarks'               => [ '#mathetes', ],
     'sociar'                  => [ '#ramaze' ],
     'watir-mirror'            => [ '#mathetes', '#watir' ],
     'weewar-ai'               => [ '#mathetes' ],
@@ -70,7 +73,7 @@ module GitHubHookServer
         author = cdata[ 'author' ][ 'name' ]
         message = cdata[ 'message' ].gsub( /\s+/, ' ' )[ 0..384 ]
         url = zepto_url( cdata[ 'url' ] )
-        text = "[github] <#{author}> #{message} [#{repo}] #{url}"
+        text = "[github] [#{repo}] <#{author}> #{message} #{url}"
 
         if channels.nil? or channels.empty?
           say "Unknown repo: '#{repo}'", '#mathetes'
@@ -96,7 +99,7 @@ module GitHubHookServer
           shas.each do |sha|
             s[ sha ] = true
           end
-          say "[github] #{commits.size} commits to #{repo} by: #{authors.join( ', ' )}  #{first_url}", channel
+          say "[github] [#{repo}] #{commits.size} commits by: #{authors.join( ', ' )}  #{first_url}", channel
         end
       end
 
