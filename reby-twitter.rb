@@ -45,7 +45,7 @@ class RebyTwitter
       loop do
         poll_timeline
         poll_searches
-        sleep 30
+        sleep 120
       end
     end
     $reby.registerThread @thread
