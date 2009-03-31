@@ -19,11 +19,6 @@ class RebyTwitter
     '_why' => [ '#ramaze', ],
   }
   SEARCHES = {
-    'm4dbi' => [ 'Pistos', 'Pistos|work|afk', 'Pistos|home|afk', ],
-    'better-benchmark' => [ 'Pistos', 'Pistos|work|afk', 'Pistos|home|afk', ],
-    'diakonos' => [ 'Pistos', 'Pistos|work|afk', 'Pistos|home|afk', ],
-    'linistrac' => [ 'Pistos', 'Pistos|work|afk', 'Pistos|home|afk', ],
-    'purepistos' => [ 'Pistos', 'Pistos|work|afk', 'Pistos|home|afk', ],
     'ramaze' => [ '#ramaze', ],
     'ruby dbi' => [ '#ruby-dbi', ],
     'webbynode' => [ '#webbynode', ],
