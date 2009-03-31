@@ -63,6 +63,7 @@ class WebSearch
         $reby.bind( "pub", "-", "!syn", "synonym", "$websearch" )
         $reby.bind( "pub", "-", "!pun", "badPuns", "$websearch" )
         $reby.bind( "pub", "-", "!googlefight", "googlefight", "$websearch" )
+        $reby.bind( "pub", "-", "!gf", "googlefight", "$websearch" )
         $reby.bind( 'pub', '-', '!gloss', 'gloss', '$websearch' )
         $reby.bind( 'pub', '-', '!define', 'gloss', '$websearch' )
         $reby.bind( 'pub', '-', '!dict', 'wordsmyth', '$websearch' )
@@ -163,7 +164,7 @@ class WebSearch
     def googlefight( nick, userhost, handle, channel, args )
       a = args.split( /,/ )
       if a.size != 2
-        a = args.split( /v(?:ersu)?s\.?/ )
+        a = args.split( /\bv(?:ersu)?s(?:\.|\b)/ )
         if a.size != 2
           a = args.split( /\s+/, 2 )
         end
