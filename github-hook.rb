@@ -112,8 +112,11 @@ end
 class GitHubHookReceiver
   def initialize
     @thread = Thread.new do
-      EventMachine::run do
-        EventMachine::start_server '127.0.0.1', 9005, GitHubHookServer
+      loop do
+        EventMachine::run do
+          EventMachine::start_server '127.0.0.1', 9005, GitHubHookServer
+        end
+        $reby.log "*** EventMachine died; restarting ***"
       end
     end
   end
