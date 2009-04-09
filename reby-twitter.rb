@@ -16,7 +16,6 @@ class RebyTwitter
   CHANNELS = {
     'webbynode' => [ '#webbynode', ],
     'manveru' => [ '#ramaze', ],
-    '_why' => [ '#ramaze', ],
   }
   SEARCHES = {
     'ramaze' => [ '#ramaze', ],
@@ -59,8 +58,7 @@ class RebyTwitter
     tl = @twitter.timeline( :friends, :since => ( @last_timestamp + 1 ).to_s )
     if tl.any?
       tl.reverse!
-      @last_timestamp = Time.parse( tl[ -1 ].created_at )
-      tl.each do |tweet|
+      tl.reverse_each do |tweet|
         say_tweet tweet
       end
     end
@@ -88,6 +86,9 @@ class RebyTwitter
   end
 
   def say_tweet tweet
+    tweet_time = Time.parse( tweet.created_at )
+    return  if tweet_time < @last_timestamp
+    @last_timestamp = tweet_time
     tweet_id = tweet.id.to_i
     src = tweet.user.screen_name
     text = REXML::Text::unnormalize( tweet.text ).gsub( /[^a-zA-Z0-9,.;:&@'!?\/ ()_-]/, '' )
