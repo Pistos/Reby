@@ -23,8 +23,8 @@ rescue Exception => e
 end
 
 class WebSearch
-    VERSION = '1.1.4'
-    LAST_MODIFIED = '2009-01-21'
+    VERSION = '1.1.5'
+    LAST_MODIFIED = '2009-05-07'
 
     MAX_RESULTS = 5
     ENGINE_GOOGLE = 0
@@ -64,6 +64,7 @@ class WebSearch
         $reby.bind( "pub", "-", "!pun", "badPuns", "$websearch" )
         $reby.bind( "pub", "-", "!googlefight", "googlefight", "$websearch" )
         $reby.bind( "pub", "-", "!gf", "googlefight", "$websearch" )
+        $reby.bind( "pub", "-", "!meme", "meme", "$websearch" )
         $reby.bind( 'pub', '-', '!gloss', 'gloss', '$websearch' )
         $reby.bind( 'pub', '-', '!define', 'gloss', '$websearch' )
         $reby.bind( 'pub', '-', '!dict', 'wordsmyth', '$websearch' )
@@ -189,6 +190,18 @@ class WebSearch
           msg = "#{a[1]} #{verb} #{a[0]}! (#{c2} to #{c1})"
         end
         put( "#{nick}: #{msg}", channel )
+      end
+    end
+
+    def meme( nick, userhost, handle, channel, args )
+      n = 1
+      if args.to_s.to_i > 0
+        n = args.to_s.to_i
+      end
+
+      memes = open( "http://meme.boxofjunk.ws/moar.txt" ).readlines
+      memes[ 0...n ].each do |meme|
+        put meme, channel
       end
     end
 
