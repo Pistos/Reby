@@ -108,6 +108,8 @@ class Reby
         @is_identified = Hash.new
         @script_threads = Array.new
         @con = nil
+
+        @excuses = File.readlines( File.join( File.dirname( __FILE__ ), 'excuses.txt' ) )
     end
 
     def loadConfiguration
@@ -422,8 +424,12 @@ class Reby
         end
     end
 
+    def excuse
+      @excuses[ rand( @excuses.size ) ]
+    end
+
     def log_exception( e )
-        putserv "PRIVMSG #{@debug_channel} :Eep!  A critical Reby error! #{e.class}"
+        putserv "PRIVMSG #{@debug_channel} :Eep!  A critical Reby error! #{e.class} \"#{excuse}\""
         log "Reby error: #{e.class} #{e.message}"
         log e.backtrace.join( "\n" )
     end
@@ -658,7 +664,7 @@ class Reby
                             begin
                                 obj.send( bind_specs[ :method ], *bind_args )
                             rescue Exception => e
-                                $stderr.puts "Eep!  A critical Reby error!"
+                                $stderr.puts "Eep!  A critical Reby error! \"#{excuse}\""
                                 log "Reby error: " + e.message
                                 log e.backtrace.join( "\n" )
                             end
@@ -690,7 +696,7 @@ class Reby
                         <<-EOS
 
                             rescue Exception => e
-                                $stderr.puts "Eep!  A critical Reby error!"
+                                $stderr.puts "Eep!  A critical Reby error! \"#{excuse}\""
                                 log "Reby error: " + e.message
                                 log e.backtrace.join( "\n" )
                             end
