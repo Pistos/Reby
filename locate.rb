@@ -20,14 +20,14 @@ class GeoLocate
         @requests = 0
         @agent = WWW::Mechanize.new
     end
-    
+
     def bindWhoisResponse
         $reby.bind( "raw", "-", "311", "locate_ip", "$locate" )
     end
     def unbindWhoisResponse
         $reby.unbind( "raw", "-", "311", "locate_ip", "$locate" )
     end
-    
+
     def locate_ip( from, keyword, text )
         return if(
             keyword != "311" or
@@ -39,25 +39,30 @@ class GeoLocate
             unbindWhoisResponse
             @requests = 0
         end
-        
+
         ip_address = text.split()[ 3 ]
-        
+
         threads = []
         country = ""
         region = ""
         city = ""
-        timezone = ""
-        
+
         begin
-            doc = Hpricot( open( "http://www.geobytes.com/IpLocator.htm?GetLocation&ipaddress=#{ip_address}" ) )
-            country = doc.at( "[@name='ro-no_bots_pls13']" )[ 'value' ]
-            region = doc.at( "[@name='ro-no_bots_pls15']" )[ 'value' ]
-            city = doc.at( "[@name='ro-no_bots_pls17']" )[ 'value' ]
-            timezone = doc.at( "[@name='ro-no_bots_pls9']" )[ 'value' ]
+          # doc = Hpricot( open( "http://www.geoip.co.uk/?IP=#{ip_address}" ) )
+          # data = doc.at('#mapinfo .textleft').to_enum( :traverse_text ).zip( doc.at('#mapinfo .textright' ).to_enum(:traverse_text)).map{ |a,b|
+            # [ a.inner_text.strip,b.inner_text.delete(':').strip ]
+          # }
+          # country = data[ 3 ][ 1 ]
+          # region = data[ 5 ][ 1 ]
+
+          doc = Hpricot( open( "http://www.geobytes.com/IpLocator.htm?GetLocation&ipaddress=#{ip_address}" ) )
+          country = doc.at( "[@name='ro-no_bots_pls13']" )[ 'value' ]
+          region = doc.at( "[@name='ro-no_bots_pls15']" )[ 'value' ]
+          city = doc.at( "[@name='ro-no_bots_pls17']" )[ 'value' ]
         rescue Exception => e
-            $reby.log e.message
+          $reby.log e.message
         end
-        
+
         if not city.empty?
             put "I estimate that #{@ip_nick} is somewhere near #{city}, #{region}, #{country}.", @ip_channel
             t = time_in( city, region, country )
@@ -70,11 +75,11 @@ class GeoLocate
             put "Unable to !locate #{@ip_nick}.", @ip_channel
         end
     end
-    
+
     def put( message, destination = ( @channel || 'Pistos' ) )
         $reby.putserv "PRIVMSG #{destination} :#{message}"
     end
-    
+
     def locate( nick, userhost, handle, channel, args )
         @ip_nick = args.split()[ 0 ]
         @ip_channel = channel
@@ -83,7 +88,7 @@ class GeoLocate
         bindWhoisResponse
         $reby.putserv "WHOIS #{@ip_nick}"
     end
-    
+
     def time_in( city, region, country )
         @time_place = nil
         place = CGI.escape( "#{city}, #{region}, #{country}" )
