@@ -26,6 +26,7 @@ module GitHubHookServer
     'linistrac'               => [ '#mathetes', '#ramaze', ],
     'm4dbi'                   => [ '#mathetes', '#ruby-dbi', ],
     'nagoro'                  => [ '#mathetes', '#ramaze' ],
+    'Ramalytics'              => [ '#mathetes', '#ramaze' ],
     'ramaze'                  => [ '#mathetes', '#ramaze', ],
     'ramaze-book'             => [ '#mathetes', '#ramaze' ],
     'ramaze.net'              => [ '#ramaze', ],
