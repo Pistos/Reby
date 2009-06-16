@@ -15,7 +15,6 @@ class RebyTwitter
 
   CHANNELS = {
     'webbynode' => [ '#webbynode', ],
-    'manveru' => [ '#ramaze', ],
   }
   SEARCHES = {
     'ramaze' => [ '#ramaze', ],
