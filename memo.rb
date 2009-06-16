@@ -1,4 +1,4 @@
-# memo.rb 
+# memo.rb
 
 # Basic public memo system.
 # Delivers messages when recipient is seen to be active in the channel.
@@ -22,33 +22,34 @@ class MemoManager
     ]
     MAX_MEMOS_PER_PERSON = 20
     PUBLIC_READING_THRESHOLD = 2
-    
+
     def initialize
         $reby.bind( "raw", "-", "PRIVMSG", "saw_PRIVMSG", "$reby_memo" )
         $reby.bind( "pub", "-", "!memo", "record_memo", "$reby_memo" )
+        $reby.bind( "join", "-", "*", "on_join", "$reby_memo" )
         @dbh = DBI.connect( "DBI:Pg:reby-memo", "memo", "memo" )
     end
-    
+
     def put( message, destination = @channel )
         $reby.putserv "PRIVMSG #{destination} :#{message}"
     end
-    
+
     def splitput( text, dest )
         text.scan( /.{1,400}/ ) do |text_part|
             put text_part, dest
         end
     end
-    
+
     def process_activity( nick, channel )
         return if IGNORED.include?( nick )
-        
+
         memos = memos_for( nick )
         if memos.size <= PUBLIC_READING_THRESHOLD
             dest = channel
         else
             dest = nick
         end
-        
+
         memos.each do |memo|
             age = memo[ 'sent_age' ].gsub( /\.\d+$/, '' )
             case age
@@ -66,7 +67,7 @@ class MemoManager
             )
         end
     end
-    
+
     def saw_PRIVMSG( from, keyword, text )
         from = from.to_s
         delimiter_index = from.index( "!" )
@@ -78,12 +79,19 @@ class MemoManager
             $reby.log "[memo] No nick?  '#{from}' (#{from.index( '!' )})"
         end
     end
-    
+
+    def on_join( nick, userhost, handle, channel )
+        memos = memos_for( nick )
+        if memos.size > 0
+          put "You have #{memos.size} memo(s).  Speak publicly in a channel to retrieve them.", nick
+        end
+    end
+
     def record_memo( nick, userhost, handle, channel, args )
         @channel = channel
         sender = nick
         recipient, message = args.split( /\s+/, 2 )
-        
+
         if sender and recipient and message and not recipient.empty? and not message.empty?
             if recipient =~ %r{^/(.*)/$}
                 recipient_regexp = Regexp.new $1
@@ -111,7 +119,7 @@ class MemoManager
             put "#{nick}: !memo <recipient> <message>"
         end
     end
-    
+
     def memos_for( recipient )
         @dbh.select_all(
             %{
