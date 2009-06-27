@@ -11,11 +11,11 @@ require 'nice-inspect'
 class RebyRSS
 
   FEEDS = {
-    'http://forum.webbynode.com/syndication.php?limit=10' => {
+    'http://forum.webbynode.com/rss.php' => {
       :channels => [ '#webbynode', ],
       :interval => 60,
     },
-    'http://feeds.feedburner.com/webbyblog' => {
+    'http://blog.webbynode.com/feed/rss/' => {
       :channels => [ '#webbynode', ],
       :interval => 60 * 60,
     },
