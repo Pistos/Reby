@@ -61,7 +61,8 @@ class WebSearch
         $reby.bind( "pub", "-", "!wikipedia", "wikipedia", "$websearch" )
         $reby.bind( "pub", "-", "!etym", "etymOnline", "$websearch" )
         $reby.bind( "pub", "-", "!syn", "synonym", "$websearch" )
-        $reby.bind( "pub", "-", "!pun", "badPuns", "$websearch" )
+        # $reby.bind( "pub", "-", "!pun", "badPuns", "$websearch" )
+        $reby.bind( "pub", "-", "!pun", "pun", "$websearch" )
         $reby.bind( "pub", "-", "!googlefight", "googlefight", "$websearch" )
         $reby.bind( "pub", "-", "!gf", "googlefight", "$websearch" )
         $reby.bind( "pub", "-", "!meme", "meme", "$websearch" )
@@ -142,6 +143,12 @@ class WebSearch
             channel,
             1
         )
+    end
+
+    def pun( nick, userhost, handle, channel, args )
+      doc = Hpricot( open( "http://www.punoftheday.com/cgi-bin/randompun.pl" ) )
+      p = doc.search( '#main-content p' )[ 0 ].inner_text
+      put p, channel
     end
 
     def gloss( nick, userhost, handle, channel, args )
