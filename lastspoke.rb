@@ -60,7 +60,7 @@ class LastSpoke
 
     def initialize
         @last_spoke = PStore.new( "lastspoke.pstore" )
-        @last_spoke.ultra_safe = true
+        # @last_spoke.ultra_safe = true
         @spoke_start = PStore.new( "lastspoke-start.pstore" )
         @spoke_start.transaction { @spoke_start[ 'time' ] = Time.now }
 
