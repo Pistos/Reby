@@ -8,23 +8,23 @@
 # (http://purepistos.net/eggdrop/reby).
 
 require 'yaml'
-require 'pistos'
+# require 'pistos'
 require 'fileutils'
 
 class ChanStats
     DATA_FILE = 'chanstats.dat'
     EXCLUDED_CHANNELS = [ '#sequel', '#ruby-pro' ]
-    
+
     def initialize
         $reby.bind( "join", "-", "*", "on_join", "$chanstats" )
         $reby.bind( "pub", "-", "!cs", "chanstats_command", "$chanstats" )
         load_data
     end
-    
+
     def put( message, destination = ( @channel || 'Pistos' ) )
         $reby.putserv "PRIVMSG #{destination} :#{message}"
     end
-    
+
     def load_data
         if File.exist? DATA_FILE
             @stats = YAML::load( File.read( DATA_FILE ) )
@@ -41,7 +41,7 @@ class ChanStats
             f.write @stats.to_yaml
         end
     end
-    
+
     def set_defaults( channel )
         @stats[ channel ] ||= Hash.new
         @stats[ channel ][ :size_record ] ||= 0
@@ -50,7 +50,7 @@ class ChanStats
         save_data
         @stats[ channel ]
     end
-    
+
     def on_join( nick, userhost, handle, channel )
         members = $reby.chanlist( channel )
         n = members.size
@@ -65,7 +65,7 @@ class ChanStats
             end
         end
     end
-    
+
     def chanstats_command( nick, userhost, handle, channel, args )
         case args.to_s
             when /^rec/i

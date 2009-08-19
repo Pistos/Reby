@@ -16,11 +16,6 @@ require "open-uri"
 require "cgi"
 require 'rubygems'
 require 'hpricot'
-begin
-    require 'rubyful_soup'
-rescue Exception => e
-    require_gem 'rubyful_soup'
-end
 
 class WebSearch
     VERSION = '1.1.5'
@@ -347,31 +342,31 @@ class WebSearch
                     #$reby.putserv "PRIVMSG #{channel} :[syn] Invalid input."
                 #end
             when ENGINE_WIKIPEDIA
-                open( "http://en.wikipedia.org/w/wiki.phtml?search=#{ arg }" ) do |html|
-                    soup = BeautifulSoup.new( html.read )
-
-                    heading_tag = soup.find( 'h1', :attrs => { 'class' => 'firstHeading' } )
-                    if heading_tag
-                        title = heading_tag.string
-                        case title
-                            when 'Main_Page'
-                                $reby.putserv "PRIVMSG #{channel} :No wikipedia entries found for '#{arg}'."
-                            when 'Search'
-                                count = -2
-                                soup.find_all( 'a', :attrs => { 'href' => %r{^/wiki/} } ).each do |a|
-                                    if count >= 0
-                                        $reby.putserv "PRIVMSG #{channel} :[#{arg}] http://en.wikipedia.org#{a['href']}"
-                                    end
-                                    count += 1
-                                    if count >= num_results
-                                        break
-                                    end
-                                end
-                            else
-                                $reby.putserv "PRIVMSG #{channel} :[#{arg}] http://en.wikipedia.org/wiki/#{title}"
-                        end
-                    end
-                end
+                # open( "http://en.wikipedia.org/w/wiki.phtml?search=#{ arg }" ) do |html|
+                    # soup = BeautifulSoup.new( html.read )
+#
+                    # heading_tag = soup.find( 'h1', :attrs => { 'class' => 'firstHeading' } )
+                    # if heading_tag
+                        # title = heading_tag.string
+                        # case title
+                            # when 'Main_Page'
+                                # $reby.putserv "PRIVMSG #{channel} :No wikipedia entries found for '#{arg}'."
+                            # when 'Search'
+                                # count = -2
+                                # soup.find_all( 'a', :attrs => { 'href' => %r{^/wiki/} } ).each do |a|
+                                    # if count >= 0
+                                        # $reby.putserv "PRIVMSG #{channel} :[#{arg}] http://en.wikipedia.org#{a['href']}"
+                                    # end
+                                    # count += 1
+                                    # if count >= num_results
+                                        # break
+                                    # end
+                                # end
+                            # else
+                                # $reby.putserv "PRIVMSG #{channel} :[#{arg}] http://en.wikipedia.org/wiki/#{title}"
+                        # end
+                    # end
+                # end
             when ENGINE_GEOSHELL_WIKI
                 open( "http://docs.geoshell.org/dosearchsite.action?searchQuery.queryString=#{ arg }" ) do |html|
                     text = html.read
@@ -411,13 +406,14 @@ class WebSearch
                     end
                 end
             when :search_wordsmyth
-                open( "http://www.wordsmyth.net/live/home.php?script=search&matchent=#{arg}&matchtype=exact" ) do |html|
-                    parse_wordsmyth( html.read, channel )
-                end
+                # open( "http://www.wordsmyth.net/live/home.php?script=search&matchent=#{arg}&matchtype=exact" ) do |html|
+                    # parse_wordsmyth( html.read, channel )
+                # end
         end
 
     end
 
+    # Broken; Soup is not 1.9-ready.
     def parse_wordsmyth( text, channel )
         soup = BeautifulSoup.new( text )
 

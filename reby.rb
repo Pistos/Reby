@@ -1,16 +1,13 @@
-#!/usr/bin/env ruby
-
 # == REBY
 #
 # Ruby-Eggdrop Bridge Yes-this-letter-has-no-meaning-in-the-acronym
 # :title: Reby
-# Version:: 0.7.5 (January 3, 2008)
+# Version:: 0.8.0 (August 18, 2009)
 #
-# Author:: Pistos (irc.freenode.net)
+# @author Pistos (irc.freenode.net)
 # http://purepistos.net/eggdrop/reby
 #
-# == Examples
-#
+# @example
 #
 #     def test( nick, userhost, handle, channel, text )
 #         if text.class == Array
@@ -53,9 +50,8 @@
 #     puts "Got back: " + $reby.getReturnValue( return_id )
 #
 
-
-require "net/telnet"
-require "thread"
+require 'net/telnet'
+require 'thread'
 require 'ostruct'
 require 'eventmachine'
 
@@ -1264,7 +1260,10 @@ end
 
 # ---------------------------------------------------------------------------
 
-if PLATFORM !~ /win/
+if(
+  RUBY_VERSION >= '1.9' && RUBY_PLATFORM !~ /win/ ||
+  RUBY_VERSION < '1.9' && PLATFORM !~ /win/
+)
     trap( "SIGHUP" ) do | |
         $reby_signal = "SIGHUP"
         $reby.log "Received SIGHUP"
