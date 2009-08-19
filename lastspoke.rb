@@ -54,14 +54,28 @@ class Float
     end
 end
 
+# PStore with mutex.
+class MuPStore < PStore
+  def initialize( *args )
+    @mutex = Mutex.new
+    super
+  end
+
+  def transaction # ( *args, &block )
+    @mutex.synchronize do
+      super
+    end
+  end
+end
+
 class LastSpoke
     # Add bot names to this list, if you like.
     IGNORED = [ "", "*" ]
 
     def initialize
-        @last_spoke = PStore.new( "lastspoke.pstore" )
+        @last_spoke = MuPStore.new( "lastspoke.pstore" )
         # @last_spoke.ultra_safe = true
-        @spoke_start = PStore.new( "lastspoke-start.pstore" )
+        @spoke_start = MuPStore.new( "lastspoke-start.pstore" )
         @spoke_start.transaction { @spoke_start[ 'time' ] = Time.now }
 
         $reby.bind( "raw", "-", "PRIVMSG", "sawPRIVMSG", "$lastspoke" )
@@ -91,7 +105,7 @@ class LastSpoke
             $reby.putserv "PRIVMSG #{channel} :Um... you JUST spoke, to issue the command.  :)"
         elsif $reby.isbotnick( target )
             $reby.putserv "PRIVMSG #{channel} :I don't watch myself."
-        elsif lst
+        elsif lst.nil?
             $reby.putserv "PRIVMSG #{channel} :As far as I know, #{target} hasn't said anything."
             t = nil
             @spoke_start.transaction { t = @spoke_start[ 'time' ] }
