@@ -10,11 +10,15 @@ require 'time'
 require 'nice-inspect'
 require 'yaml'
 require 'rexml/document'
+require 'cgi'
+
+$KCODE = 'u'
 
 class RebyTwitter
 
   CHANNELS = {
     'webbynode' => [ '#webbynode', ],
+    'ramazetest' => [ '#mathetes', ],
   }
   SEARCHES = {
     'ramaze' => [ '#ramaze', ],
@@ -29,13 +33,19 @@ class RebyTwitter
     @last_search_id = Hash.new
     @seen = Hash.new { |hash,key| hash[ key ] = Array.new }
 
+    $reby.bind( "raw", "-", "PRIVMSG", "sawPRIVMSG", "$reby_twitter" )
+
     SEARCHES.each do |search_term,channels|
       search = Twitter::Search.new( search_term )
-      fetched = search.fetch
-      max_id = fetched[ 'max_id' ].to_i
-      @last_search_id[ search_term ] = max_id
-      channels.each do |channel|
-        @seen[ channel ] << max_id
+      begin
+        fetched = search.fetch
+        max_id = fetched[ 'max_id' ].to_i
+        @last_search_id[ search_term ] = max_id
+        channels.each do |channel|
+          @seen[ channel ] << max_id
+        end
+      rescue Exception => e
+        $reby.log "Reby Twitter exception: #{e}"
       end
     end
 
@@ -43,7 +53,7 @@ class RebyTwitter
       loop do
         poll_timeline
         poll_searches
-        sleep 180
+        sleep 60
       end
     end
     $reby.registerThread @thread
@@ -51,6 +61,21 @@ class RebyTwitter
 
   def say( message, destination = "#mathetes" )
     $reby.putserv "PRIVMSG #{destination} :#{message}"
+  end
+
+  def sawPRIVMSG( from, keyword, text )
+    if from !~ /^(.+?)!/
+      $reby.log "[lastspoke] No nick?  '#{from}' !~ /^(.+?)!/"
+      return
+    end
+
+    nick = $1
+    channel, speech = text.split( " :", 2 )
+    if speech =~ %r{twitter\.com/\w+/status(?:es)?/(\d+)}
+      tweet = @twitter.status( $1.to_i )
+      escaped_text = CGI.unescapeHTML( tweet.text.gsub( /\s/, ' ' ) )
+      say "[twitter] <#{tweet.user.screen_name}> #{escaped_text}", channel
+    end
   end
 
   def poll_timeline
@@ -63,7 +88,7 @@ class RebyTwitter
     end
   rescue Exception => e
     $reby.log "RebyTwitter exception: #{e.message}"
-    #$reby.log e.backtrace.join( "\t\n" )
+    # $reby.log e.backtrace.join( "\t\n" )
   end
 
   def poll_searches
@@ -81,16 +106,29 @@ class RebyTwitter
     end
   rescue Exception => e
     $reby.log "RebyTwitter exception: #{e.message}"
-    #$reby.log e.backtrace.join( "\t\n" )
+    # $reby.log e.backtrace.join( "\t\n" )
   end
 
-  def say_tweet tweet
+  def clean_text( text )
+    converted = text.gsub( /&#([[:digit:]]+);/ ) {
+      [ $1.to_i ].pack( 'U*' )
+    }.gsub( /&#x([[:xdigit:]]+);/ ) {
+      [ $1.to_i(16) ].pack( 'U*' )
+    }
+    REXML::Text::unnormalize(
+      #text.gsub( /&\#\d{3,};/, '?' )
+      converted
+    )
+    # ).gsub( /[^a-zA-Z0-9,.;:&\#@'!?\/ ()_-]/, '' )
+  end
+
+  def say_tweet( tweet )
     tweet_time = Time.parse( tweet.created_at )
     return  if tweet_time < @last_timestamp
     @last_timestamp = tweet_time
     tweet_id = tweet.id.to_i
     src = tweet.user.screen_name
-    text = REXML::Text::unnormalize( tweet.text ).gsub( /[^a-zA-Z0-9,.;:&@'!?\/ ()_-]/, '' )
+    text = clean_text( tweet.text )
     alert = "[twitter] <#{src}> #{text}"
     channels = CHANNELS[ src ] || [ 'Pistos' ]
     channels.each do |channel|
@@ -104,7 +142,7 @@ class RebyTwitter
   def say_search_tweet( tweet, channels = [ 'Pistos' ] )
     tweet_id = tweet[ 'id' ].to_i
     src = tweet[ 'from_user' ]
-    text = REXML::Text::unnormalize( tweet[ 'text' ] ).gsub( /[^a-zA-Z0-9,.;:&@'!?\/ ()_-]/, '' )
+    text = clean_text( tweet[ 'text' ] )
     alert = "[twitter] <#{src}> #{text}"
     channels.each do |channel|
       if not @seen[ channel ].include?( tweet_id )
@@ -115,4 +153,4 @@ class RebyTwitter
   end
 end
 
-RebyTwitter.new
+$reby_twitter = RebyTwitter.new
