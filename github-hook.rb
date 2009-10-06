@@ -35,6 +35,7 @@ module GitHubHookServer
     'ramaze.net'              => [ '#ramaze', ],
     'ramaze-wiki-pages'       => [ '#mathetes', '#ramaze' ],
     'ruby-dbi'                => [ '#mathetes', '#ruby-dbi', ],
+    'rvm'                     => [ '#rvm', ],
     'selfmarks'               => [ '#mathetes', ],
     'sociar'                  => [ '#ramaze' ],
     'watir-mirror'            => [ '#mathetes', '#watir' ],
@@ -77,7 +78,7 @@ module GitHubHookServer
         author = cdata[ 'author' ][ 'name' ]
         message = cdata[ 'message' ].gsub( /\s+/, ' ' )[ 0..384 ]
         url = zepto_url( cdata[ 'url' ] )
-        text = "[github] [#{repo}] <#{author}> #{message} #{url}"
+        text = "[github] [\00303#{repo}\003] <\00307#{author}\003> #{message} #{url}"
 
         if channels.nil? or channels.empty?
           say "Unknown repo: '#{repo}'", '#mathetes'
