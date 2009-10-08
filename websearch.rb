@@ -50,6 +50,7 @@ class WebSearch
 
     def initialize
         $reby.bind( "pub", "-", "!google", "google", "$websearch" )
+        $reby.bind( "pub", "-", "!g", "google", "$websearch" )
         $reby.bind( "pub", "-", "!teoma", "teoma", "$websearch" )
         $reby.bind( "pub", "-", "!atw", "allTheWeb", "$websearch" )
         $reby.bind( "pub", "-", "!alltheweb", "allTheWeb", "$websearch" )
