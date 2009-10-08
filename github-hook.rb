@@ -104,7 +104,7 @@ module GitHubHookServer
           shas.each do |sha|
             s[ sha ] = true
           end
-          say "[github] [#{repo}] #{commits.size} commits by: #{authors.join( ', ' )}  #{first_url}", channel
+          say "[github] [\00303#{repo}\003] #{commits.size} commits by: \00307#{authors.join( ', ' )}\003  #{first_url}", channel
         end
       end
 
