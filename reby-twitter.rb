@@ -73,7 +73,7 @@ class RebyTwitter
     channel, speech = text.split( " :", 2 )
     if speech =~ %r{twitter\.com/\w+/status(?:es)?/(\d+)}
       tweet = @twitter.status( $1.to_i )
-      escaped_text = CGI.unescapeHTML( tweet.text.gsub( /\s/, ' ' ) )
+      escaped_text = CGI.unescapeHTML( tweet.text.gsub( '&quot;', '"' ).gsub( '&amp;', '&' ) ).gsub( /\s/, ' ' )
       say "[twitter] <#{tweet.user.screen_name}> #{escaped_text}", channel
     end
   end
