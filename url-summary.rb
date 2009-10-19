@@ -42,19 +42,19 @@ class URLSummarizer
 
       description = doc.at( 'meta[@name="description"]' )
       if description
-        say "[URL] #{description.attribute( 'content' )}"
+        say "[URL] #{description.attribute( 'content' )}", channel
         return
       end
 
       title = doc.at( 'title' ).content
       if title && ! title.empty?
-        say "[URL] #{title}"
+        say "[URL] #{title}", channel
         return
       end
 
       heading = doc.at( 'h1,h2,h3,h4' ).content
       if heading && ! heading.empty?
-        say "[URL] #{heading}"
+        say "[URL] #{heading}", channel
       end
     end
   end
