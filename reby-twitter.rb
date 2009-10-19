@@ -33,8 +33,6 @@ class RebyTwitter
     @last_search_id = Hash.new
     @seen = Hash.new { |hash,key| hash[ key ] = Array.new }
 
-    $reby.bind( "raw", "-", "PRIVMSG", "sawPRIVMSG", "$reby_twitter" )
-
     SEARCHES.each do |search_term,channels|
       search = Twitter::Search.new( search_term )
       begin
@@ -61,21 +59,6 @@ class RebyTwitter
 
   def say( message, destination = "#mathetes" )
     $reby.putserv "PRIVMSG #{destination} :#{message}"
-  end
-
-  def sawPRIVMSG( from, keyword, text )
-    if from !~ /^(.+?)!/
-      $reby.log "[lastspoke] No nick?  '#{from}' !~ /^(.+?)!/"
-      return
-    end
-
-    nick = $1
-    channel, speech = text.split( " :", 2 )
-    if speech =~ %r{twitter\.com/\w+/status(?:es)?/(\d+)}
-      tweet = @twitter.status( $1.to_i )
-      escaped_text = CGI.unescapeHTML( tweet.text.gsub( '&quot;', '"' ).gsub( '&amp;', '&' ) ).gsub( /\s/, ' ' )
-      say "[twitter] <#{tweet.user.screen_name}> #{escaped_text}", channel
-    end
   end
 
   def poll_timeline
