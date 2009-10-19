@@ -30,6 +30,10 @@ class URLSummarizer
     channel, speech = text.split( " :", 2 )
 
     case speech
+    when %r{http://pastie.org},
+      %r{http://github.com/.*/blob},
+      %r{http://\d+\.\d+\.\d+\.\d+}
+      # Blacklist; swallow and discard
     when %r{twitter\.com/\w+/status(?:es)?/(\d+)}
       open( "http://twitter.com/statuses/show/#{$1.to_i}.json" ) do |http|
         json = http.read
