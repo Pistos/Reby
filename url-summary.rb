@@ -44,21 +44,31 @@ class URLSummarizer
     when %r{(http://(?:[0-9a-zA-Z-]+\.)+[a-zA-Z]+(?:/[0-9a-zA-Z~!@#%&./?=_-]*)?)}
       doc = Nokogiri::HTML( open( $1 ) )
 
-      description = doc.at( 'meta[@name="description"]' )
-      if description
-        say "[URL] #{description.attribute( 'content' )}", channel
-        return
+      summary = nil
+
+      catch :found do
+        description = doc.at( 'meta[@name="description"]' )
+        if description
+          summary = description.attribute( 'content' ).to_s
+          throw :found
+        end
+
+        title = doc.at( 'title' )
+        if title
+          summary = title.content
+          throw :found
+        end
+
+        heading = doc.at( 'h1,h2,h3,h4' )
+        if heading
+          summary = heading.content
+          throw :found
+        end
       end
 
-      title = doc.at( 'title' ).content
-      if title && ! title.empty?
-        say "[URL] #{title}", channel
-        return
-      end
-
-      heading = doc.at( 'h1,h2,h3,h4' ).content
-      if heading && ! heading.empty?
-        say "[URL] #{heading}", channel
+      if summary && summary != "OpenDNS"
+        summary = summary.split( /\n/ )[ 0 ]
+        say "[URL] #{summary}", channel
       end
     end
   end
