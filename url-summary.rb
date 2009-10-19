@@ -37,6 +37,25 @@ class URLSummarizer
         escaped_text = CGI.unescapeHTML( tweet[ 'text' ].gsub( '&quot;', '"' ).gsub( '&amp;', '&' ) ).gsub( /\s/, ' ' )
         say "[twitter] <#{tweet[ 'user' ][ 'screen_name' ]}> #{escaped_text}", channel
       end
+    when %r{(http://[0-9a-zA-Z~!@#%&./?=_-]+)}
+      doc = Nokogiri::HTML( open( $1 ) )
+
+      description = doc.at( 'meta[@name="description"]' )
+      if description
+        say "[URL] #{description.attribute( 'content' )}"
+        return
+      end
+
+      title = doc.at( 'title' ).content
+      if title && ! title.empty?
+        say "[URL] #{title}"
+        return
+      end
+
+      heading = doc.at( 'h1,h2,h3,h4' ).content
+      if heading && ! heading.empty?
+        say "[URL] #{heading}"
+      end
     end
   end
 end
