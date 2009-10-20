@@ -56,7 +56,7 @@ class URLSummarizer
       number_files[:removed]  = all_changes.css( 'li.removed' ).size
       number_files[:total]    = all_changes.size
 
-      s = "[github] [#{project}] <#{author}> #{commit_message} {+#{number_files[ :added ]}/-#{number_files[ :removed ]}/*#{number_filed[ :modified ]}}"
+      s = "[github] [#{project}] <#{author}> #{commit_message} {+#{number_files[ :added ]}/-#{number_files[ :removed ]}/*#{number_files[ :modified ]}}"
       say s, channel
     when %r{(http://(?:[0-9a-zA-Z-]+\.)+[a-zA-Z]+(?:/[0-9a-zA-Z~!@#%&./?=_+-]*)?)}
       begin
