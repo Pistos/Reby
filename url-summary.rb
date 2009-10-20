@@ -70,7 +70,7 @@ class URLSummarizer
 
         if summary && summary.length > 10
           summary = summary.split( /\n/ )[ 0 ]
-          say "[URL] #{summary[ 0...160 ]}", channel
+          say "[URL] #{summary[ 0...160 ]}#{summary.size > 159 ? '[...]' : ''}", channel
         end
       rescue RuntimeError => e
         if e.message !~ /redirect/
