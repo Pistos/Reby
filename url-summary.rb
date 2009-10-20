@@ -49,12 +49,10 @@ class URLSummarizer
       commit_message = doc.css( 'div.human div.message pre' )[ 0 ].content
       author         = doc.css( 'div.human div.name a')[ 0 ].content
 
-      all_changes             = doc.css( 'div#toc ul li' )
       number_files            = {}
-      number_files[:modified] = all_changes.css( 'li.modified' ).size
-      number_files[:added]    = all_changes.css( 'li.added' ).size
-      number_files[:removed]  = all_changes.css( 'li.removed' ).size
-      number_files[:total]    = all_changes.size
+      number_files[:modified] = doc.css( 'div#toc ul li.modified' ).size
+      number_files[:added]    = doc.css( 'div#toc ul li.added'    ).size
+      number_files[:removed]  = doc.css( 'div#toc ul li.removed'  ).size
 
       s = "[github] [#{project}] <#{author}> #{commit_message} {+#{number_files[ :added ]}/-#{number_files[ :removed ]}/*#{number_files[ :modified ]}}"
       say s, channel
