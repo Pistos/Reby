@@ -42,6 +42,23 @@ class URLSummarizer
         escaped_text = CGI.unescapeHTML( tweet[ 'text' ].gsub( '&quot;', '"' ).gsub( '&amp;', '&' ) ).gsub( /\s/, ' ' )
         say "[twitter] <#{tweet[ 'user' ][ 'screen_name' ]}> #{escaped_text}", channel
       end
+    when %r{^(http://github.com/(.+?)/(.+?)/commit/.+)$}
+      doc            = Nokogiri::HTML( open( $1 ) )
+
+      author         = $2
+      project        = $3
+      commit_message = doc.css( 'div.human div.message pre' )[ 0 ].content
+      author         = doc.css( 'div.human div.name a')[ 0 ].content
+
+      all_changes             = doc.css( 'div#toc ul li' )
+      number_files            = {}
+      number_files[:modified] = all_changes.css( 'li.modified' ).size
+      number_files[:added]    = all_changes.css( 'li.added' ).size
+      number_files[:removed]  = all_changes.css( 'li.removed' ).size
+      number_files[:total]    = all_changes.size
+
+      s = "[github] [#{project}] <#{author}> #{commit_message} {+#{number_files[ :added ]}/-#{number_files[ :removed ]}/*#{number_filed[ :modified ]}}"
+      say s, channel
     when %r{(http://(?:[0-9a-zA-Z-]+\.)+[a-zA-Z]+(?:/[0-9a-zA-Z~!@#%&./?=_+-]*)?)}
       begin
         doc = Nokogiri::HTML( open( $1 ) )
