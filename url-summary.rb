@@ -30,8 +30,9 @@ class URLSummarizer
     channel, speech = text.split( " :", 2 )
 
     case speech
-    when %r{http://pastie.org},
-      %r{http://github.com/.*/blob},
+    when %r{http://pastie\.org},
+      %r{http://github\.com/.*/blob},
+      %r{http://gist\.github\.com},
       %r{http://\d+\.\d+\.\d+\.\d+}
       # Blacklist; swallow and discard
     when %r{twitter\.com/\w+/status(?:es)?/(\d+)}
