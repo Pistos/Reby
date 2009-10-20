@@ -46,31 +46,36 @@ class URLSummarizer
       begin
         doc = Nokogiri::HTML( open( $1 ) )
 
-      summary = nil
+        summary = nil
 
-      catch :found do
-        description = doc.at( 'meta[@name="description"]' )
-        if description
-          summary = description.attribute( 'content' ).to_s
-          throw :found
+        catch :found do
+          description = doc.at( 'meta[@name="description"]' )
+          if description
+            summary = description.attribute( 'content' ).to_s
+            throw :found
+          end
+
+          title = doc.at( 'title' )
+          if title
+            summary = title.content
+            throw :found
+          end
+
+          heading = doc.at( 'h1,h2,h3,h4' )
+          if heading
+            summary = heading.content
+            throw :found
+          end
         end
 
-        title = doc.at( 'title' )
-        if title
-          summary = title.content
-          throw :found
+        if summary && summary.length > 10
+          summary = summary.split( /\n/ )[ 0 ]
+          say "[URL] #{summary[ 0...160 ]}", channel
         end
-
-        heading = doc.at( 'h1,h2,h3,h4' )
-        if heading
-          summary = heading.content
-          throw :found
+      rescue RuntimeError => e
+        if e.message !~ /redirect/
+          raise e
         end
-      end
-
-      if summary && summary != "OpenDNS"
-        summary = summary.split( /\n/ )[ 0 ]
-        say "[URL] #{summary}", channel
       end
     end
   end
