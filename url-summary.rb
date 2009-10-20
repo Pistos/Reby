@@ -42,7 +42,7 @@ class URLSummarizer
         escaped_text = CGI.unescapeHTML( tweet[ 'text' ].gsub( '&quot;', '"' ).gsub( '&amp;', '&' ) ).gsub( /\s/, ' ' )
         say "[twitter] <#{tweet[ 'user' ][ 'screen_name' ]}> #{escaped_text}", channel
       end
-    when %r{^(http://github.com/.+?/(.+?)/commit/.+)$}
+    when %r{(http://github.com/.+?/(.+?)/commit/.+)}
       doc            = Nokogiri::HTML( open( $1 ) )
 
       project        = $2
