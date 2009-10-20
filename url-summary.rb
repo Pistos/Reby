@@ -68,9 +68,12 @@ class URLSummarizer
           end
         end
 
-        if summary && summary.length > 10
-          summary = summary.split( /\n/ )[ 0 ]
-          say "[URL] #{summary[ 0...160 ]}#{summary.size > 159 ? '[...]' : ''}", channel
+        if summary
+          summary = summary.strip.gsub( /\s+/, ' ' )
+          if summary.length > 10
+            summary = summary.split( /\n/ )[ 0 ]
+            say "[URL] #{summary[ 0...160 ]}#{summary.size > 159 ? '[...]' : ''}", channel
+          end
         end
       rescue RuntimeError => e
         if e.message !~ /redirect/
