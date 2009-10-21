@@ -13,6 +13,10 @@ require 'timeout'
 
 class URLSummarizer
 
+  CHANNEL_BLACKLIST = [
+    '#rendergods',
+  ]
+
   def initialize
     $reby.bind( "raw", "-", "PRIVMSG", "sawPRIVMSG", "$url_summarizer" )
   end
@@ -30,8 +34,11 @@ class URLSummarizer
     nick = $1
     channel, speech = text.split( " :", 2 )
 
+    return  if CHANNEL_BLACKLIST.include?( channel )
+
     case speech
     when %r{http://pastie\.org},
+      %r{http://pastebin},
       %r{http://github\.com/.*/blob},
       %r{http://gist\.github\.com},
       %r{http://\d+\.\d+\.\d+\.\d+}
