@@ -29,6 +29,7 @@ module GitHubHookServer
     'm4dbi'                   => [ '#mathetes', '#ruby-dbi', ],
     'nagoro'                  => [ '#mathetes', '#ramaze' ],
     'Ramalytics'              => [ '#mathetes', '#ramaze' ],
+    'Reby'                    => [ '#mathetes', ],
     'ramaze'                  => [ '#mathetes', '#ramaze', ],
     'ramaze-book'             => [ '#mathetes', '#ramaze' ],
     'ramaze-proto'            => [ '#mathetes', '#ramaze' ],
