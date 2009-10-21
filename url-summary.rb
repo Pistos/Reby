@@ -60,7 +60,7 @@ class URLSummarizer
     when %r{(http://(?:[0-9a-zA-Z-]+\.)+[a-zA-Z]+(?:/[0-9a-zA-Z~!@#%&./?=_+-]*)?)}
       begin
         doc = nil
-        Timeout::timeout( 30 ) do
+        Timeout::timeout( 10 ) do
           doc = Nokogiri::HTML( open( $1 ) )
         end
 
@@ -92,6 +92,13 @@ class URLSummarizer
             summary = summary.split( /\n/ )[ 0 ]
             say "[URL] #{summary[ 0...160 ]}#{summary.size > 159 ? '[...]' : ''}", channel
           end
+        end
+      rescue Timeout::Error
+        say "[URL - Timed out]", channel
+      rescue OpenURI::HTTPError => e
+        case e
+        when /403/
+          say "[URL - 403 Forbidden]", channel
         end
       rescue RuntimeError => e
         if e.message !~ /redirect/
