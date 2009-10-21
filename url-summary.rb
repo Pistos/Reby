@@ -9,6 +9,7 @@ require 'cgi'
 require 'open-uri'
 require 'json'
 require 'nokogiri'
+require 'timeout'
 
 class URLSummarizer
 
@@ -58,7 +59,10 @@ class URLSummarizer
       say s, channel
     when %r{(http://(?:[0-9a-zA-Z-]+\.)+[a-zA-Z]+(?:/[0-9a-zA-Z~!@#%&./?=_+-]*)?)}
       begin
-        doc = Nokogiri::HTML( open( $1 ) )
+        doc = nil
+        Timeout::timeout( 30 ) do
+          doc = Nokogiri::HTML( open( $1 ) )
+        end
 
         summary = nil
 
