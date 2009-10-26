@@ -10,6 +10,7 @@ require 'open-uri'
 require 'json'
 require 'nokogiri'
 require 'timeout'
+require 'net/http'
 
 class ByteLimitExceededException < Exception
 end
@@ -34,21 +35,21 @@ class URLSummarizer
 
     begin
       Timeout::timeout( 10 ) do
-        open(
-          url,
-          :progress_proc => lambda { |s|
-            if s >= BYTE_LIMIT
-              raise ByteLimitExceededException.new
+        uri = URI.parse( url)
+        result = Net::HTTP.start( uri.host, uri.port ) { |http|
+          http.get( "#{uri.path}?#{uri.query}" )
+          http.request_get('/index.html') { |res|
+            res.read_body do |segment|
+              doc_text << segment
+              if doc_text.length >= BYTE_LIMIT
+                raise ByteLimitExceededException.new
+              end
             end
           }
-        ) do |http|
-          1000.times do
-            doc_text << http.readline
-          end
-        end
+        }
       end
     rescue EOFError, ByteLimitExceededException
-      $reby.log "[URL] Byte limit reached reading #{url}"
+      $reby.log "[URL] Byte limit reached reading #{url} (document reached #{doc_text.length} bytes)"
     end
 
     doc = Nokogiri::HTML( doc_text )
