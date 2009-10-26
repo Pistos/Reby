@@ -20,7 +20,7 @@ class URLSummarizer
   CHANNEL_BLACKLIST = [
     '#rendergods',
   ]
-  BYTE_LIMIT = 65536
+  BYTE_LIMIT = 16384
 
   def initialize
     $reby.bind( "raw", "-", "PRIVMSG", "sawPRIVMSG", "$url_summarizer" )
