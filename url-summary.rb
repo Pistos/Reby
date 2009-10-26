@@ -30,29 +30,45 @@ class URLSummarizer
     $reby.putserv "PRIVMSG #{destination} :#{message}"
   end
 
-  def summarize_url( url, channel )
-    doc_text = ""
-
-    begin
-      Timeout::timeout( 10 ) do
-        uri = URI.parse( url)
-        result = Net::HTTP.start( uri.host, uri.port ) { |http|
-          http.get( "#{uri.path}?#{uri.query}" )
-          http.request_get('/index.html') { |res|
-            res.read_body do |segment|
-              doc_text << segment
-              if doc_text.length >= BYTE_LIMIT
-                raise ByteLimitExceededException.new
-              end
-            end
-          }
-        }
-      end
-    rescue EOFError, ByteLimitExceededException
-      $reby.log "[URL] Byte limit reached reading #{url} (document reached #{doc_text.length} bytes)"
+  def fetch( url, limit = 10 )
+    if limit == 0
+      raise ArgumentError, 'HTTP redirect too deep'
     end
 
-    doc = Nokogiri::HTML( doc_text )
+    @doc_text = ""
+    uri = URI.parse( url )
+
+    response = Net::HTTP.start( uri.host, 80 ) { |http|
+      http.request_get( "#{uri.path}?#{uri.query}" ) { |res|
+        res.read_body do |segment|
+          @doc_text << segment
+          if @doc_text.length >= BYTE_LIMIT
+            raise ByteLimitExceededException.new
+          end
+        end
+      }
+    }
+
+    case response
+    when Net::HTTPSuccess
+      response
+    when Net::HTTPRedirection
+      fetch( response[ 'location' ], limit - 1 )
+    else
+      response.error!
+    end
+  end
+
+  def summarize_url( url, channel )
+    begin
+      Timeout::timeout( 10 ) do
+        fetch url
+      end
+    rescue EOFError, ByteLimitExceededException
+      $reby.log "[URL] Byte limit reached reading #{url} (document reached #{@doc_text.length} bytes)"
+    end
+
+    doc = Nokogiri::HTML( @doc_text )
     summary = nil
 
     catch :found do
