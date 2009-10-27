@@ -39,7 +39,8 @@ class URLSummarizer
     uri = URI.parse( url )
 
     response = Net::HTTP.start( uri.host, 80 ) { |http|
-      http.request_get( "#{uri.path}?#{uri.query}" ) { |res|
+      path = uri.path.empty? ? '/' : uri.path
+      http.request_get( "#{path}?#{uri.query}" ) { |res|
         res.read_body do |segment|
           @doc_text << segment
           if @doc_text.length >= BYTE_LIMIT
