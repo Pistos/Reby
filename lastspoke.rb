@@ -7,7 +7,8 @@
 # This is not a standalone Ruby script; it is meant to be run from Reby
 # (http://purepistos.net/eggdrop/reby).
 
-require 'pstore'
+__DIR__ = File.expand_path( File.dirname( __FILE__ ) )
+require "#{__DIR__}/mutex-pstore"
 
 class Fixnum
     def seconds_to_interval_string
@@ -52,20 +53,6 @@ class Float
     def seconds_to_interval_string
         return self.to_i.seconds_to_interval_string
     end
-end
-
-# PStore with mutex.
-class MuPStore < PStore
-  def initialize( *args )
-    @mutex = Mutex.new
-    super
-  end
-
-  def transaction # ( *args, &block )
-    @mutex.synchronize do
-      super
-    end
-  end
 end
 
 class LastSpoke
