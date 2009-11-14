@@ -5,6 +5,8 @@
 # This is not a standalone Ruby script; it is meant to be run from Reby
 # (http://purepistos.net/eggdrop/reby).
 
+$KCODE = 'u'
+
 require 'cgi'
 require 'open-uri'
 require 'json'
@@ -124,7 +126,7 @@ class URLSummarizer
     return  if CHANNEL_BLACKLIST.include?( channel )
 
     case speech
-    when %r{http://pastie\.org},
+    when %r{http://pastie},
       %r{http://pastebin},
       %r{http://github\.com/.*/blob},
       %r{http://gist\.github\.com},
@@ -151,7 +153,7 @@ class URLSummarizer
 
       s = "[github] [#{project}] <#{author}> #{commit_message} {+#{number_files[ :added ]}/-#{number_files[ :removed ]}/*#{number_files[ :modified ]}}"
       say s, channel
-    when %r{(http://(?:[0-9a-zA-Z-]+\.)+[a-zA-Z]+(?:/[0-9a-zA-Z~!@#%&./?=_+-]*)?)}
+    when %r|(http://(?:[0-9a-zA-Z-]+\.)+[a-zA-Z]+(?:/[0-9a-zA-Z#{"\303\244-\303\256"}~!@#%&./?=_+-]*)?)|u
       summarize_url $1, channel
     end
   end
