@@ -21,12 +21,12 @@ module RebyKVStore
       params = args.to_s
       if params =~ /(.+?)=(.+)/
         key, value = $1.strip, $2.strip
-        @h.transaction { @h[ key ] = value }
+        @h.transaction { @h[ { :channel => channel, :key => key }.inspect ] = value }
         say "Set '#{key}'.", channel
       else
         key = params.strip
         value = nil
-        @h.transaction { value = @h[ key ] }
+        @h.transaction { value = @h[ { :channel => channel, :key => key }.inspect ] }
         if value
           say value, channel
         else
