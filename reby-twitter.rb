@@ -24,6 +24,7 @@ class RebyTwitter
     'ramaze' => [ '#ramaze', ],
     'ruby dbi' => [ '#ruby-dbi', ],
     'webbynode' => [ '#webbynode', ],
+    'rvm -rain -treadmill -running -qualifiers -weather -car -"the rvm"' => [ '#rvm', ],
   }
 
   def initialize
