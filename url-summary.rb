@@ -68,7 +68,7 @@ class URLSummarizer
         fetch url
       end
     rescue EOFError, ByteLimitExceededException
-      $reby.log "[URL] Byte limit reached reading #{url} (document reached #{@doc_text.length} bytes)"
+      $reby.log "[\00300URL\003] Byte limit reached reading #{url} (document reached #{@doc_text.length} bytes)"
     end
 
     doc = Nokogiri::HTML( @doc_text )
@@ -98,7 +98,7 @@ class URLSummarizer
       summary = summary.strip.gsub( /\s+/, ' ' )
       if summary.length > 10
         summary = summary.split( /\n/ )[ 0 ]
-        say "[URL] #{summary[ 0...160 ]}#{summary.size > 159 ? '[...]' : ''}", channel
+        say "[\00300URL\003] #{summary[ 0...160 ]}#{summary.size > 159 ? '[...]' : ''}", channel
       end
     end
   rescue Timeout::Error
@@ -137,7 +137,7 @@ class URLSummarizer
         json = http.read
         tweet = JSON.parse( json )
         escaped_text = CGI.unescapeHTML( tweet[ 'text' ].gsub( '&quot;', '"' ).gsub( '&amp;', '&' ) ).gsub( /\s/, ' ' )
-        say "[twitter] <#{tweet[ 'user' ][ 'screen_name' ]}> #{escaped_text}", channel
+        say "[\00300twitter\003] <#{tweet[ 'user' ][ 'screen_name' ]}> #{escaped_text}", channel
       end
     when %r{(http://github.com/.+?/(.+?)/commit/.+)}
       doc            = Nokogiri::HTML( open( $1 ) )
@@ -151,7 +151,7 @@ class URLSummarizer
       number_files[:added]    = doc.css( 'div#toc ul li.added'    ).size
       number_files[:removed]  = doc.css( 'div#toc ul li.removed'  ).size
 
-      s = "[github] [#{project}] <#{author}> #{commit_message} {+#{number_files[ :added ]}/-#{number_files[ :removed ]}/*#{number_files[ :modified ]}}"
+      s = "[\00300github\003] [#{project}] <#{author}> #{commit_message} {+#{number_files[ :added ]}/-#{number_files[ :removed ]}/*#{number_files[ :modified ]}}"
       say s, channel
     when %r|(http://(?:[0-9a-zA-Z-]+\.)+[a-zA-Z]+(?:/[0-9a-zA-Z#{"\303\244-\303\256"}~!@#%&./?=_+-]*)?)|u
       summarize_url $1, channel

@@ -14,7 +14,7 @@ module RebyKVStore
     end
 
     def say( message, channel )
-      $reby.putserv "PRIVMSG #{channel} :[kv] #{message}"
+      $reby.putserv "PRIVMSG #{channel} :[\00300kv\003] #{message}"
     end
 
     def info( nick, userhost, handle, channel, args )

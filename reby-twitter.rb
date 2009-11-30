@@ -113,7 +113,7 @@ class RebyTwitter
     tweet_id = tweet.id.to_i
     src = tweet.user.screen_name
     text = clean_text( tweet.text )
-    alert = "[twitter] <#{src}> #{text}"
+    alert = "[\00300twitter\003] <#{src}> #{text}"
     channels = CHANNELS[ src ] || [ 'Pistos' ]
     channels.each do |channel|
       if not @seen[ channel ].include?( tweet_id )
@@ -127,7 +127,7 @@ class RebyTwitter
     tweet_id = tweet[ 'id' ].to_i
     src = tweet[ 'from_user' ]
     text = clean_text( tweet[ 'text' ] )
-    alert = "[twitter] <#{src}> #{text}"
+    alert = "[\00300twitter\003] <#{src}> #{text}"
     channels.each do |channel|
       if not @seen[ channel ].include?( tweet_id )
         say alert, channel
