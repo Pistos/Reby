@@ -31,6 +31,10 @@ class RebyRSS
       :channels => [ '#ramaze', ],
       :interval => 60 * 60,
     },
+    'http://projects.stoneship.org/trac/nanoc/timeline?ticket=on&milestone=on&wiki=on&max=50&daysback=90&format=rss' => {
+      :channels => [ '#nanoc', ],
+      :interval => 60 * 60,
+    },
     # 'http://linis.purepistos.net/ticket/rss/124' => {
       # :channels => [ 'Pistos', ],
       # :interval => 20,
